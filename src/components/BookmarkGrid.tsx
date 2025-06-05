@@ -63,6 +63,7 @@ interface BookmarkGridProps {
   bookmarks: Bookmark[];
   categories: Category[]; 
   onDeleteBookmark: (id: string) => void;
+  onEditBookmark: (bookmark: Bookmark) => void; // New prop
   isAdminAuthenticated: boolean;
   currentCategoryName?: string; 
   activeCategoryId: string | null;
@@ -72,7 +73,8 @@ interface BookmarkGridProps {
 const BookmarkGrid: React.FC<BookmarkGridProps> = ({ 
     bookmarks, 
     categories, 
-    onDeleteBookmark, 
+    onDeleteBookmark,
+    onEditBookmark, 
     isAdminAuthenticated,
     currentCategoryName,
     activeCategoryId,
@@ -121,10 +123,10 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
   
   return (
     <div className="space-y-8">
-      {(activeCategoryId === 'all' || !activeCategoryId) ? ( // Group by category if 'all' or no specific category is active
+      {(activeCategoryId === 'all' || !activeCategoryId) ? (
         categoriesToDisplay.map((category) => {
           const categoryBookmarks = bookmarks.filter(
-            (bookmark) => bookmark.categoryId === category.id // Bookmarks are already pre-filtered for privacy by page.tsx
+            (bookmark) => bookmark.categoryId === category.id
           );
           if (categoryBookmarks.length === 0) return null;
 
@@ -146,6 +148,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
                     key={bookmark.id}
                     bookmark={bookmark}
                     onDeleteBookmark={onDeleteBookmark}
+                    onEditBookmark={onEditBookmark}
                     isAdminAuthenticated={isAdminAuthenticated}
                   />
                 ))}
@@ -153,7 +156,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
             </section>
           );
         })
-      ) : ( // Display bookmarks for a single active category
+      ) : ( 
         <section aria-labelledby={`category-title-main`}>
             {currentCategoryName && (
                  <h2 
@@ -166,11 +169,12 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
                 </h2>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-            {bookmarks.map((bookmark) => ( // Bookmarks are already pre-filtered by page.tsx
+            {bookmarks.map((bookmark) => (
                 <BookmarkItem
                 key={bookmark.id}
                 bookmark={bookmark}
                 onDeleteBookmark={onDeleteBookmark}
+                onEditBookmark={onEditBookmark}
                 isAdminAuthenticated={isAdminAuthenticated}
                 />
             ))}

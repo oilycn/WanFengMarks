@@ -3,9 +3,9 @@
 
 import React from 'react';
 import type { Bookmark } from '@/types';
-import { Card } from '@/components/ui/card'; 
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Link2, Trash2, ArrowUpRightSquare, EyeOff } from 'lucide-react';
+import { Link2, Trash2, ArrowUpRightSquare, EyeOff, PenLine } from 'lucide-react';
 import Image from 'next/image';
 import {
   AlertDialog,
@@ -23,10 +23,11 @@ import { useToast } from "@/hooks/use-toast";
 interface BookmarkItemProps {
   bookmark: Bookmark;
   onDeleteBookmark: (id: string) => void;
+  onEditBookmark: (bookmark: Bookmark) => void; // New prop for editing
   isAdminAuthenticated: boolean;
 }
 
-const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark, isAdminAuthenticated }) => {
+const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark, onEditBookmark, isAdminAuthenticated }) => {
   const { toast } = useToast();
   
   const getFaviconUrl = (url: string) => {
@@ -46,7 +47,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark,
   };
 
   if (!isAdminAuthenticated && bookmark.isPrivate) {
-    return null; // Don't render private bookmarks if not authenticated
+    return null;
   }
 
   return (
@@ -77,7 +78,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark,
           <Link2 className={`h-8 w-8 text-muted-foreground fallback-icon ${favicon ? 'hidden' : ''} flex-shrink-0`} />
           
           <div className="flex-grow min-w-0">
-            <h3 className="text-sm font-semibold truncate group-hover:underline flex items-center" title={bookmark.name}>
+            <h3 className="text-sm font-semibold truncate /* Removed group-hover:underline */ flex items-center" title={bookmark.name}>
               {bookmark.name}
               {bookmark.isPrivate && <EyeOff className="ml-1.5 h-3 w-3 text-muted-foreground/70 flex-shrink-0" title="私密书签"/>}
             </h3>
@@ -92,32 +93,43 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark,
       </a>
       
       {isAdminAuthenticated && (
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-             <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive/60 hover:text-destructive hover:bg-destructive/10 p-1 rounded-full"
-              aria-label={`删除 ${bookmark.name}`}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>确定删除书签 "{bookmark.name}"?</AlertDialogTitle>
-              <AlertDialogDescription>
-                此操作无法撤销。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>取消</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-                删除
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <div className="absolute top-1 right-1 flex items-center opacity-0 group-hover:opacity-100 transition-opacity space-x-0.5">
+           <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-foreground/60 hover:text-foreground hover:bg-accent/10 p-1 rounded-full"
+            aria-label={`编辑 ${bookmark.name}`}
+            onClick={() => onEditBookmark(bookmark)}
+          >
+            <PenLine className="h-3.5 w-3.5" />
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-destructive/60 hover:text-destructive hover:bg-destructive/10 p-1 rounded-full"
+                aria-label={`删除 ${bookmark.name}`}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>确定删除书签 "{bookmark.name}"?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  此操作无法撤销。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>取消</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                  删除
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       )}
     </Card>
   );
