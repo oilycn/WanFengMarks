@@ -6,7 +6,6 @@ import type { Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Label } from '@/components/ui/label'; // Label might not be needed for the new button style
 import { PlusCircle, Trash2, LogIn, Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, Save, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2, Eye, EyeOff, PenLine } from 'lucide-react';
 import {
   AlertDialog,
@@ -122,6 +121,10 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
     onDeleteCategory(categoryId);
     toast({ title: "分类已删除", description: `"${categoryName}" 及其所有书签已被删除。`, variant: "destructive" });
   };
+  
+  const selectedIconObject = availableIcons.find(icon => icon.value === newCategoryIcon);
+  const selectedIconName = selectedIconObject?.name || "选择图标";
+
 
   return (
     <aside className="w-60 md:w-64 bg-card/60 backdrop-blur-md border-r flex flex-col h-full shadow-lg">
@@ -189,7 +192,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
         </nav>
       </ScrollArea>
       
-      <div className="p-3 border-t mt-auto space-y-3"> {/* Increased space-y for better separation */}
+      <div className="p-3 border-t mt-auto space-y-3">
         {isAdminAuthenticated && (
           <form onSubmit={handleAddCategorySubmit} className="space-y-2">
             <div className="flex items-center space-x-2">
@@ -197,7 +200,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                 <SelectTrigger className="flex-1 h-9 text-sm justify-start" aria-label="选择分类图标">
                    <div className="flex items-center gap-2 truncate">
                       {React.createElement(iconMap[newCategoryIcon] || iconMap['Default'], {className: "h-4 w-4 flex-shrink-0"})}
-                      <SelectValue placeholder="选择图标" />
+                      <span>{selectedIconName}</span>
                    </div>
                 </SelectTrigger>
                 <SelectContent>
