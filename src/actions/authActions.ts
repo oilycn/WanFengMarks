@@ -25,16 +25,26 @@ interface ActionResult {
 }
 
 async function getConfigValue(key: string, connection?: PoolConnection): Promise<string | null> {
-  noStore(); // Ensure this helper is also not cached if called from other contexts
+  noStore();
   console.log(`[AuthAction] getConfigValue: Called for key: "${key}"`);
-  const execQuery = connection ? connection.query.bind(connection) : query;
   try {
-    console.log(`[AuthAction] getConfigValue: Attempting to execute query for key: "${key}"`);
-    const rows = await execQuery<ConfigRow[]>("SELECT config_value FROM config WHERE config_key = ?", [key]);
-    console.log(`[AuthAction] getConfigValue: Query executed for key "${key}". Found ${rows.length} rows.`);
-    if (rows.length > 0) {
-      console.log(`[AuthAction] getConfigValue: Key "${key}" found, value: "${rows[0].config_value}"`);
-      return rows[0].config_value;
+    let actualRows: ConfigRow[];
+
+    if (connection) {
+      console.log(`[AuthAction] getConfigValue: Using provided connection to query for key: "${key}"`);
+      // When using a direct connection.query, it returns [rows, fields]
+      const [rowsFromConnectionQuery] = await connection.query<ConfigRow[]>("SELECT config_value FROM config WHERE config_key = ?", [key]);
+      actualRows = rowsFromConnectionQuery;
+    } else {
+      console.log(`[AuthAction] getConfigValue: Using global query function for key: "${key}"`);
+      // The global query() function is assumed to return rows directly
+      actualRows = await query<ConfigRow[]>("SELECT config_value FROM config WHERE config_key = ?", [key]);
+    }
+
+    console.log(`[AuthAction] getConfigValue: Query executed for key "${key}". Found ${actualRows.length} rows.`);
+    if (actualRows.length > 0) {
+      console.log(`[AuthAction] getConfigValue: Key "${key}" found, value: "${actualRows[0].config_value}"`);
+      return actualRows[0].config_value;
     } else {
       console.log(`[AuthAction] getConfigValue: Key "${key}" NOT found in database.`);
       return null;
@@ -200,13 +210,13 @@ export async function verifyAdminPasswordAction(password: string): Promise<boole
   noStore();
   console.log('[AuthAction] verifyAdminPasswordAction: Verifying admin password.');
   try {
-    const setupCompleted = await isSetupCompleteAction(); // This already logs
+    const setupCompleted = await isSetupCompleteAction();
     if (!setupCompleted) {
          console.warn('[AuthAction] verifyAdminPasswordAction: Admin password verification attempted before setup is complete. Returning false.');
          return false;
     }
 
-    const hashedPassword = await getConfigValue(ADMIN_PASSWORD_KEY); // This already logs
+    const hashedPassword = await getConfigValue(ADMIN_PASSWORD_KEY);
     if (!hashedPassword) {
       console.warn('[AuthAction] verifyAdminPasswordAction: Admin password not found in DB. Returning false.');
       return false;
@@ -231,7 +241,7 @@ export async function isSetupCompleteAction(): Promise<boolean> {
     connection = await connectToDatabase();
     console.log('[AuthAction] isSetupCompleteAction: Connected to database. Attempting to get config value for:', SETUP_COMPLETED_KEY);
     
-    const setupCompletedValue = await getConfigValue(SETUP_COMPLETED_KEY, connection); // getConfigValue now also logs verbosely
+    const setupCompletedValue = await getConfigValue(SETUP_COMPLETED_KEY, connection);
     console.log(`[AuthAction] isSetupCompleteAction: Raw setupCompletedValue from getConfigValue: '${setupCompletedValue}' (type: ${typeof setupCompletedValue})`);
 
     if (setupCompletedValue === 'true') {
@@ -259,7 +269,7 @@ export async function getSelectedDatabaseTypeAction(): Promise<string> {
     noStore();
     console.log('[AuthAction] getSelectedDatabaseTypeAction: Determining database type.');
     try {
-      const isSetupDone = await isSetupCompleteAction(); // This will use the verbose logging
+      const isSetupDone = await isSetupCompleteAction();
       if (isSetupDone) {
         console.log('[AuthAction] getSelectedDatabaseTypeAction: Setup is complete, returning "mysql".');
         return 'mysql';
@@ -292,4 +302,6 @@ export async function resetSetupStateAction(): Promise<void> {
         if (connection) connection.release();
     }
 }
+    
+
     
