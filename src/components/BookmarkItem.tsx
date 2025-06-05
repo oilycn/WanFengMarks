@@ -48,7 +48,8 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
   const getFaviconUrl = (url: string) => {
     try {
       const domain = new URL(url).hostname;
-      return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+      const googleFaviconServiceUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+      return `https://proxy.oily.cn/proxy/${googleFaviconServiceUrl}`;
     } catch (error) {
       console.error("Invalid URL for favicon:", url, error);
       return '';
@@ -58,7 +59,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
 
   const handleDelete = () => {
     onDeleteBookmark(bookmark.id);
-    toast({ title: "书签已删除", description: `"${bookmark.name}" 已被删除。`, variant: "destructive" });
+    toast({ title: "书签已删除", description: `"${bookmark.name}" 已被删除。`, variant: "destructive", duration: 2000 });
   };
 
   if (!isAdminAuthenticated && bookmark.isPrivate) {
@@ -165,3 +166,4 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
 BookmarkItem.displayName = 'BookmarkItem';
 
 export default BookmarkItem;
+
