@@ -5,7 +5,7 @@ import React from 'react';
 import type { Bookmark } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Link2, Trash2, EyeOff, PenLine } from 'lucide-react';
+import { Link2, Trash2, EyeOff, PenLine, GripVertical } from 'lucide-react';
 import Image from 'next/image';
 import {
   AlertDialog,
@@ -19,15 +19,29 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import type { DraggableProvidedDraggableProps, DraggableProvidedDragHandleProps } from 'react-beautiful-dnd';
 
 interface BookmarkItemProps {
   bookmark: Bookmark;
   onDeleteBookmark: (id: string) => void;
   onEditBookmark: (bookmark: Bookmark) => void;
   isAdminAuthenticated: boolean;
+  innerRef?: (element: HTMLElement | null) => void;
+  draggableProps?: DraggableProvidedDraggableProps;
+  dragHandleProps?: DraggableProvidedDragHandleProps;
+  isDragging?: boolean;
 }
 
-const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark, onEditBookmark, isAdminAuthenticated }) => {
+const BookmarkItem: React.FC<BookmarkItemProps> = ({ 
+  bookmark, 
+  onDeleteBookmark, 
+  onEditBookmark, 
+  isAdminAuthenticated,
+  innerRef,
+  draggableProps,
+  dragHandleProps,
+  isDragging
+}) => {
   const { toast } = useToast();
   
   const getFaviconUrl = (url: string) => {
@@ -51,87 +65,98 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark,
   }
 
   return (
-    <Card className="group relative shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out overflow-hidden bg-card/70 backdrop-blur-sm border border-border/60 hover:border-primary/70 rounded-lg flex flex-col group-hover:bg-accent/10 group-focus-within:bg-accent/10">
-      <a
-        href={bookmark.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex-grow p-3 flex flex-col text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline"
-        aria-label={`打开 ${bookmark.name}`}
-      >
-        <div className="flex items-start space-x-3">
-          {favicon ? (
-            <Image 
-              src={favicon} 
-              alt="" 
-              width={32} 
-              height={32}
-              className="mt-0.5 rounded-md object-contain group-hover:scale-110 transition-transform flex-shrink-0"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const fallbackIcon = target.closest('.flex')?.querySelector('.fallback-icon');
-                if (fallbackIcon) fallbackIcon.classList.remove('hidden');
-              }}
-            />
-          ) : null}
-          <Link2 className={`h-8 w-8 text-muted-foreground fallback-icon ${favicon ? 'hidden' : ''} flex-shrink-0`} />
-          
-          <div className="flex-grow min-w-0">
-            <h3 className="text-sm font-semibold truncate flex items-center" title={bookmark.name}>
-              {bookmark.name}
-              {bookmark.isPrivate && <EyeOff className="ml-1.5 h-3 w-3 text-muted-foreground/70 flex-shrink-0" title="私密书签"/>}
-            </h3>
-            {bookmark.description && (
-              <p className="text-xs text-muted-foreground mt-0.5 truncate" title={bookmark.description}>
-                {bookmark.description}
-              </p>
-            )}
-          </div>
-          {/* Removed ArrowUpRightSquare icon from here */}
-        </div>
-      </a>
-      
-      {isAdminAuthenticated && (
-        <div className="absolute top-1 right-1 flex items-center opacity-0 group-hover:opacity-100 transition-opacity space-x-0.5">
-           <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-foreground/60 hover:text-foreground hover:bg-accent/10 p-1 rounded-full"
-            aria-label={`编辑 ${bookmark.name}`}
-            onClick={() => onEditBookmark(bookmark)}
+    <div
+      ref={innerRef}
+      {...draggableProps}
+      className={`group relative rounded-lg flex flex-col transition-shadow ${isDragging ? 'shadow-2xl scale-105 bg-card' : 'shadow-lg hover:shadow-xl bg-card/70'}`}
+    >
+      <Card className={`flex-grow overflow-hidden backdrop-blur-sm border border-border/60 hover:border-primary/70 rounded-lg group-hover:bg-accent/10 group-focus-within:bg-accent/10 ${isDragging ? 'border-primary ring-2 ring-primary' : ''}`}>
+        <div className="flex items-center p-3">
+          {isAdminAuthenticated && dragHandleProps && (
+            <div {...dragHandleProps} className="cursor-grab p-1 mr-2 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-50 transition-opacity" aria-label="拖动排序">
+              <GripVertical className="h-4 w-4" />
+            </div>
+          )}
+          <a
+            href={bookmark.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-grow flex items-start space-x-3 text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline"
+            aria-label={`打开 ${bookmark.name}`}
+            onClick={(e) => { if(isDragging) e.preventDefault();}} // Prevent navigation while dragging
           >
-            <PenLine className="h-3.5 w-3.5" />
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-destructive/60 hover:text-destructive hover:bg-destructive/10 p-1 rounded-full"
-                aria-label={`删除 ${bookmark.name}`}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>确定删除书签 "{bookmark.name}"?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  此操作无法撤销。
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>取消</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-                  删除
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+            {favicon ? (
+              <Image 
+                src={favicon} 
+                alt="" 
+                width={32} 
+                height={32}
+                className="mt-0.5 rounded-md object-contain group-hover:scale-110 transition-transform flex-shrink-0"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const fallbackIcon = target.closest('.flex')?.querySelector('.fallback-icon');
+                  if (fallbackIcon) fallbackIcon.classList.remove('hidden');
+                }}
+              />
+            ) : null}
+            <Link2 className={`h-8 w-8 text-muted-foreground fallback-icon ${favicon ? 'hidden' : ''} flex-shrink-0`} />
+            
+            <div className="flex-grow min-w-0">
+              <h3 className="text-sm font-semibold truncate flex items-center" title={bookmark.name}>
+                {bookmark.name}
+                {bookmark.isPrivate && <EyeOff className="ml-1.5 h-3 w-3 text-muted-foreground/70 flex-shrink-0" title="私密书签"/>}
+              </h3>
+              {bookmark.description && (
+                <p className="text-xs text-muted-foreground mt-0.5 truncate" title={bookmark.description}>
+                  {bookmark.description}
+                </p>
+              )}
+            </div>
+          </a>
         </div>
-      )}
-    </Card>
+        
+        {isAdminAuthenticated && (
+          <div className="absolute top-1 right-1 flex items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity space-x-0.5" style={isDragging ? { opacity: 1 } : {}}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-foreground/60 hover:text-foreground hover:bg-accent/10 p-1 rounded-full"
+              aria-label={`编辑 ${bookmark.name}`}
+              onClick={() => onEditBookmark(bookmark)}
+            >
+              <PenLine className="h-3.5 w-3.5" />
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-destructive/60 hover:text-destructive hover:bg-destructive/10 p-1 rounded-full"
+                  aria-label={`删除 ${bookmark.name}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>确定删除书签 "{bookmark.name}"?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    此操作无法撤销。
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                    删除
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
+      </Card>
+    </div>
   );
 };
 

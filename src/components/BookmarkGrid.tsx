@@ -5,6 +5,7 @@ import React from 'react';
 import type { Bookmark, Category } from '@/types';
 import BookmarkItem from './BookmarkItem';
 import { FolderOpen, SearchX, EyeOff } from 'lucide-react';
+import { Droppable, Draggable } from 'react-beautiful-dnd';
 import { Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, Save, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2, Eye } from 'lucide-react';
 
 
@@ -60,10 +61,10 @@ iconMap['Default'] = Folder;
 
 
 interface BookmarkGridProps {
-  bookmarks: Bookmark[];
+  bookmarks: Bookmark[]; // These are the displayedBookmarks from page.tsx
   categories: Category[]; 
   onDeleteBookmark: (id: string) => void;
-  onEditBookmark: (bookmark: Bookmark) => void; // New prop
+  onEditBookmark: (bookmark: Bookmark) => void; 
   isAdminAuthenticated: boolean;
   currentCategoryName?: string; 
   activeCategoryId: string | null;
@@ -82,10 +83,33 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
 }) => {
 
   const getCategoryById = (id: string) => categories.find(c => c.id === id);
+  const canDrag = isAdminAuthenticated && activeCategoryId && activeCategoryId !== 'all';
 
-  const categoriesToDisplay = (activeCategoryId === 'all' || !activeCategoryId)
-    ? categories.filter(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated) && bookmarks.some(b => b.categoryId === c.id))
-    : categories.filter(c => c.id === activeCategoryId && c.isVisible && (!c.isPrivate || isAdminAuthenticated));
+  const renderBookmarks = (bookmarksToRender: Bookmark[], droppableId: string) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+      {bookmarksToRender.map((bookmark, index) => (
+        <Draggable 
+          key={bookmark.id} 
+          draggableId={bookmark.id} 
+          index={index}
+          isDragDisabled={!canDrag}
+        >
+          {(provided, snapshot) => (
+            <BookmarkItem
+              bookmark={bookmark}
+              onDeleteBookmark={onDeleteBookmark}
+              onEditBookmark={onEditBookmark}
+              isAdminAuthenticated={isAdminAuthenticated}
+              innerRef={provided.innerRef}
+              draggableProps={provided.draggableProps}
+              dragHandleProps={provided.dragHandleProps}
+              isDragging={snapshot.isDragging}
+            />
+          )}
+        </Draggable>
+      ))}
+    </div>
+  );
 
 
   if (bookmarks.length === 0) {
@@ -121,61 +145,94 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
     );
   }
   
+  // If a specific category is selected and user is admin, enable drag-and-drop
+  if (canDrag && activeCategoryId) {
+    return (
+      <Droppable droppableId={activeCategoryId} type="BOOKMARK">
+        {(provided) => (
+          <div {...provided.droppableProps} ref={provided.innerRef}>
+            <section aria-labelledby={`category-title-main`}>
+              {currentCategoryName && (
+                   <h2 
+                      id={`category-title-main`} 
+                      className="text-xl font-semibold mb-4 text-foreground border-b pb-2 flex items-center"
+                    >
+                      {categories.find(c => c.id === activeCategoryId)?.icon && React.createElement(iconMap[categories.find(c => c.id === activeCategoryId)?.icon || 'Default'] || iconMap['Default'], {className: "mr-2 h-5 w-5 text-primary flex-shrink-0"})}
+                      {currentCategoryName}
+                      {categories.find(c => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
+                  </h2>
+              )}
+              {renderBookmarks(bookmarks, activeCategoryId)}
+              {provided.placeholder}
+            </section>
+          </div>
+        )}
+      </Droppable>
+    );
+  }
+
+  // Default rendering (no D&D or "all" categories view)
   return (
     <div className="space-y-8">
       {(activeCategoryId === 'all' || !activeCategoryId) ? (
-        categoriesToDisplay.map((category) => {
-          const categoryBookmarks = bookmarks.filter(
-            (bookmark) => bookmark.categoryId === category.id
-          );
-          if (categoryBookmarks.length === 0) return null;
+        categories
+          .filter(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated))
+          .map((category) => {
+            const categoryBookmarks = bookmarks.filter(
+              (bookmark) => bookmark.categoryId === category.id
+            );
+            if (categoryBookmarks.length === 0) return null;
 
-          const IconComponent = iconMap[category.icon || 'Default'] || iconMap['Default'];
+            const IconComponent = iconMap[category.icon || 'Default'] || iconMap['Default'];
 
-          return (
-            <section key={category.id} aria-labelledby={`category-title-${category.id}`}>
-              <h2 
-                id={`category-title-${category.id}`} 
-                className="text-xl font-semibold mb-4 text-foreground border-b pb-2 flex items-center"
-              >
-                <IconComponent className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
-                {category.name}
-                {category.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-                {categoryBookmarks.map((bookmark) => (
-                  <BookmarkItem
-                    key={bookmark.id}
-                    bookmark={bookmark}
-                    onDeleteBookmark={onDeleteBookmark}
-                    onEditBookmark={onEditBookmark}
-                    isAdminAuthenticated={isAdminAuthenticated}
-                  />
-                ))}
-              </div>
-            </section>
-          );
-        })
+            return (
+              <section key={category.id} aria-labelledby={`category-title-${category.id}`}>
+                <h2 
+                  id={`category-title-${category.id}`} 
+                  className="text-xl font-semibold mb-4 text-foreground border-b pb-2 flex items-center"
+                >
+                  <IconComponent className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
+                  {category.name}
+                  {category.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
+                </h2>
+                {/* Render bookmarks for "all" view without D&D wrappers */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+                  {categoryBookmarks.map((bookmark) => (
+                    <BookmarkItem
+                      key={bookmark.id}
+                      bookmark={bookmark}
+                      onDeleteBookmark={onDeleteBookmark}
+                      onEditBookmark={onEditBookmark}
+                      isAdminAuthenticated={isAdminAuthenticated}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })
       ) : ( 
+        // This case is for when a specific category is selected, but D&D is not enabled (e.g., user not admin)
+        // Or, this part might be redundant if the `canDrag` condition above handles it.
+        // For safety, providing a non-D&D render path for single category view.
         <section aria-labelledby={`category-title-main`}>
             {currentCategoryName && (
                  <h2 
                     id={`category-title-main`} 
                     className="text-xl font-semibold mb-4 text-foreground border-b pb-2 flex items-center"
                   >
-                    {categoriesToDisplay[0]?.icon && React.createElement(iconMap[categoriesToDisplay[0].icon || 'Default'] || iconMap['Default'], {className: "mr-2 h-5 w-5 text-primary flex-shrink-0"})}
+                    {categories.find(c => c.id === activeCategoryId)?.icon && React.createElement(iconMap[categories.find(c => c.id === activeCategoryId)?.icon || 'Default'] || iconMap['Default'], {className: "mr-2 h-5 w-5 text-primary flex-shrink-0"})}
                     {currentCategoryName}
-                    {categoriesToDisplay[0]?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
+                    {categories.find(c => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
                 </h2>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
             {bookmarks.map((bookmark) => (
                 <BookmarkItem
-                key={bookmark.id}
-                bookmark={bookmark}
-                onDeleteBookmark={onDeleteBookmark}
-                onEditBookmark={onEditBookmark}
-                isAdminAuthenticated={isAdminAuthenticated}
+                  key={bookmark.id}
+                  bookmark={bookmark}
+                  onDeleteBookmark={onDeleteBookmark}
+                  onEditBookmark={onEditBookmark}
+                  isAdminAuthenticated={isAdminAuthenticated}
                 />
             ))}
             </div>
@@ -186,4 +243,3 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
 };
 
 export default BookmarkGrid;
-
