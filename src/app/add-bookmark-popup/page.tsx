@@ -4,8 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import AddBookmarkDialog from '@/components/AddBookmarkDialog';
 import type { Bookmark, Category } from '@/types';
-import { Toaster } from "@/components/ui/toaster"; // Needed for toast notifications
-import { useToast } from "@/hooks/use-toast"; // Needed for toast notifications
+// import { Toaster } from "@/components/ui/toaster"; // Removed
+// import { useToast } from "@/hooks/use-toast"; // Removed
 import '../globals.css'; // Import global styles for the dialog to look correct
 
 const LS_BOOKMARKS_KEY = 'wanfeng_bookmarks_v1_zh';
@@ -16,7 +16,7 @@ export default function AddBookmarkPopupPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(true); // Dialog is open by default
   const [initialData, setInitialData] = useState<{ name?: string; url?: string; description?: string } | null>(null);
   const [isClient, setIsClient] = useState(false);
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Removed
 
 
   useEffect(() => {
@@ -63,7 +63,8 @@ export default function AddBookmarkPopupPage() {
     localStorage.setItem(LS_BOOKMARKS_KEY, JSON.stringify(updatedBookmarks));
     
     // Toast for success (optional, as window closes quickly)
-    // toast({ title: "书签已添加", description: `"${bookmarkWithId.name}" 已成功添加。`});
+    // The toast call inside AddBookmarkDialog will attempt to fire, but without a Toaster here, it won't show.
+    // This is fine as the window closes.
 
     // Close the popup window
     // A small delay might help ensure localStorage write completes, though usually fast
@@ -84,7 +85,7 @@ export default function AddBookmarkPopupPage() {
   const selectableCategories = categories.filter(c => c.id !== 'all');
 
   return (
-    // Minimal wrapper to center the dialog and provide background + Toaster
+    // Minimal wrapper to center the dialog and provide background
     <div className="flex h-screen w-screen items-center justify-center bg-background/80 backdrop-blur-sm p-4">
       <AddBookmarkDialog
         isOpen={isDialogOpen} // Dialog is controlled to be always open initially
@@ -94,9 +95,7 @@ export default function AddBookmarkPopupPage() {
         // activeCategoryId is not relevant here, dialog will use its default logic
         initialData={initialData}
       />
-      <Toaster />
+      {/* <Toaster /> Removed */}
     </div>
   );
 }
-
-    
