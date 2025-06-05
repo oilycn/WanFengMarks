@@ -26,6 +26,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
+import { cn } from '@/lib/utils';
+
 
 export const availableIcons: { name: string; value: string; IconComponent: React.ElementType }[] = [
   { name: '文件夹', value: 'Folder', IconComponent: Folder },
@@ -87,6 +89,7 @@ interface AppSidebarProps {
   activeCategory: string | null;
   setActiveCategory: (id: string | null) => void;
   onShowPasswordDialog: () => void;
+  className?: string; // Added className prop
 }
 
 const AppSidebar: React.FC<AppSidebarProps> = ({
@@ -98,6 +101,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
   activeCategory,
   setActiveCategory,
   onShowPasswordDialog,
+  className, // Consumed className prop
 }) => {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIcon, setNewCategoryIcon] = useState<string>(availableIcons[0].value);
@@ -127,7 +131,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
 
 
   return (
-    <aside className="w-60 md:w-64 bg-card/60 backdrop-blur-md border-r flex flex-col h-full shadow-lg">
+    <aside className={cn("w-60 md:w-64 bg-card/60 backdrop-blur-md border-r flex flex-col h-full shadow-lg", className)}>
       <ScrollArea className="flex-grow pt-3">
         <nav className="p-3 space-y-1">
           <Button
@@ -152,7 +156,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                   <span className="truncate">{category.name}</span>
                   {category.isPrivate && <EyeOff className="ml-auto h-3.5 w-3.5 text-muted-foreground flex-shrink-0" title="私密分类" />}
                 </Button>
-                {isAdminAuthenticated && category.id !== 'default' && (
+                {isAdminAuthenticated && category.id !== 'default' && category.name !== '通用书签' && ( // Prevent actions on true default category
                   <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button 
                       variant="ghost" 
@@ -255,3 +259,5 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
 };
 
 export default AppSidebar;
+
+    

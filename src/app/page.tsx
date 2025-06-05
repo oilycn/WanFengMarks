@@ -12,7 +12,8 @@ import EditCategoryDialog from '@/components/EditCategoryDialog';
 import PasswordDialog from '@/components/PasswordDialog';
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, LogOut, Copy, Save } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'; // Added Sheet
+import { PlusCircle, LogOut, Copy, Save, Menu } from 'lucide-react'; // Added Menu
 import { useToast } from "@/hooks/use-toast";
 import {
   DragDropContext,
@@ -33,6 +34,8 @@ import {
   deleteCategoryAction,
 } from '@/actions/categoryActions';
 import { isSetupCompleteAction, verifyAdminPasswordAction } from '@/actions/authActions';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 
 const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1';
 
@@ -62,6 +65,9 @@ export default function HomePage() {
   const [initialDataForAddDialog, setInitialDataForAddDialog] = useState<{ name?: string; url?: string; description?: string } | null>(null);
   const [isClientReadyForDnd, setIsClientReadyForDnd] = useState(false);
   const [hasPendingBookmarkOrderChanges, setHasPendingBookmarkOrderChanges] = useState(false);
+  
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
 
 
   const { toast } = useToast();
@@ -73,13 +79,12 @@ export default function HomePage() {
   useEffect(() => {
     // This effect specifically handles setting isClientReadyForDnd
     // to ensure DragDropContext is rendered only after client is fully ready.
-    // This helps with react-beautiful-dnd initialization in StrictMode.
     setIsClientReadyForDnd(true); 
   }, []);
 
 
   useEffect(() => {
-    if (!isClient) return; // Ensure this runs only client-side
+    if (!isClient) return; 
 
     let active = true;
 
@@ -143,7 +148,7 @@ export default function HomePage() {
         console.warn("HomePage: Fetched categories was empty or undefined, using UI fallback.");
       }
       if (!preservePendingOrderChanges) {
-        setHasPendingBookmarkOrderChanges(false); // Reset pending changes when fetching new data unless specified
+        setHasPendingBookmarkOrderChanges(false); 
       }
       console.log("HomePage: Data fetched successfully.");
     } catch (error) {
@@ -157,7 +162,7 @@ export default function HomePage() {
       setIsLoading(false);
       console.log("HomePage: fetchData finished. isLoading set to false.");
     }
-  }, [toast, categories.length]);
+  }, [toast, categories.length]); // categories.length dependency is okay here
 
   useEffect(() => {
     if (isClient && !isCheckingSetup) {
@@ -177,14 +182,27 @@ export default function HomePage() {
     }
   }, [categories, activeCategory, isAdminAuthenticated, isLoading]);
 
+  const handleSetActiveCategory = (catId: string | null) => {
+    if (hasPendingBookmarkOrderChanges) {
+        if (!confirm("您有未保存的书签顺序更改。切换分类将丢失这些更改。确定要切换吗？")) {
+            return;
+        }
+    }
+    setHasPendingBookmarkOrderChanges(false);
+    setActiveCategory(catId);
+    if (isMobile) {
+      setIsMobileSidebarOpen(false); // Close mobile sidebar on category selection
+    }
+  };
+
   const handleAddBookmark = async (newBookmarkData: Omit<Bookmark, 'id' | 'priority'>) => {
     try {
       const newBookmark = await addBookmarkAction(newBookmarkData);
-      setBookmarks(prev => [...prev, newBookmark].sort((a,b) => b.priority - a.priority)); // Re-sort after adding
+      setBookmarks(prev => [...prev, newBookmark].sort((a,b) => b.priority - a.priority)); 
       setIsAddBookmarkDialogOpen(false);
       setInitialDataForAddDialog(null); 
       toast({ title: "书签已添加", description: `"${newBookmark.name}" 已成功添加。` });
-      fetchData(hasPendingBookmarkOrderChanges); // Refetch to update priorities if necessary
+      fetchData(hasPendingBookmarkOrderChanges); 
     } catch (error) {
       console.error("Failed to add bookmark:", error);
       const errorMessage = error instanceof Error ? error.message : "添加书签失败。";
@@ -199,11 +217,8 @@ export default function HomePage() {
     }
     try {
       await deleteBookmarkAction(bookmarkId);
-      // Optimistic update: remove from local state
       setBookmarks(prev => prev.filter(bm => bm.id !== bookmarkId));
       toast({ title: "书签已删除", description: "书签已从服务器删除。", variant: "destructive" });
-      if (hasPendingBookmarkOrderChanges) {
-      }
       fetchData(hasPendingBookmarkOrderChanges); 
     } catch (error) {
       console.error("Failed to delete bookmark:", error);
@@ -279,7 +294,7 @@ export default function HomePage() {
         const nextVisibleCategories = categories.filter(c => c.id !== categoryId && c.isVisible && (!c.isPrivate || isAdminAuthenticated));
         const defaultCat = categories.find(c => c.name === '通用书签' && c.isVisible && (!c.isPrivate || isAdminAuthenticated) && c.id !== categoryId);
         const nextCategory = defaultCat || (nextVisibleCategories.length > 0 ? nextVisibleCategories[0] : categories.find(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated) && c.id !== categoryId));
-        setActiveCategory(nextCategory?.id || 'all');
+        handleSetActiveCategory(nextCategory?.id || 'all');
       }
       toast({ title: "分类已删除", description: `"${oldCategoryName}" 及其所有书签已被删除。`, variant: "destructive" });
       setHasPendingBookmarkOrderChanges(false); 
@@ -347,7 +362,7 @@ export default function HomePage() {
     const currentCat = categories.find(c => c.id === activeCategory);
     if (currentCat && currentCat.isPrivate) {
         const firstPublicCategory = categories.find(c => c.isVisible && !c.isPrivate);
-        setActiveCategory(firstPublicCategory?.id || 'all');
+        handleSetActiveCategory(firstPublicCategory?.id || 'all');
     }
     toast({ title: "已退出", description: "已退出管理模式。" });
     setHasPendingBookmarkOrderChanges(false); 
@@ -401,9 +416,7 @@ export default function HomePage() {
     reorderedDisplayedItems.splice(destinationIndex, 0, movedItem);
 
     setBookmarks(prevGlobalBookmarks => {
-      // Filter out the items from the active category that are being reordered
       const otherGlobalBookmarks = prevGlobalBookmarks.filter(bm => bm.categoryId !== activeCategory);
-      // Concatenate the reordered items (now at higher effective priority) with the rest
       return [...reorderedDisplayedItems, ...otherGlobalBookmarks];
     });
 
@@ -416,7 +429,6 @@ export default function HomePage() {
       return;
     }
 
-    // The `bookmarks` state already reflects the desired global order due to the logic in `handleDragEndBookmarks`
     const orderedIdsForServer = bookmarks.map(bm => bm.id);
 
     try {
@@ -424,15 +436,15 @@ export default function HomePage() {
       if (res.success) {
         toast({ title: "书签顺序已保存" });
         setHasPendingBookmarkOrderChanges(false);
-        fetchData(true); // Refetch to confirm, preserving any *other* types of pending changes if they existed
+        fetchData(true); 
       } else {
         toast({ title: "保存书签顺序失败", description: "服务器未能保存顺序。", variant: "destructive" });
-        fetchData(); // Revert to server state on failure
+        fetchData(); 
       }
     } catch (error) {
       console.error("Error saving bookmark order:", error);
       toast({ title: "保存书签顺序失败", description: "发生网络错误。", variant: "destructive" });
-      fetchData(); // Revert to server state on error
+      fetchData(); 
     }
   };
 
@@ -491,30 +503,44 @@ export default function HomePage() {
         <AppHeader
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(prev => !prev)}
         />
         <div className="flex flex-1 overflow-hidden">
-          <AppSidebar
-            categories={categoriesForSidebar}
-            onAddCategory={handleAddCategory}
-            onDeleteCategory={handleDeleteCategory}
-            onEditCategory={handleOpenEditCategoryDialog}
-            isAdminAuthenticated={isAdminAuthenticated}
-            activeCategory={activeCategory}
-            setActiveCategory={(catId) => {
-                if (hasPendingBookmarkOrderChanges) {
-                    if (!confirm("您有未保存的书签顺序更改。切换分类将丢失这些更改。确定要切换吗？")) {
-                        return;
-                    }
-                }
-                setHasPendingBookmarkOrderChanges(false); 
-                setActiveCategory(catId);
-            }}
-            onShowPasswordDialog={() => setShowPasswordDialog(true)}
-          />
+          {isMobile ? (
+            <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+              <SheetContent side="left" className="p-0 w-64 sm:w-72">
+                <AppSidebar
+                  categories={categoriesForSidebar}
+                  onAddCategory={handleAddCategory}
+                  onDeleteCategory={handleDeleteCategory}
+                  onEditCategory={handleOpenEditCategoryDialog}
+                  isAdminAuthenticated={isAdminAuthenticated}
+                  activeCategory={activeCategory}
+                  setActiveCategory={handleSetActiveCategory}
+                  onShowPasswordDialog={() => {
+                    setShowPasswordDialog(true);
+                    setIsMobileSidebarOpen(false); // Close sidebar when opening password dialog
+                  }}
+                />
+              </SheetContent>
+            </Sheet>
+          ) : (
+            <AppSidebar
+              categories={categoriesForSidebar}
+              onAddCategory={handleAddCategory}
+              onDeleteCategory={handleDeleteCategory}
+              onEditCategory={handleOpenEditCategoryDialog}
+              isAdminAuthenticated={isAdminAuthenticated}
+              activeCategory={activeCategory}
+              setActiveCategory={handleSetActiveCategory}
+              onShowPasswordDialog={() => setShowPasswordDialog(true)}
+              className="hidden md:flex" // Hide on mobile, flex on md+
+            />
+          )}
           <div className="flex-1 flex flex-col overflow-y-auto bg-background relative">
             <main className="flex-grow p-4 md:p-6 relative">
               {isAdminAuthenticated && (
-                <div className="fixed bottom-16 right-6 flex flex-col space-y-2 z-20">
+                <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 flex flex-col space-y-2 z-20">
                   <Button
                     onClick={handleOpenAddBookmarkDialog}
                     className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
@@ -610,3 +636,6 @@ export default function HomePage() {
     
 
 
+
+
+    
