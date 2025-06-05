@@ -10,10 +10,11 @@ import AddBookmarkDialog from '@/components/AddBookmarkDialog';
 import EditBookmarkDialog from '@/components/EditBookmarkDialog';
 import EditCategoryDialog from '@/components/EditCategoryDialog';
 import PasswordDialog from '@/components/PasswordDialog';
+import SettingsDialog from '@/components/SettingsDialog'; // Import SettingsDialog
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { PlusCircle, LogOut, Copy } from 'lucide-react';
+import { PlusCircle, LogOut, Copy, Settings as SettingsIcon } from 'lucide-react'; // Added SettingsIcon
 import { useToast } from "@/hooks/use-toast";
 import {
   DragDropContext,
@@ -33,7 +34,13 @@ import {
   updateCategoryAction,
   deleteCategoryAction,
 } from '@/actions/categoryActions';
-import { isSetupCompleteAction, verifyAdminPasswordAction } from '@/actions/authActions';
+import { 
+  isSetupCompleteAction, 
+  verifyAdminPasswordAction, 
+  changeAdminPasswordAction, // Import new actions
+  getAppSettingsAction,
+  updateLogoSettingsAction,
+} from '@/actions/authActions';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 
@@ -69,18 +76,40 @@ export default function HomePage() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
 
+  // Settings Dialog State
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
+  const [logoText, setLogoText] = useState<string>("晚风Marks"); 
+  const [logoIconName, setLogoIconName] = useState<string>("ShieldCheck");
+  const [adminPasswordExists, setAdminPasswordExists] = useState(false);
+
 
   const { toast } = useToast();
 
   useEffect(() => {
     setIsClient(true);
   }, []);
-
+  
   useEffect(() => {
     if (isClient) {
-        setIsClientReadyForDnd(true); 
+      setIsClientReadyForDnd(true);
     }
   }, [isClient]);
+
+
+  const fetchAppSettings = useCallback(async () => {
+    console.log("HomePage: fetchAppSettings called.");
+    try {
+      const settings = await getAppSettingsAction();
+      if (settings) {
+        if (settings.logoText) setLogoText(settings.logoText);
+        if (settings.logoIcon) setLogoIconName(settings.logoIcon);
+        setAdminPasswordExists(settings.adminPasswordSet);
+      }
+    } catch (error) {
+      console.error("HomePage: Error fetching app settings:", error);
+      toast({ title: "错误", description: "无法加载应用设置。", variant: "destructive" });
+    }
+  }, [toast]);
 
 
   useEffect(() => {
@@ -102,7 +131,8 @@ export default function HomePage() {
           console.log("HomePage: Setup not complete, redirecting to /setup");
           router.push('/setup');
         } else {
-          console.log("HomePage: Setup complete, proceeding with auth check.");
+          console.log("HomePage: Setup complete, proceeding with auth check and app settings fetch.");
+          await fetchAppSettings(); // Fetch settings after setup is confirmed
           const adminAuth = localStorage.getItem(LS_ADMIN_AUTH_KEY);
           if (adminAuth === 'true') {
             setIsAdminAuthenticated(true);
@@ -118,7 +148,7 @@ export default function HomePage() {
         }
         console.error("HomePage: Error checking setup status:", error);
         toast({ title: "错误", description: "无法检查应用配置状态，请刷新。", variant: "destructive" });
-        router.push('/setup'); 
+        // router.push('/setup'); // Comment out to avoid redirect loops on minor settings fetch errors
       }
     }
     performSetupCheck();
@@ -127,7 +157,7 @@ export default function HomePage() {
       active = false;
       console.log("HomePage: useEffect for setup check cleanup.");
     };
-  }, [isClient, router, toast]);
+  }, [isClient, router, toast, fetchAppSettings]);
 
 
   const fetchData = useCallback(async (preservePendingOrderChanges = false) => {
@@ -154,7 +184,7 @@ export default function HomePage() {
     } catch (error) {
       console.error("HomePage: Failed to fetch data:", error);
       toast({ title: "错误", description: "加载数据失败，请稍后重试。", variant: "destructive" });
-       if (categories.length === 0) { 
+       if (categories.length === 0) { // Check categories.length directly, not categories
            const defaultCategory = { id: 'default-fallback-ui-error', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false, priority: 0 };
            setCategories([defaultCategory]);
        }
@@ -162,7 +192,7 @@ export default function HomePage() {
       setIsLoading(false);
       console.log("HomePage: fetchData finished. isLoading set to false.");
     }
-  }, [toast]); 
+  }, [toast]); // Removed categories.length
 
   useEffect(() => {
     if (isClient && !isCheckingSetup) {
@@ -195,7 +225,7 @@ export default function HomePage() {
     }
   };
 
-  const handleAddBookmark = async (newBookmarkData: Omit<Bookmark, 'id' | 'priority'>) => {
+  const handleAddBookmark = useCallback(async (newBookmarkData: Omit<Bookmark, 'id' | 'priority'>) => {
     try {
       const newBookmark = await addBookmarkAction(newBookmarkData);
       setIsAddBookmarkDialogOpen(false);
@@ -207,7 +237,7 @@ export default function HomePage() {
       const errorMessage = error instanceof Error ? error.message : "添加书签失败。";
       toast({ title: "错误", description: errorMessage, variant: "destructive" });
     }
-  };
+  }, [fetchData, toast, hasPendingBookmarkOrderChanges]);
 
   const handleDeleteBookmark = useCallback(async (bookmarkId: string) => {
     if (!isAdminAuthenticated) {
@@ -216,7 +246,7 @@ export default function HomePage() {
     }
     try {
       await deleteBookmarkAction(bookmarkId);
-      setBookmarks(prev => prev.filter(bm => bm.id !== bookmarkId));
+      // Optimistic update removed to rely on fetchData for consistency
       toast({ title: "书签已删除", description: "书签已从服务器删除。", variant: "destructive", duration: 2000 });
       fetchData(hasPendingBookmarkOrderChanges); 
     } catch (error) {
@@ -242,7 +272,7 @@ export default function HomePage() {
     }
     try {
       const newUpdatedBookmark = await updateBookmarkAction(updatedBookmark);
-      setBookmarks(prev => prev.map(bm => bm.id === newUpdatedBookmark.id ? newUpdatedBookmark : bm));
+      // Optimistic update removed
       setIsEditBookmarkDialogOpen(false);
       setBookmarkToEdit(null);
       toast({ title: "书签已更新", description: `"${newUpdatedBookmark.name}" 已成功更新。`, duration: 2000 });
@@ -265,8 +295,9 @@ export default function HomePage() {
     }
     try {
       const newCategory = await addCategoryAction(categoryName, icon, isPrivate);
-      setCategories(prev => [...prev, newCategory].sort((a,b) => b.priority - a.priority)); // Sort by priority
+      // Optimistic update removed
       toast({ title: "分类已添加", description: `"${newCategory.name}" 已成功添加。`, duration: 2000 });
+      fetchData(); // Refetch all data
     } catch (error) {
       console.error("Failed to add category:", error);
       const errorMessage = error instanceof Error ? error.message : "添加分类失败。";
@@ -321,10 +352,11 @@ export default function HomePage() {
     }
     try {
       const newUpdatedCategory = await updateCategoryAction(updatedCategory);
-      setCategories(prev => prev.map(cat => cat.id === newUpdatedCategory.id ? newUpdatedCategory : cat).sort((a,b) => b.priority - a.priority)); // Sort by priority
+      // Optimistic update removed
       setIsEditCategoryDialogOpen(false);
       setCategoryToEdit(null);
       toast({ title: "分类已更新", description: `"${newUpdatedCategory.name}" 已成功更新。`, duration: 2000 });
+      fetchData(); // Refetch all data
     } catch (error)
     {
       console.error("Failed to update category:", error);
@@ -342,6 +374,7 @@ export default function HomePage() {
         setShowPasswordDialog(false);
         toast({ title: "授权成功", description: "已进入管理模式。", duration: 2000 });
         fetchData(); 
+        await fetchAppSettings(); // Fetch settings which includes adminPasswordSet status
       } else {
         toast({ title: "密码错误", description: "请输入正确的管理员密码。", variant: "destructive" });
       }
@@ -410,8 +443,11 @@ export default function HomePage() {
     const [movedItem] = reorderedItemsInActiveCategory.splice(sourceIndex, 1);
     reorderedItemsInActiveCategory.splice(destinationIndex, 0, movedItem);
 
+    // Optimistic UI update
     setBookmarks(prevGlobalBookmarks => {
       const otherGlobalBookmarks = prevGlobalBookmarks.filter(bm => bm.categoryId !== activeCategory);
+      // Create a new list where the reordered items from the active category are first,
+      // then followed by all other bookmarks. This effectively sets their global priority.
       return [...reorderedItemsInActiveCategory, ...otherGlobalBookmarks];
     });
 
@@ -419,11 +455,12 @@ export default function HomePage() {
   };
 
   const handleSaveBookmarksOrder = async () => {
-    if (!isAdminAuthenticated || !hasPendingBookmarkOrderChanges || !activeCategory || activeCategory === 'all') {
-      toast({ title: "无需保存", description: "书签顺序未更改、未授权或未选择特定分类。" });
+    if (!isAdminAuthenticated || !hasPendingBookmarkOrderChanges) {
+      toast({ title: "无需保存", description: "书签顺序未更改或未授权。" });
       return;
     }
 
+    // The `bookmarks` state already reflects the desired global order due to the optimistic update logic.
     const globallyOrderedIdsForServer = bookmarks.map(bm => bm.id);
 
     try {
@@ -431,16 +468,73 @@ export default function HomePage() {
       if (res.success) {
         toast({ title: "书签顺序已保存", duration: 2000 });
         setHasPendingBookmarkOrderChanges(false);
-        fetchData(true); 
+        fetchData(true); // Preserve other potential changes, though for bookmarks this might be redundant after order save
       } else {
         toast({ title: "保存书签顺序失败", description: "服务器未能保存顺序。", variant: "destructive" });
-        fetchData(); 
+        fetchData(); // Revert to server state on failure
       }
     } catch (error) {
       console.error("Error saving bookmark order:", error);
       toast({ title: "保存书签顺序失败", description: "发生网络错误。", variant: "destructive" });
-      fetchData(); 
+      fetchData(); // Revert to server state on error
     }
+  };
+
+  // Settings Dialog Handlers
+  const handleOpenSettingsDialog = () => setIsSettingsDialogOpen(true);
+  const handleCloseSettingsDialog = () => setIsSettingsDialogOpen(false);
+
+  const handleSaveSettings = async (settingsData: {
+    currentPassword?: string;
+    newPassword?: string;
+    logoText?: string;
+    logoIcon?: string;
+  }) => {
+    let passwordChanged = false;
+    let logoChanged = false;
+
+    if (settingsData.newPassword) {
+      try {
+        const result = await changeAdminPasswordAction(
+          settingsData.currentPassword || '',
+          settingsData.newPassword
+        );
+        if (result.success) {
+          toast({ title: "密码已更新", description: result.message, duration: 2000 });
+          passwordChanged = true;
+        } else {
+          toast({ title: "密码更新失败", description: result.error, variant: "destructive" });
+          return; // Stop if password change fails
+        }
+      } catch (error: any) {
+        toast({ title: "密码更新错误", description: error.message || "操作失败。", variant: "destructive" });
+        return;
+      }
+    }
+
+    if (settingsData.logoText !== logoText || settingsData.logoIcon !== logoIconName) {
+      try {
+        const result = await updateLogoSettingsAction(
+          settingsData.logoText || logoText,
+          settingsData.logoIcon || logoIconName
+        );
+        if (result.success) {
+          setLogoText(settingsData.logoText || logoText);
+          setLogoIconName(settingsData.logoIcon || logoIconName);
+          toast({ title: "Logo 已更新", description: result.message, duration: 2000 });
+          logoChanged = true;
+        } else {
+          toast({ title: "Logo 更新失败", description: result.error, variant: "destructive" });
+        }
+      } catch (error: any) {
+        toast({ title: "Logo 更新错误", description: error.message || "操作失败。", variant: "destructive" });
+      }
+    }
+    
+    if (passwordChanged || logoChanged) {
+        await fetchAppSettings(); // Re-fetch settings to update adminPasswordExists if needed
+    }
+    setIsSettingsDialogOpen(false);
   };
 
 
@@ -499,6 +593,8 @@ export default function HomePage() {
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(prev => !prev)}
+          logoText={logoText}
+          logoIconName={logoIconName}
         />
         <div className="flex flex-1 overflow-hidden">
           {isMobile ? (
@@ -552,79 +648,103 @@ export default function HomePage() {
               />
             </main>
             <footer className="text-center py-3 border-t bg-background/50 text-xs text-muted-foreground">
-              &copy; {new Date().getFullYear()} 晚风Marks. 版权所有.
+              &copy; {new Date().getFullYear()} {logoText}. 版权所有.
             </footer>
           </div>
         </div>
-
-        {isAdminAuthenticated && (
-          <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 flex flex-col space-y-2 z-20">
-            <Button
-              onClick={handleOpenAddBookmarkDialog}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
-              aria-label="添加书签"
-              title="添加书签"
-            >
-              <PlusCircle className="h-5 w-5" />
-            </Button>
-            <Button
-              onClick={handleCopyBookmarkletScript}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
-              aria-label="复制书签脚本"
-              title="复制书签脚本"
-            >
-              <Copy className="h-5 w-5" />
-            </Button>
-            <Button
-              onClick={handleLogoutAdmin}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
-              aria-label="退出管理模式"
-              title="退出管理模式"
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
-          </div>
-        )}
-
-        <AddBookmarkDialog
-          isOpen={isAddBookmarkDialogOpen}
-          onClose={handleCloseAddBookmarkDialog}
-          onAddBookmark={handleAddBookmark}
-          categories={categoriesForSidebar.filter(c => c.id !== 'all')} 
-          activeCategoryId={activeCategory}
-          initialData={initialDataForAddDialog}
-        />
-        {bookmarkToEdit && (
-          <EditBookmarkDialog
-            isOpen={isEditBookmarkDialogOpen}
-            onClose={() => { setIsEditBookmarkDialogOpen(false); setBookmarkToEdit(null); }}
-            onUpdateBookmark={handleUpdateBookmark}
-            bookmarkToEdit={bookmarkToEdit}
-            categories={categoriesForSidebar.filter(c => c.id !== 'all')} 
-          />
-        )}
-        {categoryToEdit && (
-          <EditCategoryDialog
-            isOpen={isEditCategoryDialogOpen}
-            onClose={() => { setIsEditCategoryDialogOpen(false); setCategoryToEdit(null); }}
-            onUpdateCategory={handleUpdateCategory}
-            categoryToEdit={categoryToEdit}
-          />
-        )}
-        <PasswordDialog
-          isOpen={showPasswordDialog}
-          onClose={() => setShowPasswordDialog(false)}
-          onSubmit={handlePasswordSubmit}
-        />
       </div>
   );
 
-  return isClientReadyForDnd ? (
-    <DragDropContext onDragEnd={handleDragEndBookmarks}>
-      {mainContent}
-    </DragDropContext>
-  ) : mainContent;
+  return (
+    <>
+      {isClientReadyForDnd ? (
+        <DragDropContext onDragEnd={handleDragEndBookmarks}>
+          {mainContent}
+        </DragDropContext>
+      ) : mainContent}
+
+      {isAdminAuthenticated && (
+        <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 flex flex-col space-y-2 z-40">
+          <Button
+            onClick={handleOpenAddBookmarkDialog}
+            className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
+            aria-label="添加书签"
+            title="添加书签"
+          >
+            <PlusCircle className="h-5 w-5" />
+          </Button>
+          <Button
+            onClick={handleCopyBookmarkletScript}
+            className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
+            aria-label="复制书签脚本"
+            title="复制书签脚本"
+          >
+            <Copy className="h-5 w-5" />
+          </Button>
+           <Button
+            onClick={handleOpenSettingsDialog}
+            className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
+            aria-label="应用设置"
+            title="应用设置"
+          >
+            <SettingsIcon className="h-5 w-5" />
+          </Button>
+          <Button
+            onClick={handleLogoutAdmin}
+            className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
+            aria-label="退出管理模式"
+            title="退出管理模式"
+          >
+            <LogOut className="h-5 w-5" />
+          </Button>
+        </div>
+      )}
+
+      <AddBookmarkDialog
+        isOpen={isAddBookmarkDialogOpen}
+        onClose={handleCloseAddBookmarkDialog}
+        onAddBookmark={handleAddBookmark}
+        categories={categoriesForSidebar.filter(c => c.id !== 'all')} 
+        activeCategoryId={activeCategory}
+        initialData={initialDataForAddDialog}
+      />
+      {bookmarkToEdit && (
+        <EditBookmarkDialog
+          isOpen={isEditBookmarkDialogOpen}
+          onClose={() => { setIsEditBookmarkDialogOpen(false); setBookmarkToEdit(null); }}
+          onUpdateBookmark={handleUpdateBookmark}
+          bookmarkToEdit={bookmarkToEdit}
+          categories={categoriesForSidebar.filter(c => c.id !== 'all')} 
+        />
+      )}
+      {categoryToEdit && (
+        <EditCategoryDialog
+          isOpen={isEditCategoryDialogOpen}
+          onClose={() => { setIsEditCategoryDialogOpen(false); setCategoryToEdit(null); }}
+          onUpdateCategory={handleUpdateCategory}
+          categoryToEdit={categoryToEdit}
+        />
+      )}
+      <PasswordDialog
+        isOpen={showPasswordDialog}
+        onClose={() => setShowPasswordDialog(false)}
+        onSubmit={handlePasswordSubmit}
+      />
+      {isAdminAuthenticated && (
+          <SettingsDialog
+            isOpen={isSettingsDialogOpen}
+            onClose={handleCloseSettingsDialog}
+            onSave={handleSaveSettings}
+            currentLogoText={logoText}
+            currentLogoIconName={logoIconName}
+            adminPasswordPresent={adminPasswordExists}
+          />
+        )}
+    </>
+  );
 }
+    
+
     
 
     

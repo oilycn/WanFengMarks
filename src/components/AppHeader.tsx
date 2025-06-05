@@ -12,9 +12,17 @@ interface AppHeaderProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onToggleMobileSidebar: () => void;
+  logoText: string;
+  logoIconName: string;
 }
 
-const AppHeader: React.FC<AppHeaderProps> = ({ searchQuery, setSearchQuery, onToggleMobileSidebar }) => {
+const AppHeader: React.FC<AppHeaderProps> = ({ 
+  searchQuery, 
+  setSearchQuery, 
+  onToggleMobileSidebar,
+  logoText,
+  logoIconName 
+}) => {
   return (
     <header
       className="p-3 flex flex-col md:flex-row md:items-center md:justify-between relative border-b shadow-sm"
@@ -34,7 +42,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ searchQuery, setSearchQuery, onTo
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <AegisLogo />
+          <AegisLogo logoText={logoText} logoIconName={logoIconName} />
         </div>
 
         {/* Right part of Row 1 (Mobile) / Far right of Header (Desktop) */}
@@ -52,4 +60,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({ searchQuery, setSearchQuery, onTo
 };
 
 export default AppHeader;
+    
+
     

@@ -8,6 +8,8 @@ import type { RowDataPacket, OkPacket, PoolConnection } from 'mysql2/promise';
 
 const ADMIN_PASSWORD_KEY = 'adminHashedPassword';
 const SETUP_COMPLETED_KEY = 'setupCompleted';
+const LOGO_TEXT_KEY = 'logoText';
+const LOGO_ICON_KEY = 'logoIcon';
 
 interface ConfigRow extends RowDataPacket {
   config_key: string;
@@ -24,29 +26,34 @@ interface ActionResult {
   error?: string;
 }
 
+interface AppSettingsResult {
+  logoText: string | null;
+  logoIcon: string | null;
+  adminPasswordSet: boolean;
+}
+
+
 async function getConfigValue(key: string, connection?: PoolConnection): Promise<string | null> {
   noStore();
-  console.log(`[AuthAction] getConfigValue: Called for key: "${key}"`);
+  // console.log(`[AuthAction] getConfigValue: Called for key: "${key}"`);
   try {
     let actualRows: ConfigRow[];
 
     if (connection) {
-      console.log(`[AuthAction] getConfigValue: Using provided connection to query for key: "${key}"`);
-      // When using a direct connection.query, it returns [rows, fields]
+      // console.log(`[AuthAction] getConfigValue: Using provided connection to query for key: "${key}"`);
       const [rowsFromConnectionQuery] = await connection.query<ConfigRow[]>("SELECT config_value FROM config WHERE config_key = ?", [key]);
       actualRows = rowsFromConnectionQuery;
     } else {
-      console.log(`[AuthAction] getConfigValue: Using global query function for key: "${key}"`);
-      // The global query() function is assumed to return rows directly
+      // console.log(`[AuthAction] getConfigValue: Using global query function for key: "${key}"`);
       actualRows = await query<ConfigRow[]>("SELECT config_value FROM config WHERE config_key = ?", [key]);
     }
 
-    console.log(`[AuthAction] getConfigValue: Query executed for key "${key}". Found ${actualRows.length} rows.`);
+    // console.log(`[AuthAction] getConfigValue: Query executed for key "${key}". Found ${actualRows.length} rows.`);
     if (actualRows.length > 0) {
-      console.log(`[AuthAction] getConfigValue: Key "${key}" found, value: "${actualRows[0].config_value}"`);
+      // console.log(`[AuthAction] getConfigValue: Key "${key}" found, value: "${actualRows[0].config_value}"`);
       return actualRows[0].config_value;
     } else {
-      console.log(`[AuthAction] getConfigValue: Key "${key}" NOT found in database.`);
+      // console.log(`[AuthAction] getConfigValue: Key "${key}" NOT found in database.`);
       return null;
     }
   } catch (error: any) {
@@ -56,10 +63,10 @@ async function getConfigValue(key: string, connection?: PoolConnection): Promise
 }
 
 async function setConfigValue(key: string, value: string, connection?: PoolConnection): Promise<void> {
-  console.log(`[AuthAction] setConfigValue: Setting key "${key}" to value "${value}"`);
+  // console.log(`[AuthAction] setConfigValue: Setting key "${key}" to value "${value}"`);
   const execQuery = connection ? connection.query.bind(connection) : query;
   await execQuery("REPLACE INTO config (config_key, config_value) VALUES (?, ?)", [key, value]);
-  console.log(`[AuthAction] setConfigValue: Successfully set key "${key}"`);
+  // console.log(`[AuthAction] setConfigValue: Successfully set key "${key}"`);
 }
 
 export async function testMySQLConnectionAction(): Promise<ActionResult> {
@@ -76,7 +83,7 @@ export async function testMySQLConnectionAction(): Promise<ActionResult> {
     return { success: false, error: `数据库连接失败: ${error.message}` };
   } finally {
     if (connection) {
-      console.log('[AuthAction] testMySQLConnectionAction: Releasing connection.');
+      // console.log('[AuthAction] testMySQLConnectionAction: Releasing connection.');
       connection.release();
     }
   }
@@ -99,6 +106,19 @@ export async function initializeMySQLDatabaseAction(): Promise<ActionResult> {
       )
     `);
     console.log('[AuthAction] initializeMySQLDatabaseAction: `config` table checked/created.');
+
+    // Set default logo text and icon if not already set
+    const currentLogoText = await getConfigValue(LOGO_TEXT_KEY, connection);
+    if (!currentLogoText) {
+      await setConfigValue(LOGO_TEXT_KEY, '晚风Marks', connection);
+      console.log('[AuthAction] initializeMySQLDatabaseAction: Default logo text set.');
+    }
+    const currentLogoIcon = await getConfigValue(LOGO_ICON_KEY, connection);
+    if (!currentLogoIcon) {
+      await setConfigValue(LOGO_ICON_KEY, 'ShieldCheck', connection);
+      console.log('[AuthAction] initializeMySQLDatabaseAction: Default logo icon set.');
+    }
+
 
     console.log('[AuthAction] initializeMySQLDatabaseAction: Creating `categories` table if not exists...');
     await connection.query(`
@@ -133,17 +153,17 @@ export async function initializeMySQLDatabaseAction(): Promise<ActionResult> {
     console.log('[AuthAction] initializeMySQLDatabaseAction: `bookmarks` table checked/created.');
 
     const defaultCategoryName = '通用书签';
-    console.log(`[AuthAction] initializeMySQLDatabaseAction: Checking for default category "${defaultCategoryName}"...`);
+    // console.log(`[AuthAction] initializeMySQLDatabaseAction: Checking for default category "${defaultCategoryName}"...`);
     const [existingCategories] = await connection.query<CategoryRow[]>("SELECT id FROM categories WHERE name = ?", [defaultCategoryName]);
     if (existingCategories.length === 0) {
-      console.log(`[AuthAction] initializeMySQLDatabaseAction: Default category not found. Creating "${defaultCategoryName}"...`);
+      // console.log(`[AuthAction] initializeMySQLDatabaseAction: Default category not found. Creating "${defaultCategoryName}"...`);
       await connection.query(
         "INSERT INTO categories (name, icon, is_visible, is_private, priority) VALUES (?, ?, ?, ?, ?)",
         [defaultCategoryName, 'Folder', true, false, 1]
       );
-      console.log(`[AuthAction] initializeMySQLDatabaseAction: Created default '${defaultCategoryName}' category with priority 1.`);
+      // console.log(`[AuthAction] initializeMySQLDatabaseAction: Created default '${defaultCategoryName}' category with priority 1.`);
     } else {
-      console.log(`[AuthAction] initializeMySQLDatabaseAction: Default category "${defaultCategoryName}" already exists.`);
+      // console.log(`[AuthAction] initializeMySQLDatabaseAction: Default category "${defaultCategoryName}" already exists.`);
     }
 
     console.log('[AuthAction] initializeMySQLDatabaseAction: Committing transaction.');
@@ -159,7 +179,7 @@ export async function initializeMySQLDatabaseAction(): Promise<ActionResult> {
     return { success: false, error: `数据库初始化失败: ${error.message}` };
   } finally {
     if (connection) {
-      console.log('[AuthAction] initializeMySQLDatabaseAction: Releasing connection.');
+      // console.log('[AuthAction] initializeMySQLDatabaseAction: Releasing connection.');
       connection.release();
     }
   }
@@ -176,31 +196,31 @@ export async function setInitialAdminConfigAction(password: string): Promise<Act
   let connection: PoolConnection | null = null;
   try {
     connection = await connectToDatabase();
-    console.log('[AuthAction] setInitialAdminConfigAction: Connected to DB. Beginning transaction.');
+    // console.log('[AuthAction] setInitialAdminConfigAction: Connected to DB. Beginning transaction.');
     await connection.beginTransaction();
 
-    console.log('[AuthAction] setInitialAdminConfigAction: Hashing password.');
+    // console.log('[AuthAction] setInitialAdminConfigAction: Hashing password.');
     const hashedPassword = await bcrypt.hash(password, 10);
     await setConfigValue(ADMIN_PASSWORD_KEY, hashedPassword, connection);
-    console.log('[AuthAction] setInitialAdminConfigAction: Admin password hash stored.');
+    // console.log('[AuthAction] setInitialAdminConfigAction: Admin password hash stored.');
 
     await setConfigValue(SETUP_COMPLETED_KEY, 'true', connection);
-    console.log('[AuthAction] setInitialAdminConfigAction: Setup completed flag set to "true".');
+    // console.log('[AuthAction] setInitialAdminConfigAction: Setup completed flag set to "true".');
 
-    console.log('[AuthAction] setInitialAdminConfigAction: Committing transaction.');
+    // console.log('[AuthAction] setInitialAdminConfigAction: Committing transaction.');
     await connection.commit();
     console.log('[AuthAction] setInitialAdminConfigAction: Admin config SET. Setup marked as complete.');
     return { success: true, message: '管理员配置已成功保存！' };
   } catch (error: any) {
     console.error('[AuthAction] setInitialAdminConfigAction: Error setting initial admin config.', error);
     if (connection) {
-      console.log('[AuthAction] setInitialAdminConfigAction: Rolling back transaction due to error.');
+      // console.log('[AuthAction] setInitialAdminConfigAction: Rolling back transaction due to error.');
       await connection.rollback();
     }
     return { success: false, error: `无法保存管理员配置: ${error.message}` };
   } finally {
     if (connection) {
-      console.log('[AuthAction] setInitialAdminConfigAction: Releasing connection.');
+      // console.log('[AuthAction] setInitialAdminConfigAction: Releasing connection.');
       connection.release();
     }
   }
@@ -208,7 +228,7 @@ export async function setInitialAdminConfigAction(password: string): Promise<Act
 
 export async function verifyAdminPasswordAction(password: string): Promise<boolean> {
   noStore();
-  console.log('[AuthAction] verifyAdminPasswordAction: Verifying admin password.');
+  // console.log('[AuthAction] verifyAdminPasswordAction: Verifying admin password.');
   try {
     const setupCompleted = await isSetupCompleteAction();
     if (!setupCompleted) {
@@ -222,9 +242,9 @@ export async function verifyAdminPasswordAction(password: string): Promise<boole
       return false;
     }
 
-    console.log('[AuthAction] verifyAdminPasswordAction: Comparing provided password with stored hash.');
+    // console.log('[AuthAction] verifyAdminPasswordAction: Comparing provided password with stored hash.');
     const isValid = await bcrypt.compare(password, hashedPassword);
-    console.log(`[AuthAction] verifyAdminPasswordAction: Password validation result: ${isValid}`);
+    // console.log(`[AuthAction] verifyAdminPasswordAction: Password validation result: ${isValid}`);
     return isValid;
   } catch (error:any) {
     console.error(`[AuthAction] verifyAdminPasswordAction: Error verifying admin password. Message: ${error.message}`, error);
@@ -234,52 +254,51 @@ export async function verifyAdminPasswordAction(password: string): Promise<boole
 
 export async function isSetupCompleteAction(): Promise<boolean> {
   noStore();
-  console.log('[AuthAction] isSetupCompleteAction: TOP - Checking if setup is complete.');
+  // console.log('[AuthAction] isSetupCompleteAction: TOP - Checking if setup is complete.');
   let connection: PoolConnection | null = null;
   try {
-    console.log('[AuthAction] isSetupCompleteAction: Attempting to connect to database...');
+    // console.log('[AuthAction] isSetupCompleteAction: Attempting to connect to database...');
     connection = await connectToDatabase();
-    console.log('[AuthAction] isSetupCompleteAction: Connected to database. Attempting to get config value for:', SETUP_COMPLETED_KEY);
+    // console.log('[AuthAction] isSetupCompleteAction: Connected to database. Attempting to get config value for:', SETUP_COMPLETED_KEY);
     
     const setupCompletedValue = await getConfigValue(SETUP_COMPLETED_KEY, connection);
-    console.log(`[AuthAction] isSetupCompleteAction: Raw setupCompletedValue from getConfigValue: '${setupCompletedValue}' (type: ${typeof setupCompletedValue})`);
+    // console.log(`[AuthAction] isSetupCompleteAction: Raw setupCompletedValue from getConfigValue: '${setupCompletedValue}' (type: ${typeof setupCompletedValue})`);
 
     if (setupCompletedValue === 'true') {
-      console.log('[AuthAction] isSetupCompleteAction: Returning TRUE (setup is complete).');
+      // console.log('[AuthAction] isSetupCompleteAction: Returning TRUE (setup is complete).');
       return true;
     } else {
-      console.log(`[AuthAction] isSetupCompleteAction: Returning FALSE (setupCompletedValue is not 'true', it is '${setupCompletedValue}').`);
+      // console.log(`[AuthAction] isSetupCompleteAction: Returning FALSE (setupCompletedValue is not 'true', it is '${setupCompletedValue}').`);
       return false;
     }
   } catch (error: any) {
-    // Check if the error is due to the config table not existing
     if (error.message && (error.message.includes("Table 'config' doesn't exist") || (error.code && error.code === 'ER_NO_SUCH_TABLE'))) {
-      console.log('[AuthAction] isSetupCompleteAction: Config table does not exist. Returning FALSE (setup is not complete).');
+      // console.log('[AuthAction] isSetupCompleteAction: Config table does not exist. Returning FALSE (setup is not complete).');
       return false;
     }
     console.error(`[AuthAction] isSetupCompleteAction: Caught error: ${error.message}`, error);
-    console.log('[AuthAction] isSetupCompleteAction: Returning FALSE due to error.');
+    // console.log('[AuthAction] isSetupCompleteAction: Returning FALSE due to error.');
     return false;
   } finally {
     if (connection) {
-      console.log('[AuthAction] isSetupCompleteAction: Releasing database connection.');
+      // console.log('[AuthAction] isSetupCompleteAction: Releasing database connection.');
       connection.release();
     }
-    console.log('[AuthAction] isSetupCompleteAction: BOTTOM');
+    // console.log('[AuthAction] isSetupCompleteAction: BOTTOM');
   }
 }
 
 
 export async function getSelectedDatabaseTypeAction(): Promise<string> {
     noStore();
-    console.log('[AuthAction] getSelectedDatabaseTypeAction: Determining database type.');
+    // console.log('[AuthAction] getSelectedDatabaseTypeAction: Determining database type.');
     try {
       const isSetupDone = await isSetupCompleteAction();
       if (isSetupDone) {
-        console.log('[AuthAction] getSelectedDatabaseTypeAction: Setup is complete, returning "mysql".');
+        // console.log('[AuthAction] getSelectedDatabaseTypeAction: Setup is complete, returning "mysql".');
         return 'mysql';
       }
-      console.log('[AuthAction] getSelectedDatabaseTypeAction: Setup not complete, returning "unconfigured".');
+      // console.log('[AuthAction] getSelectedDatabaseTypeAction: Setup not complete, returning "unconfigured".');
       return 'unconfigured';
     } catch (error: any) {
       console.error(`[AuthAction] getSelectedDatabaseTypeAction: Error. Message: ${error.message}`, error);
@@ -295,14 +314,14 @@ export async function resetSetupStateAction(): Promise<ActionResult> {
         connection = await connectToDatabase();
         await connection.beginTransaction();
         
-        // Check if config table exists before attempting to delete from it
         const [tables] = await connection.query<RowDataPacket[]>("SHOW TABLES LIKE 'config'");
         if (tables.length > 0) {
             console.log(`[AuthAction] resetSetupStateAction: 'config' table exists. Deleting keys.`);
-            console.log(`[AuthAction] resetSetupStateAction: Deleting config key: ${ADMIN_PASSWORD_KEY}`);
             await connection.query("DELETE FROM config WHERE config_key = ?", [ADMIN_PASSWORD_KEY]);
-            console.log(`[AuthAction] resetSetupStateAction: Deleting config key: ${SETUP_COMPLETED_KEY}`);
             await connection.query("DELETE FROM config WHERE config_key = ?", [SETUP_COMPLETED_KEY]);
+            await connection.query("DELETE FROM config WHERE config_key = ?", [LOGO_TEXT_KEY]);
+            await connection.query("DELETE FROM config WHERE config_key = ?", [LOGO_ICON_KEY]);
+            console.log(`[AuthAction] resetSetupStateAction: All relevant config keys deleted.`);
         } else {
             console.log(`[AuthAction] resetSetupStateAction: 'config' table does not exist. No keys to delete.`);
         }
@@ -318,6 +337,116 @@ export async function resetSetupStateAction(): Promise<ActionResult> {
         if (connection) connection.release();
     }
 }
-    
+
+export async function changeAdminPasswordAction(currentPasswordInput: string, newPasswordInput: string): Promise<ActionResult> {
+  noStore();
+  console.log('[AuthAction] changeAdminPasswordAction: Attempting to change admin password.');
+
+  if (!newPasswordInput) {
+    return { success: false, error: '新密码不能为空。' };
+  }
+
+  const setupCompleted = await isSetupCompleteAction();
+  if (!setupCompleted) {
+    return { success: false, error: '应用尚未完成初始设置，无法更改密码。' };
+  }
+
+  const currentHashedPassword = await getConfigValue(ADMIN_PASSWORD_KEY);
+  if (!currentHashedPassword) {
+      // This case might occur if initial setup was done without a password, or if a reset happened.
+      // For security, if no password is set, we might want to force initial password setup flow.
+      // However, if we allow changing from "no password" to "new password", we skip verification.
+      // For now, let's assume a password must exist to be changed.
+      // If there's no current password in DB, it implies an incomplete or reset setup.
+      console.warn('[AuthAction] changeAdminPasswordAction: No current admin password hash found in DB. This might indicate an incomplete setup or a reset.');
+      // To handle this, let's verify if currentPasswordInput is also empty, signifying user knows no password is set.
+      if (currentPasswordInput) {
+         return { success: false, error: '当前管理员密码记录不存在，但您提供了当前密码。请检查系统状态或联系支持。' };
+      }
+      // If no current password in DB AND user provides no currentPasswordInput, proceed to set new password
+  } else {
+      // If a hashed password exists, verify currentPasswordInput against it
+      if (!currentPasswordInput) {
+        return { success: false, error: '当前密码不能为空，因为系统记录中存在密码。' };
+      }
+      const isCurrentPasswordValid = await bcrypt.compare(currentPasswordInput, currentHashedPassword);
+      if (!isCurrentPasswordValid) {
+        return { success: false, error: '当前密码不正确。' };
+      }
+  }
+
+
+  let connection: PoolConnection | null = null;
+  try {
+    connection = await connectToDatabase();
+    await connection.beginTransaction();
+
+    const newHashedPassword = await bcrypt.hash(newPasswordInput, 10);
+    await setConfigValue(ADMIN_PASSWORD_KEY, newHashedPassword, connection);
+
+    await connection.commit();
+    console.log('[AuthAction] changeAdminPasswordAction: Admin password changed successfully.');
+    return { success: true, message: '管理员密码已成功更新！' };
+  } catch (error: any) {
+    if (connection) await connection.rollback();
+    console.error(`[AuthAction] changeAdminPasswordAction: Error. Message: ${error.message}`, error);
+    return { success: false, error: `密码更新失败: ${error.message}` };
+  } finally {
+    if (connection) connection.release();
+  }
+}
+
+export async function getAppSettingsAction(): Promise<AppSettingsResult> {
+  noStore();
+  // console.log('[AuthAction] getAppSettingsAction: Fetching app settings.');
+  let connection: PoolConnection | null = null;
+  try {
+    connection = await connectToDatabase();
+    const logoText = await getConfigValue(LOGO_TEXT_KEY, connection);
+    const logoIcon = await getConfigValue(LOGO_ICON_KEY, connection);
+    const adminPasswordHash = await getConfigValue(ADMIN_PASSWORD_KEY, connection);
+    return { 
+      logoText: logoText || '晚风Marks', 
+      logoIcon: logoIcon || 'ShieldCheck',
+      adminPasswordSet: !!adminPasswordHash // True if hash exists, false otherwise
+    };
+  } catch (error: any) {
+    console.error(`[AuthAction] getAppSettingsAction: Error. Message: ${error.message}`, error);
+    return { 
+        logoText: '晚风Marks', 
+        logoIcon: 'ShieldCheck', 
+        adminPasswordSet: false 
+    }; // Return defaults on error
+  } finally {
+    if (connection) connection.release();
+  }
+}
+
+export async function updateLogoSettingsAction(logoText: string, logoIcon: string): Promise<ActionResult> {
+  noStore();
+  console.log('[AuthAction] updateLogoSettingsAction: Updating logo settings.');
+  if (!logoText || !logoIcon) {
+    return { success: false, error: 'Logo 文本和图标不能为空。' };
+  }
+
+  let connection: PoolConnection | null = null;
+  try {
+    connection = await connectToDatabase();
+    await connection.beginTransaction();
+
+    await setConfigValue(LOGO_TEXT_KEY, logoText, connection);
+    await setConfigValue(LOGO_ICON_KEY, logoIcon, connection);
+
+    await connection.commit();
+    console.log('[AuthAction] updateLogoSettingsAction: Logo settings updated successfully.');
+    return { success: true, message: 'Logo 设置已成功更新！' };
+  } catch (error: any) {
+    if (connection) await connection.rollback();
+    console.error(`[AuthAction] updateLogoSettingsAction: Error. Message: ${error.message}`, error);
+    return { success: false, error: `Logo 设置更新失败: ${error.message}` };
+  } finally {
+    if (connection) connection.release();
+  }
+}
 
     
