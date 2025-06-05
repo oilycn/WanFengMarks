@@ -56,7 +56,8 @@ export async function connectToDatabase(): Promise<mysql.PoolConnection> {
 
 /*
 IMPORTANT: SQL Table Definitions
-Run these commands in your MySQL database ONCE to set up the necessary tables if you haven't used the in-app initializer.
+These commands are executed by the `initializeMySQLDatabaseAction` if the tables don't exist.
+You generally don't need to run them manually if you use the in-app setup.
 
 1. Config Table (for admin password and setup status):
 CREATE TABLE IF NOT EXISTS config (
@@ -71,6 +72,7 @@ CREATE TABLE IF NOT EXISTS categories (
   icon VARCHAR(50) DEFAULT 'Folder',
   is_visible BOOLEAN DEFAULT TRUE,
   is_private BOOLEAN DEFAULT FALSE,
+  priority INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -83,9 +85,9 @@ CREATE TABLE IF NOT EXISTS bookmarks (
   category_id INT,
   description TEXT,
   is_private BOOLEAN DEFAULT FALSE,
+  priority INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 */
-

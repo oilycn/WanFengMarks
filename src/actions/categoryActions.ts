@@ -3,7 +3,7 @@
 
 import type { Category } from '@/types';
 import { connectToDatabase, query } from '@/lib/mysql';
-import type { RowDataPacket, OkPacket } from 'mysql2';
+import type { RowDataPacket, OkPacket, PoolConnection } from 'mysql2/promise';
 import { unstable_noStore as noStore } from 'next/cache';
 
 interface CategoryRow extends RowDataPacket {
@@ -12,6 +12,11 @@ interface CategoryRow extends RowDataPacket {
   icon: string;
   is_visible: boolean | number; // MySQL BOOLEAN can be 0 or 1
   is_private: boolean | number;
+  priority: number;
+}
+
+interface MaxPriorityRow extends RowDataPacket {
+  max_priority: number | null;
 }
 
 function mapDbRowToCategory(row: CategoryRow): Category {
@@ -21,25 +26,25 @@ function mapDbRowToCategory(row: CategoryRow): Category {
     icon: row.icon || 'Folder',
     isVisible: Boolean(row.is_visible),
     isPrivate: Boolean(row.is_private),
+    priority: row.priority || 0,
   };
 }
 
-async function ensureDefaultCategory() {
+async function ensureDefaultCategory(connection?: PoolConnection) {
   noStore();
   const defaultCategoryName = '通用书签';
+  const execQuery = connection ? connection.query.bind(connection) : query;
   try {
-    const existing = await query<CategoryRow[]>("SELECT id FROM categories WHERE name = ?", [defaultCategoryName]);
+    const existing = await execQuery<CategoryRow[]>("SELECT id FROM categories WHERE name = ?", [defaultCategoryName]);
     if (existing.length === 0) {
-      await query(
-        "INSERT INTO categories (name, icon, is_visible, is_private) VALUES (?, ?, ?, ?)",
-        [defaultCategoryName, 'Folder', true, false]
+      await execQuery(
+        "INSERT INTO categories (name, icon, is_visible, is_private, priority) VALUES (?, ?, ?, ?, ?)",
+        [defaultCategoryName, 'Folder', true, false, 1] // Default category gets priority 1
       );
-      console.log(`Created default '${defaultCategoryName}' category in MySQL DB.`);
+      console.log(`Created default '${defaultCategoryName}' category in MySQL DB with priority 1.`);
     }
   } catch (error) {
     console.error("Error ensuring default category in MySQL:", error);
-    // If table doesn't exist yet, this might fail.
-    // It should be created by the user manually as per instructions in mysql.ts
   }
 }
 
@@ -47,53 +52,62 @@ export async function getCategoriesAction(): Promise<Category[]> {
   noStore();
   console.log('Server Action: getCategoriesAction called (MySQL)');
   try {
-    await ensureDefaultCategory(); // Ensure default category exists
-    const rows = await query<CategoryRow[]>("SELECT * FROM categories ORDER BY name ASC");
+    await ensureDefaultCategory();
+    const rows = await query<CategoryRow[]>("SELECT * FROM categories ORDER BY priority DESC, name ASC");
     return rows.map(mapDbRowToCategory);
   } catch (error) {
     console.error("Error fetching categories from MySQL DB:", error);
-    // Attempt to return a minimal default if DB fails
-    return [{ id: 'default-fallback-mysql', name: '通用书签 (错误)', isVisible: true, icon: 'Folder', isPrivate: false }];
+    return [{ id: 'default-fallback-mysql', name: '通用书签 (错误)', isVisible: true, icon: 'Folder', isPrivate: false, priority: 0 }];
   }
 }
 
 export async function addCategoryAction(name: string, icon?: string, isPrivate?: boolean): Promise<Category> {
   noStore();
   console.log('Server Action: addCategoryAction called with (MySQL):', { name, icon, isPrivate });
+  let connection: PoolConnection | null = null;
   try {
-    const existingCategory = await query<CategoryRow[]>("SELECT id FROM categories WHERE name = ?", [name]);
-    if (existingCategory.length > 0) {
+    connection = await connectToDatabase();
+    await connection.beginTransaction();
+
+    const existingCategory = await connection.query<CategoryRow[]>("SELECT id FROM categories WHERE name = ?", [name]);
+    if (existingCategory[0].length > 0) {
       throw new Error('Category name already exists');
     }
 
-    const result = await query<OkPacket>(
-      "INSERT INTO categories (name, icon, is_visible, is_private) VALUES (?, ?, ?, ?)",
-      [name, icon || 'Folder', true, isPrivate || false]
+    const [maxPriorityResult] = await connection.query<MaxPriorityRow[]>("SELECT MAX(priority) as max_priority FROM categories");
+    const nextPriority = (maxPriorityResult[0]?.max_priority || 0) + 1;
+
+    const [result] = await connection.query<OkPacket>(
+      "INSERT INTO categories (name, icon, is_visible, is_private, priority) VALUES (?, ?, ?, ?, ?)",
+      [name, icon || 'Folder', true, isPrivate || false, nextPriority]
     );
-    
+
     if (!result.insertId) {
         throw new Error('Failed to insert category into MySQL DB.');
     }
-    
+    await connection.commit();
     return {
       id: String(result.insertId),
       name,
       icon: icon || 'Folder',
       isVisible: true,
       isPrivate: isPrivate || false,
+      priority: nextPriority,
     };
   } catch (error) {
+    if (connection) await connection.rollback();
     console.error("Error adding category to MySQL DB:", error);
-    throw error; 
+    throw error;
+  } finally {
+    if (connection) connection.release();
   }
 }
 
 export async function updateCategoryAction(categoryToUpdate: Category): Promise<Category> {
   noStore();
   console.log('Server Action: updateCategoryAction called with (MySQL):', categoryToUpdate);
-  const { id, name, icon, isVisible, isPrivate } = categoryToUpdate;
+  const { id, name, icon, isVisible, isPrivate, priority } = categoryToUpdate; // priority included
   try {
-    // Check for name collision if name is being changed
     if (name) {
         const existingCategoryWithSameName = await query<CategoryRow[]>(
             "SELECT id FROM categories WHERE name = ? AND id != ?",
@@ -103,29 +117,26 @@ export async function updateCategoryAction(categoryToUpdate: Category): Promise<
             throw new Error('Another category with this name already exists');
         }
     }
-    
-    // Prevent changing name or privacy of '通用书签' category
+
     const currentCategoryResult = await query<CategoryRow[]>("SELECT name, icon FROM categories WHERE id = ?", [id]);
     if (currentCategoryResult.length > 0) {
         const currentCategory = currentCategoryResult[0];
         if (currentCategory.name === '通用书签' && currentCategory.icon === 'Folder') {
             if (name && name !== '通用书签') {
-                console.warn("Attempt to change name of '通用书签' category (MySQL) blocked.");
-                categoryToUpdate.name = '通用书签'; // Revert name change
+                categoryToUpdate.name = '通用书签';
             }
             if (isPrivate === true) {
-                console.warn("Attempt to make '通用书签' category private (MySQL) blocked.");
-                categoryToUpdate.isPrivate = false; // Revert privacy change
+                categoryToUpdate.isPrivate = false;
             }
         }
     }
 
     await query(
-      "UPDATE categories SET name = ?, icon = ?, is_visible = ?, is_private = ? WHERE id = ?",
-      [categoryToUpdate.name, categoryToUpdate.icon || 'Folder', categoryToUpdate.isVisible, categoryToUpdate.isPrivate || false, id]
+      "UPDATE categories SET name = ?, icon = ?, is_visible = ?, is_private = ?, priority = ? WHERE id = ?",
+      [categoryToUpdate.name, categoryToUpdate.icon || 'Folder', categoryToUpdate.isVisible, categoryToUpdate.isPrivate || false, priority, id]
     );
-    
-    return categoryToUpdate; // Return the updated object as passed in, assuming success
+
+    return categoryToUpdate;
   } catch (error) {
     console.error("Error updating category in MySQL DB:", error);
     throw error;
@@ -144,20 +155,48 @@ export async function deleteCategoryAction(categoryId: string): Promise<{ id: st
         }
     }
 
-    // Bookmarks associated with this category will be handled by ON DELETE SET NULL (or ON DELETE CASCADE) in DB schema
-    // Or could be explicitly updated here to move to a default category before deleting.
-    // For now, relying on DB constraint. The `deleteBookmarksByCategoryIdAction` in `bookmarkActions.ts` is more explicit.
-
     const result = await query<OkPacket>("DELETE FROM categories WHERE id = ?", [categoryId]);
     if (result.affectedRows === 0) {
       console.warn(`Category with ID ${categoryId} (MySQL) not found for deletion, or already deleted.`);
     }
-    
-    await ensureDefaultCategory(); // Ensure default category still exists or is recreated if somehow deleted
+
+    await ensureDefaultCategory();
 
     return { id: categoryId };
   } catch (error) {
     console.error("Error deleting category from MySQL DB:", error);
     throw error;
+  }
+}
+
+export async function updateCategoriesOrderAction(orderedCategoryIds: string[]): Promise<{ success: boolean }> {
+  noStore();
+  console.log('Server Action: updateCategoriesOrderAction called with (MySQL):', orderedCategoryIds);
+  if (!orderedCategoryIds || orderedCategoryIds.length === 0) {
+    return { success: true }; // No order to update
+  }
+
+  let connection: PoolConnection | null = null;
+  try {
+    connection = await connectToDatabase();
+    await connection.beginTransaction();
+
+    const totalItems = orderedCategoryIds.length;
+    for (let i = 0; i < totalItems; i++) {
+      const categoryId = orderedCategoryIds[i];
+      const priority = totalItems - 1 - i; // Highest priority for the first item in the array
+      await connection.query("UPDATE categories SET priority = ? WHERE id = ?", [priority, Number(categoryId)]);
+    }
+
+    await connection.commit();
+    console.log('Categories order updated successfully.');
+    return { success: true };
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("Error updating categories order in MySQL DB:", error);
+    // throw error; // Optionally re-throw or return specific error info
+    return { success: false };
+  } finally {
+    if (connection) connection.release();
   }
 }
