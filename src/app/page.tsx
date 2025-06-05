@@ -3,18 +3,19 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import AppSidebar from '@/components/AppSidebar';
 import AppHeader from '@/components/AppHeader';
 import BookmarkGrid from '@/components/BookmarkGrid';
-import AddBookmarkDialog from '@/components/AddBookmarkDialog';
-import EditBookmarkDialog from '@/components/EditBookmarkDialog';
-import EditCategoryDialog from '@/components/EditCategoryDialog';
-import PasswordDialog from '@/components/PasswordDialog';
-import SettingsDialog from '@/components/SettingsDialog'; // Import SettingsDialog
+// import AddBookmarkDialog from '@/components/AddBookmarkDialog'; // Static import removed
+// import EditBookmarkDialog from '@/components/EditBookmarkDialog'; // Static import removed
+// import EditCategoryDialog from '@/components/EditCategoryDialog'; // Static import removed
+// import PasswordDialog from '@/components/PasswordDialog'; // Static import removed
+// import SettingsDialog from '@/components/SettingsDialog'; // Static import removed
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { PlusCircle, LogOut, Copy, Settings as SettingsIcon } from 'lucide-react'; // Added SettingsIcon
+import { PlusCircle, LogOut, Copy, Settings as SettingsIcon } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import {
   DragDropContext,
@@ -42,6 +43,13 @@ import {
   updateLogoSettingsAction,
 } from '@/actions/authActions';
 import { useIsMobile } from '@/hooks/use-mobile';
+
+// Dynamically import dialogs
+const AddBookmarkDialog = dynamic(() => import('@/components/AddBookmarkDialog'));
+const EditBookmarkDialog = dynamic(() => import('@/components/EditBookmarkDialog'));
+const EditCategoryDialog = dynamic(() => import('@/components/EditCategoryDialog'));
+const PasswordDialog = dynamic(() => import('@/components/PasswordDialog'));
+const SettingsDialog = dynamic(() => import('@/components/SettingsDialog'));
 
 
 const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1';
@@ -686,15 +694,17 @@ export default function HomePage() {
       </div>
 
 
-      <AddBookmarkDialog
-        isOpen={isAddBookmarkDialogOpen}
-        onClose={handleCloseAddBookmarkDialog}
-        onAddBookmark={handleAddBookmark}
-        categories={categoriesForSidebar.filter(c => c.id !== 'all')} 
-        activeCategoryId={activeCategory}
-        initialData={initialDataForAddDialog}
-      />
-      {bookmarkToEdit && (
+      {isAddBookmarkDialogOpen && (
+        <AddBookmarkDialog
+          isOpen={isAddBookmarkDialogOpen}
+          onClose={handleCloseAddBookmarkDialog}
+          onAddBookmark={handleAddBookmark}
+          categories={categoriesForSidebar.filter(c => c.id !== 'all')} 
+          activeCategoryId={activeCategory}
+          initialData={initialDataForAddDialog}
+        />
+      )}
+      {bookmarkToEdit && isEditBookmarkDialogOpen && (
         <EditBookmarkDialog
           isOpen={isEditBookmarkDialogOpen}
           onClose={() => { setIsEditBookmarkDialogOpen(false); setBookmarkToEdit(null); }}
@@ -703,7 +713,7 @@ export default function HomePage() {
           categories={categoriesForSidebar.filter(c => c.id !== 'all')} 
         />
       )}
-      {categoryToEdit && (
+      {categoryToEdit && isEditCategoryDialogOpen && (
         <EditCategoryDialog
           isOpen={isEditCategoryDialogOpen}
           onClose={() => { setIsEditCategoryDialogOpen(false); setCategoryToEdit(null); }}
@@ -711,12 +721,14 @@ export default function HomePage() {
           categoryToEdit={categoryToEdit}
         />
       )}
-      <PasswordDialog
-        isOpen={showPasswordDialog}
-        onClose={() => setShowPasswordDialog(false)}
-        onSubmit={handlePasswordSubmit}
-      />
-      {isAdminAuthenticated && (
+      {showPasswordDialog && (
+        <PasswordDialog
+          isOpen={showPasswordDialog}
+          onClose={() => setShowPasswordDialog(false)}
+          onSubmit={handlePasswordSubmit}
+        />
+      )}
+      {isAdminAuthenticated && isSettingsDialogOpen && (
           <SettingsDialog
             isOpen={isSettingsDialogOpen}
             onClose={handleCloseSettingsDialog}
@@ -729,6 +741,8 @@ export default function HomePage() {
     </>
   );
 }
+    
+
     
 
     
