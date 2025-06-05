@@ -37,7 +37,7 @@ import {
 import { 
   isSetupCompleteAction, 
   verifyAdminPasswordAction, 
-  changeAdminPasswordAction, // Import new actions
+  changeAdminPasswordAction, 
   getAppSettingsAction,
   updateLogoSettingsAction,
 } from '@/actions/authActions';
@@ -59,7 +59,7 @@ export default function HomePage() {
   const [isClient, setIsClient] = useState(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>('all'); // Default to 'all'
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingSetup, setIsCheckingSetup] = useState(true);
@@ -184,7 +184,7 @@ export default function HomePage() {
     } catch (error) {
       console.error("HomePage: Failed to fetch data:", error);
       toast({ title: "错误", description: "加载数据失败，请稍后重试。", variant: "destructive" });
-       if (categories.length === 0) { // Check categories.length directly, not categories
+       if (categories.length === 0) { 
            const defaultCategory = { id: 'default-fallback-ui-error', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false, priority: 0 };
            setCategories([defaultCategory]);
        }
@@ -192,7 +192,7 @@ export default function HomePage() {
       setIsLoading(false);
       console.log("HomePage: fetchData finished. isLoading set to false.");
     }
-  }, [toast]); // Removed categories.length
+  }, [toast, categories.length]); 
 
   useEffect(() => {
     if (isClient && !isCheckingSetup) {
@@ -203,14 +203,8 @@ export default function HomePage() {
     }
   }, [isClient, isCheckingSetup, fetchData]);
 
-
-  useEffect(() => {
-    if(categories.length > 0 && !activeCategory && !isLoading) {
-      const firstVisibleCategory = categories.find(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated));
-      const defaultCat = categories.find(c => c.name === '通用书签' && c.isVisible && (!c.isPrivate || isAdminAuthenticated));
-      setActiveCategory(defaultCat?.id || firstVisibleCategory?.id || 'all');
-    }
-  }, [categories, activeCategory, isAdminAuthenticated, isLoading]);
+  // Removed useEffect that previously set a default active category,
+  // as activeCategory is now initialized to 'all'.
 
   const handleSetActiveCategory = (catId: string | null) => {
     if (hasPendingBookmarkOrderChanges) {
@@ -246,7 +240,6 @@ export default function HomePage() {
     }
     try {
       await deleteBookmarkAction(bookmarkId);
-      // Optimistic update removed to rely on fetchData for consistency
       toast({ title: "书签已删除", description: "书签已从服务器删除。", variant: "destructive", duration: 2000 });
       fetchData(hasPendingBookmarkOrderChanges); 
     } catch (error) {
@@ -265,14 +258,13 @@ export default function HomePage() {
     setIsEditBookmarkDialogOpen(true);
   }, [isAdminAuthenticated, toast]);
 
-  const handleUpdateBookmark = async (updatedBookmark: Bookmark) => {
+  const handleUpdateBookmark = useCallback(async (updatedBookmark: Bookmark) => {
      if (!isAdminAuthenticated) {
         toast({ title: "未授权", description: "请先进入管理模式。", variant: "destructive" });
         return;
     }
     try {
       const newUpdatedBookmark = await updateBookmarkAction(updatedBookmark);
-      // Optimistic update removed
       setIsEditBookmarkDialogOpen(false);
       setBookmarkToEdit(null);
       toast({ title: "书签已更新", description: `"${newUpdatedBookmark.name}" 已成功更新。`, duration: 2000 });
@@ -282,7 +274,7 @@ export default function HomePage() {
       const errorMessage = error instanceof Error ? error.message : "更新书签失败。";
       toast({ title: "错误", description: errorMessage, variant: "destructive" });
     }
-  };
+  }, [isAdminAuthenticated, toast, fetchData, hasPendingBookmarkOrderChanges]);
 
   const handleAddCategory = async (categoryName: string, icon?: string, isPrivate?: boolean) => {
     if (!isAdminAuthenticated) {
@@ -295,9 +287,8 @@ export default function HomePage() {
     }
     try {
       const newCategory = await addCategoryAction(categoryName, icon, isPrivate);
-      // Optimistic update removed
       toast({ title: "分类已添加", description: `"${newCategory.name}" 已成功添加。`, duration: 2000 });
-      fetchData(); // Refetch all data
+      fetchData(); 
     } catch (error) {
       console.error("Failed to add category:", error);
       const errorMessage = error instanceof Error ? error.message : "添加分类失败。";
@@ -352,11 +343,10 @@ export default function HomePage() {
     }
     try {
       const newUpdatedCategory = await updateCategoryAction(updatedCategory);
-      // Optimistic update removed
       setIsEditCategoryDialogOpen(false);
       setCategoryToEdit(null);
       toast({ title: "分类已更新", description: `"${newUpdatedCategory.name}" 已成功更新。`, duration: 2000 });
-      fetchData(); // Refetch all data
+      fetchData(); 
     } catch (error)
     {
       console.error("Failed to update category:", error);
@@ -374,7 +364,7 @@ export default function HomePage() {
         setShowPasswordDialog(false);
         toast({ title: "授权成功", description: "已进入管理模式。", duration: 2000 });
         fetchData(); 
-        await fetchAppSettings(); // Fetch settings which includes adminPasswordSet status
+        await fetchAppSettings(); 
       } else {
         toast({ title: "密码错误", description: "请输入正确的管理员密码。", variant: "destructive" });
       }
@@ -443,11 +433,8 @@ export default function HomePage() {
     const [movedItem] = reorderedItemsInActiveCategory.splice(sourceIndex, 1);
     reorderedItemsInActiveCategory.splice(destinationIndex, 0, movedItem);
 
-    // Optimistic UI update
     setBookmarks(prevGlobalBookmarks => {
       const otherGlobalBookmarks = prevGlobalBookmarks.filter(bm => bm.categoryId !== activeCategory);
-      // Create a new list where the reordered items from the active category are first,
-      // then followed by all other bookmarks. This effectively sets their global priority.
       return [...reorderedItemsInActiveCategory, ...otherGlobalBookmarks];
     });
 
@@ -460,7 +447,6 @@ export default function HomePage() {
       return;
     }
 
-    // The `bookmarks` state already reflects the desired global order due to the optimistic update logic.
     const globallyOrderedIdsForServer = bookmarks.map(bm => bm.id);
 
     try {
@@ -468,19 +454,18 @@ export default function HomePage() {
       if (res.success) {
         toast({ title: "书签顺序已保存", duration: 2000 });
         setHasPendingBookmarkOrderChanges(false);
-        fetchData(true); // Preserve other potential changes, though for bookmarks this might be redundant after order save
+        fetchData(true); 
       } else {
         toast({ title: "保存书签顺序失败", description: "服务器未能保存顺序。", variant: "destructive" });
-        fetchData(); // Revert to server state on failure
+        fetchData(); 
       }
     } catch (error) {
       console.error("Error saving bookmark order:", error);
       toast({ title: "保存书签顺序失败", description: "发生网络错误。", variant: "destructive" });
-      fetchData(); // Revert to server state on error
+      fetchData(); 
     }
   };
 
-  // Settings Dialog Handlers
   const handleOpenSettingsDialog = () => setIsSettingsDialogOpen(true);
   const handleCloseSettingsDialog = () => setIsSettingsDialogOpen(false);
 
@@ -504,7 +489,7 @@ export default function HomePage() {
           passwordChanged = true;
         } else {
           toast({ title: "密码更新失败", description: result.error, variant: "destructive" });
-          return; // Stop if password change fails
+          return; 
         }
       } catch (error: any) {
         toast({ title: "密码更新错误", description: error.message || "操作失败。", variant: "destructive" });
@@ -512,15 +497,15 @@ export default function HomePage() {
       }
     }
 
-    if (settingsData.logoText !== logoText || settingsData.logoIcon !== logoIconName) {
+    if (settingsData.logoText && settingsData.logoIcon && (settingsData.logoText !== logoText || settingsData.logoIcon !== logoIconName)) {
       try {
         const result = await updateLogoSettingsAction(
-          settingsData.logoText || logoText,
-          settingsData.logoIcon || logoIconName
+          settingsData.logoText,
+          settingsData.logoIcon
         );
         if (result.success) {
-          setLogoText(settingsData.logoText || logoText);
-          setLogoIconName(settingsData.logoIcon || logoIconName);
+          setLogoText(settingsData.logoText);
+          setLogoIconName(settingsData.logoIcon);
           toast({ title: "Logo 已更新", description: result.message, duration: 2000 });
           logoChanged = true;
         } else {
@@ -532,7 +517,7 @@ export default function HomePage() {
     }
     
     if (passwordChanged || logoChanged) {
-        await fetchAppSettings(); // Re-fetch settings to update adminPasswordExists if needed
+        await fetchAppSettings(); 
     }
     setIsSettingsDialogOpen(false);
   };
@@ -559,7 +544,6 @@ export default function HomePage() {
 
 
   if (!isClient || isCheckingSetup || isLoading) { 
-    console.log("HomePage: Render loading state. isClient:", isClient, "isCheckingSetup:", isCheckingSetup, "isLoading:", isLoading);
     return (
       <div className="flex flex-col min-h-screen items-center justify-center bg-background">
         <svg className="animate-spin h-20 w-20 text-primary" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
@@ -582,7 +566,6 @@ export default function HomePage() {
       </div>
     );
   }
-  console.log("HomePage: Render main content. isClient:", isClient, "isCheckingSetup:", isCheckingSetup, "isLoading:", isLoading);
 
   const categoriesForSidebar = visibleCategories.length > 0 ? visibleCategories : categories.filter(c => c.isVisible);
 
@@ -663,42 +646,45 @@ export default function HomePage() {
         </DragDropContext>
       ) : mainContent}
 
-      {isAdminAuthenticated && (
-        <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 flex flex-col space-y-2 z-40">
-          <Button
-            onClick={handleOpenAddBookmarkDialog}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
-            aria-label="添加书签"
-            title="添加书签"
-          >
-            <PlusCircle className="h-5 w-5" />
-          </Button>
-          <Button
-            onClick={handleCopyBookmarkletScript}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
-            aria-label="复制书签脚本"
-            title="复制书签脚本"
-          >
-            <Copy className="h-5 w-5" />
-          </Button>
-           <Button
-            onClick={handleOpenSettingsDialog}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
-            aria-label="应用设置"
-            title="应用设置"
-          >
-            <SettingsIcon className="h-5 w-5" />
-          </Button>
-          <Button
-            onClick={handleLogoutAdmin}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
-            aria-label="退出管理模式"
-            title="退出管理模式"
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
-        </div>
-      )}
+      <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 flex flex-col space-y-2 z-40">
+        {isAdminAuthenticated && (
+          <>
+            <Button
+              onClick={handleOpenAddBookmarkDialog}
+              className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
+              aria-label="添加书签"
+              title="添加书签"
+            >
+              <PlusCircle className="h-5 w-5" />
+            </Button>
+            <Button
+              onClick={handleCopyBookmarkletScript}
+              className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
+              aria-label="复制书签脚本"
+              title="复制书签脚本"
+            >
+              <Copy className="h-5 w-5" />
+            </Button>
+            <Button
+              onClick={handleOpenSettingsDialog}
+              className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
+              aria-label="应用设置"
+              title="应用设置"
+            >
+              <SettingsIcon className="h-5 w-5" />
+            </Button>
+            <Button
+              onClick={handleLogoutAdmin}
+              className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
+              aria-label="退出管理模式"
+              title="退出管理模式"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </>
+        )}
+      </div>
+
 
       <AddBookmarkDialog
         isOpen={isAddBookmarkDialogOpen}
@@ -743,6 +729,8 @@ export default function HomePage() {
     </>
   );
 }
+    
+
     
 
     
