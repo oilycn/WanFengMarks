@@ -21,7 +21,9 @@ const ADMIN_PASSWORD = "7";
 
 const APP_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:9002';
 
+// Updated BOOKMARKLET_SCRIPT to open a popup window
 const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);let desc='';const metaDesc=document.querySelector('meta[name="description"]');if(metaDesc){desc=encodeURIComponent(metaDesc.content);}else{const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc){desc=encodeURIComponent(ogDesc.content);}}const popupWidth=500;const popupHeight=650;const left=(screen.width/2)-(popupWidth/2);const top=(screen.height/2)-(popupHeight/2);const wanfengWindow=window.open(\`\${appUrl}/add-bookmark-popup?name=\${title}&url=\${pageUrl}&desc=\${desc}\`, 'wanfengMarksAddBookmarkPopup', \`toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=\${popupWidth}, height=\${popupHeight}, top=\${top}, left=\${left}\`);if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks书签添加窗口。请检查浏览器是否阻止了弹出窗口。');}})();`;
+
 
 export default function HomePage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -49,6 +51,25 @@ export default function HomePage() {
     if (adminAuth === 'true') {
       setIsAdminAuthenticated(true);
     }
+
+    // Logic to handle query parameters from bookmarklet (moved from original HomePage to here for popup to work)
+    // This logic is now primarily for the new /add-bookmark-popup page, but good to check here too for safety or future use.
+    const queryParams = new URLSearchParams(window.location.search);
+    const nameFromQuery = queryParams.get('name');
+    const urlFromQuery = queryParams.get('url');
+    const descFromQuery = queryParams.get('desc');
+
+    if (queryParams.get('from') === 'bookmarklet' && nameFromQuery && urlFromQuery) {
+      setInitialDataForAddDialog({
+        name: decodeURIComponent(nameFromQuery),
+        url: decodeURIComponent(urlFromQuery),
+        description: descFromQuery ? decodeURIComponent(descFromQuery) : undefined,
+      });
+      setIsAddBookmarkDialogOpen(true);
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
   }, []); 
 
   useEffect(() => {
@@ -284,36 +305,51 @@ export default function HomePage() {
               <div className="fixed bottom-6 right-6 flex flex-col space-y-2 z-20">
                 <Button
                   onClick={handleOpenAddBookmarkDialog}
-                  className="group bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg transition-all duration-200 ease-in-out 
-                             w-10 h-10 rounded-full p-0 flex items-center justify-center 
-                             hover:w-auto hover:rounded-md hover:px-3 hover:py-2 hover:justify-start"
+                  className="group bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg 
+                             flex items-center justify-center
+                             h-10 rounded-full p-0 
+                             transition-all ease-in-out duration-500
+                             w-10 group-hover:w-auto group-hover:rounded-md group-hover:px-3 group-hover:py-2 group-hover:justify-start
+                             delay-[2000ms] group-hover:delay-0"
                   aria-label="添加书签"
                   title="添加书签"
                 >
-                  <PlusCircle className="h-5 w-5 flex-shrink-0" />
-                  <span className="ml-2 hidden group-hover:inline whitespace-nowrap text-sm">添加书签</span>
+                  <PlusCircle className="h-5 w-5 flex-shrink-0 transition-transform duration-500 ease-in-out delay-[2000ms] group-hover:delay-0" />
+                  <span className="whitespace-nowrap text-sm overflow-hidden transition-all ease-in-out duration-500 max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 group-hover:ml-2 delay-[2000ms] group-hover:delay-[50ms]">
+                    添加书签
+                  </span>
                 </Button>
                 <Button
                   onClick={handleCopyBookmarkletScript}
-                  className="group bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg transition-all duration-200 ease-in-out 
-                             w-10 h-10 rounded-full p-0 flex items-center justify-center 
-                             hover:w-auto hover:rounded-md hover:px-3 hover:py-2 hover:justify-start"
+                  className="group bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg
+                             flex items-center justify-center
+                             h-10 rounded-full p-0
+                             transition-all ease-in-out duration-500
+                             w-10 group-hover:w-auto group-hover:rounded-md group-hover:px-3 group-hover:py-2 group-hover:justify-start
+                             delay-[2000ms] group-hover:delay-0"
                   aria-label="复制书签脚本"
                   title="复制书签脚本"
                 >
-                  <Copy className="h-5 w-5 flex-shrink-0" />
-                  <span className="ml-2 hidden group-hover:inline whitespace-nowrap text-sm">复制书签脚本</span>
+                  <Copy className="h-5 w-5 flex-shrink-0 transition-transform duration-500 ease-in-out delay-[2000ms] group-hover:delay-0" />
+                  <span className="whitespace-nowrap text-sm overflow-hidden transition-all ease-in-out duration-500 max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 group-hover:ml-2 delay-[2000ms] group-hover:delay-[50ms]">
+                    复制书签脚本
+                  </span>
                 </Button>
                  <Button
                   onClick={handleLogoutAdmin}
-                  className="group bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg transition-all duration-200 ease-in-out 
-                             w-10 h-10 rounded-full p-0 flex items-center justify-center 
-                             hover:w-auto hover:rounded-md hover:px-3 hover:py-2 hover:justify-start"
+                  className="group bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg
+                             flex items-center justify-center
+                             h-10 rounded-full p-0
+                             transition-all ease-in-out duration-500
+                             w-10 group-hover:w-auto group-hover:rounded-md group-hover:px-3 group-hover:py-2 group-hover:justify-start
+                             delay-[2000ms] group-hover:delay-0"
                   aria-label="退出管理模式"
                   title="退出管理模式"
                 >
-                  <LogOut className="h-5 w-5 flex-shrink-0" />
-                  <span className="ml-2 hidden group-hover:inline whitespace-nowrap text-sm">退出管理模式</span>
+                  <LogOut className="h-5 w-5 flex-shrink-0 transition-transform duration-500 ease-in-out delay-[2000ms] group-hover:delay-0" />
+                  <span className="whitespace-nowrap text-sm overflow-hidden transition-all ease-in-out duration-500 max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 group-hover:ml-2 delay-[2000ms] group-hover:delay-[50ms]">
+                    退出管理模式
+                  </span>
                 </Button>
               </div>
             )}
