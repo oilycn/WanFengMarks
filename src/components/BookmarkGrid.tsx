@@ -113,7 +113,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
         <FolderOpen className="mx-auto h-16 w-16 text-muted-foreground/50 mb-4" />
         <h2 className="text-2xl font-semibold mb-2 text-foreground/80">"{currentCategoryName || '此分类'}" 中没有书签</h2>
         {isAdminAuthenticated ? (
-          <p className="text-md text-muted-foreground">点击上方的 "添加书签" 按钮来添加新的书签吧！</p>
+          <p className="text-md text-muted-foreground">点击右下角的添加按钮来添加新的书签吧！</p>
         ) : (
           <p className="text-md text-muted-foreground">当前分类下没有书签。</p>
         )}
@@ -186,3 +186,4 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
 };
 
 export default BookmarkGrid;
+

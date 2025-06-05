@@ -51,25 +51,6 @@ export default function HomePage() {
     if (adminAuth === 'true') {
       setIsAdminAuthenticated(true);
     }
-
-    // Logic to handle query parameters from bookmarklet (moved from original HomePage to here for popup to work)
-    // This logic is now primarily for the new /add-bookmark-popup page, but good to check here too for safety or future use.
-    const queryParams = new URLSearchParams(window.location.search);
-    const nameFromQuery = queryParams.get('name');
-    const urlFromQuery = queryParams.get('url');
-    const descFromQuery = queryParams.get('desc');
-
-    if (queryParams.get('from') === 'bookmarklet' && nameFromQuery && urlFromQuery) {
-      setInitialDataForAddDialog({
-        name: decodeURIComponent(nameFromQuery),
-        url: decodeURIComponent(urlFromQuery),
-        description: descFromQuery ? decodeURIComponent(descFromQuery) : undefined,
-      });
-      setIsAddBookmarkDialogOpen(true);
-      // Clean URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-
   }, []); 
 
   useEffect(() => {
@@ -300,9 +281,9 @@ export default function HomePage() {
           onShowPasswordDialog={() => setShowPasswordDialog(true)}
         />
         <div className="flex-1 flex flex-col overflow-y-auto bg-background relative">
-          <main className="flex-grow p-4 md:p-6 relative">
+          <main className="flex-grow p-4 md:p-6 relative"> {/* Added relative here for potential absolute children */}
             {isAdminAuthenticated && (
-              <div className="fixed bottom-6 right-6 flex flex-col space-y-2 z-20">
+              <div className="fixed bottom-16 right-6 flex flex-col space-y-2 z-20">
                 <Button
                   onClick={handleOpenAddBookmarkDialog}
                   className="group bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg 
@@ -409,3 +390,4 @@ export default function HomePage() {
     
 
     
+
