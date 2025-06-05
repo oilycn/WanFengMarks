@@ -11,7 +11,7 @@ import EditCategoryDialog from '@/components/EditCategoryDialog';
 import PasswordDialog from '@/components/PasswordDialog';
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, EyeOff, Eye } from 'lucide-react';
+import { PlusCircle, EyeOff, Eye, Copy } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 const LS_BOOKMARKS_KEY = 'wanfeng_bookmarks_v1_zh';
@@ -24,6 +24,14 @@ interface WanfengMarksWindow extends Window {
 }
 
 declare const window: WanfengMarksWindow;
+
+const BOOKMARKLET_SCRIPT = `javascript:(function(){
+  if (typeof window.wanfengMarksOpenAddDialog === 'function') {
+    window.wanfengMarksOpenAddDialog({name: document.title, url: window.location.href});
+  } else {
+    alert('请确保 "晚风Marks" 应用已在浏览器中打开并处于活动状态，然后重试此书签脚本。如果您尚未打开 "晚风Marks"，请先打开它。');
+  }
+})();`;
 
 export default function HomePage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -51,13 +59,11 @@ export default function HomePage() {
       setIsAdminAuthenticated(true);
     }
 
-    // Expose function to global window object
     window.wanfengMarksOpenAddDialog = (data: { name: string; url: string }) => {
       setInitialDataForAddDialog(data);
       setIsAddBookmarkDialogOpen(true);
     };
 
-    // Cleanup function when component unmounts
     return () => {
       if (window.wanfengMarksOpenAddDialog) {
         delete window.wanfengMarksOpenAddDialog;
@@ -114,7 +120,7 @@ export default function HomePage() {
     const bookmarkWithId = { ...newBookmarkData, id: Date.now().toString() + Math.random().toString(36).substring(2,7) };
     setBookmarks(prev => [...prev, bookmarkWithId]);
     setIsAddBookmarkDialogOpen(false);
-    setInitialDataForAddDialog(null); // Clear prefill data
+    setInitialDataForAddDialog(null); 
   };
 
   const handleDeleteBookmark = (bookmarkId: string) => {
@@ -204,15 +210,24 @@ export default function HomePage() {
   };
   
   const handleOpenAddBookmarkDialog = () => {
-    setInitialDataForAddDialog(null); // Ensure no prefill data for manual open
+    setInitialDataForAddDialog(null); 
     setIsAddBookmarkDialogOpen(true);
   };
 
   const handleCloseAddBookmarkDialog = () => {
     setIsAddBookmarkDialogOpen(false);
-    setInitialDataForAddDialog(null); // Clear prefill data on close
+    setInitialDataForAddDialog(null); 
   };
 
+  const handleCopyBookmarkletScript = async () => {
+    try {
+      await navigator.clipboard.writeText(BOOKMARKLET_SCRIPT);
+      toast({ title: "脚本已复制", description: "书签脚本已复制到剪贴板。" });
+    } catch (err) {
+      toast({ title: "复制失败", description: "无法复制脚本，请手动复制或检查浏览器权限。", variant: "destructive" });
+      console.error('Failed to copy bookmarklet script: ', err);
+    }
+  };
 
   const visibleCategories = categories.filter(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated));
 
@@ -267,6 +282,9 @@ export default function HomePage() {
                 </Button>
                 <Button variant="outline" onClick={handleLogoutAdmin}>
                   <EyeOff className="mr-2 h-4 w-4" /> 退出管理模式
+                </Button>
+                <Button variant="outline" onClick={handleCopyBookmarkletScript}>
+                  <Copy className="mr-2 h-4 w-4" /> 复制书签脚本
                 </Button>
               </div>
             )}
