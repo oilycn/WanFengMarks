@@ -19,12 +19,9 @@ const LS_CATEGORIES_KEY = 'wanfeng_categories_v1_zh';
 const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1';
 const ADMIN_PASSWORD = "7";
 
-// IMPORTANT: For the bookmarklet to work correctly, especially during development,
-// ensure this URL matches where your "晚风Marks" app is running.
-// For production, this would be your deployed app's URL.
 const APP_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:9002';
 
-const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);const wanfengWindow=window.open(\`\${appUrl}/?action=addFromBookmarklet&name=\${title}&url=\${pageUrl}\`, '_blank');if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks。请检查浏览器是否阻止了弹出窗口。');}})();`;
+const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);let desc='';const metaDesc=document.querySelector('meta[name="description"]');if(metaDesc){desc=encodeURIComponent(metaDesc.content);}else{const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc){desc=encodeURIComponent(ogDesc.content);}}const wanfengWindow=window.open(\`\${appUrl}/?action=addFromBookmarklet&name=\${title}&url=\${pageUrl}&desc=\${desc}\`, '_blank');if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks。请检查浏览器是否阻止了弹出窗口。');}})();`;
 
 export default function HomePage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -41,7 +38,7 @@ export default function HomePage() {
   const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
 
-  const [initialDataForAddDialog, setInitialDataForAddDialog] = useState<{ name?: string; url?: string } | null>(null);
+  const [initialDataForAddDialog, setInitialDataForAddDialog] = useState<{ name?: string; url?: string; description?: string } | null>(null);
 
   const { toast } = useToast();
 
@@ -52,19 +49,22 @@ export default function HomePage() {
       setIsAdminAuthenticated(true);
     }
 
-    // Logic to handle opening dialog from bookmarklet via URL parameters
     const queryParams = new URLSearchParams(window.location.search);
     const action = queryParams.get('action');
     const nameFromQuery = queryParams.get('name');
     const urlFromQuery = queryParams.get('url');
+    const descFromQuery = queryParams.get('desc');
 
     if (action === 'addFromBookmarklet' && nameFromQuery && urlFromQuery) {
-      setInitialDataForAddDialog({ name: decodeURIComponent(nameFromQuery), url: decodeURIComponent(urlFromQuery) });
+      setInitialDataForAddDialog({ 
+        name: decodeURIComponent(nameFromQuery), 
+        url: decodeURIComponent(urlFromQuery),
+        description: descFromQuery ? decodeURIComponent(descFromQuery) : undefined
+      });
       setIsAddBookmarkDialogOpen(true);
-      // Clean the URL to prevent re-triggering on refresh
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, []); // Runs once on client mount
+  }, []); 
 
   useEffect(() => {
     if (!isClient) return;
@@ -334,5 +334,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    

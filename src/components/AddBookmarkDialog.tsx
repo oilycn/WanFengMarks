@@ -31,7 +31,7 @@ interface AddBookmarkDialogProps {
   onAddBookmark: (bookmark: Omit<Bookmark, 'id'>) => void;
   categories: Category[];
   activeCategoryId?: string | null;
-  initialData?: { name?: string; url?: string } | null;
+  initialData?: { name?: string; url?: string; description?: string } | null;
 }
 
 const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
@@ -53,8 +53,8 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
     if (isOpen) {
       setName(initialData?.name || '');
       setUrl(initialData?.url || '');
-      setDescription(''); // Reset description for new entries or prefilled
-      setIsPrivate(false); // Default to public
+      setDescription(initialData?.description || '');
+      setIsPrivate(false); 
 
       let newDefaultCategoryId = '';
       if (activeCategoryId && activeCategoryId !== 'all' && categories.some(cat => cat.id === activeCategoryId)) {
@@ -87,7 +87,7 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
 
     onAddBookmark({ name, url: url.startsWith('http') ? url : `https://${url}`, categoryId, description, isPrivate });
     toast({ title: "书签已添加", description: `"${name}" 已成功添加。` });
-    onClose(); // onClose should also handle clearing initialData in parent
+    onClose(); 
   };
 
   return (
