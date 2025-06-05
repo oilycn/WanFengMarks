@@ -148,7 +148,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
   // If a specific category is selected and user is admin, enable drag-and-drop
   if (canDrag && activeCategoryId) {
     return (
-      <Droppable droppableId={activeCategoryId} type="BOOKMARK">
+      <Droppable droppableId={activeCategoryId} type="BOOKMARK" isDropDisabled={!canDrag}>
         {(provided) => (
           <div {...provided.droppableProps} ref={provided.innerRef}>
             <section aria-labelledby={`category-title-main`}>
