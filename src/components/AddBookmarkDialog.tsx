@@ -86,13 +86,18 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
     }
 
     onAddBookmark({ name, url: url.startsWith('http') ? url : `https://${url}`, categoryId, description, isPrivate });
-    toast({ title: "书签已添加", description: `"${name}" 已成功添加。` });
+    // toast({ title: "书签已添加", description: `"${name}" 已成功添加。` }); // Toast is not needed in popup as it closes
     onClose(); 
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent 
+        className="sm:max-w-[480px]"
+        onInteractOutside={(event) => {
+          event.preventDefault(); // Prevent closing when clicking outside the dialog content
+        }}
+      >
         <DialogHeader>
           <DialogTitle>添加新书签</DialogTitle>
           <DialogDescription>
