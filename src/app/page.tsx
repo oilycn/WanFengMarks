@@ -68,8 +68,12 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsClient(true);
-    // Ensures DragDropContext is rendered only after client is fully ready
-    // This helps with react-beautiful-dnd initialization in StrictMode
+  }, []);
+
+  useEffect(() => {
+    // This effect specifically handles setting isClientReadyForDnd
+    // to ensure DragDropContext is rendered only after client is fully ready.
+    // This helps with react-beautiful-dnd initialization in StrictMode.
     setIsClientReadyForDnd(true); 
   }, []);
 
@@ -198,15 +202,9 @@ export default function HomePage() {
       // Optimistic update: remove from local state
       setBookmarks(prev => prev.filter(bm => bm.id !== bookmarkId));
       toast({ title: "书签已删除", description: "书签已从服务器删除。", variant: "destructive" });
-      // If there were pending order changes, they might be affected, so we clear the flag.
-      // Or, one could argue to keep it if other items were also reordered.
-      // For simplicity, clearing it. A more robust solution might track specific changes.
       if (hasPendingBookmarkOrderChanges) {
-          // If the deleted item was the only reason for pending changes, or to simplify,
-          // we might want to re-evaluate or just clear the flag.
-          // For now, we'll let fetchData handle resetting the flag if it's not preserved.
       }
-      fetchData(hasPendingBookmarkOrderChanges); // Refetch, potentially preserving other pending changes
+      fetchData(hasPendingBookmarkOrderChanges); 
     } catch (error) {
       console.error("Failed to delete bookmark:", error);
       const errorMessage = error instanceof Error ? error.message : "删除书签失败。";
@@ -230,7 +228,6 @@ export default function HomePage() {
     }
     try {
       const newUpdatedBookmark = await updateBookmarkAction(updatedBookmark);
-      // Optimistic update
       setBookmarks(prev => prev.map(bm => bm.id === newUpdatedBookmark.id ? newUpdatedBookmark : bm).sort((a,b) => b.priority - a.priority));
       setIsEditBookmarkDialogOpen(false);
       setBookmarkToEdit(null);
@@ -285,8 +282,8 @@ export default function HomePage() {
         setActiveCategory(nextCategory?.id || 'all');
       }
       toast({ title: "分类已删除", description: `"${oldCategoryName}" 及其所有书签已被删除。`, variant: "destructive" });
-      setHasPendingBookmarkOrderChanges(false); // Deleting category might invalidate pending order
-      fetchData(); // Full refetch
+      setHasPendingBookmarkOrderChanges(false); 
+      fetchData(); 
     } catch (error) {
       console.error("Failed to delete category or its bookmarks:", error);
       const errorMessage = error instanceof Error ? error.message : "删除分类失败。";
@@ -353,7 +350,7 @@ export default function HomePage() {
         setActiveCategory(firstPublicCategory?.id || 'all');
     }
     toast({ title: "已退出", description: "已退出管理模式。" });
-    setHasPendingBookmarkOrderChanges(false); // Clear pending changes on logout
+    setHasPendingBookmarkOrderChanges(false); 
     fetchData();
   };
   
@@ -392,13 +389,10 @@ export default function HomePage() {
       return;
     }
     
-    // Use the current displayedBookmarks for reordering, as these are what the user sees and drags.
     const currentDisplayedItems = displayedBookmarks; 
 
     if (sourceIndex < 0 || sourceIndex >= currentDisplayedItems.length || destinationIndex < 0 || destinationIndex >= currentDisplayedItems.length) {
         console.error("Drag ended: Invalid source or destination index based on displayedBookmarks.", { sourceIndex, destinationIndex, listLength: currentDisplayedItems.length});
-        // Optionally, refetch to correct state if something went very wrong.
-        // fetchData(); 
         return;
     }
     
@@ -406,20 +400,13 @@ export default function HomePage() {
     const [movedItem] = reorderedDisplayedItems.splice(sourceIndex, 1);
     reorderedDisplayedItems.splice(destinationIndex, 0, movedItem);
 
-    // Optimistically update the global `bookmarks` state.
-    // The reordered items from the active category should now be at the "top"
-    // of the global list, followed by items from other categories.
     setBookmarks(prevGlobalBookmarks => {
       const idsInReorderedDisplayed = new Set(reorderedDisplayedItems.map(b => b.id));
-      // Filter out all items from the active category from the global list first
       const otherGlobalBookmarks = prevGlobalBookmarks.filter(bm => bm.categoryId !== activeCategory || !idsInReorderedDisplayed.has(bm.id));
-      // Then, combine: reordered items from active category first, then all other bookmarks.
-      // This ensures the newly reordered items within the category get higher global priority.
       return [...reorderedDisplayedItems, ...otherGlobalBookmarks];
     });
 
     setHasPendingBookmarkOrderChanges(true);
-    // DO NOT call updateBookmarksOrderAction here anymore. It will be called by handleSaveBookmarksOrder.
   };
 
   const handleSaveBookmarksOrder = async () => {
@@ -428,7 +415,6 @@ export default function HomePage() {
       return;
     }
 
-    // The `bookmarks` state already reflects the desired new global order due to optimistic updates.
     const orderedIdsForServer = bookmarks.map(bm => bm.id);
 
     try {
@@ -436,17 +422,15 @@ export default function HomePage() {
       if (res.success) {
         toast({ title: "书签顺序已保存" });
         setHasPendingBookmarkOrderChanges(false);
-        // Optionally, fetchData() here if server might return slightly different priorities
-        // or to ensure absolute consistency. For now, assume client state is authoritative until next full fetch.
-        fetchData(true); // Preserve any other potential pending changes, though ideally there are none at this point for bookmarks.
+        fetchData(true); 
       } else {
         toast({ title: "保存书签顺序失败", description: "服务器未能保存顺序。", variant: "destructive" });
-        fetchData(); // Re-fetch to revert to server state on failure
+        fetchData(); 
       }
     } catch (error) {
       console.error("Error saving bookmark order:", error);
       toast({ title: "保存书签顺序失败", description: "发生网络错误。", variant: "destructive" });
-      fetchData(); // Re-fetch to revert to server state on error
+      fetchData(); 
     }
   };
 
@@ -474,8 +458,12 @@ export default function HomePage() {
   if (!isClient || isCheckingSetup || isLoading) { 
     console.log("HomePage: Render loading state. isClient:", isClient, "isCheckingSetup:", isCheckingSetup, "isLoading:", isLoading);
     return (
-      <div className="flex flex-col min-h-screen items-center justify-center">
-        <div className="animate-pulse text-2xl font-semibold text-primary">正在加载 晚风Marks...</div>
+      <div className="flex flex-col min-h-screen items-center justify-center bg-background">
+        <svg className="animate-spin h-16 w-16 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p className="mt-4 text-lg font-medium text-foreground">正在加载 晚风Marks...</p>
       </div>
     );
   }
@@ -500,12 +488,11 @@ export default function HomePage() {
             activeCategory={activeCategory}
             setActiveCategory={(catId) => {
                 if (hasPendingBookmarkOrderChanges) {
-                    // Simple confirm, could be a more elaborate dialog
                     if (!confirm("您有未保存的书签顺序更改。切换分类将丢失这些更改。确定要切换吗？")) {
                         return;
                     }
                 }
-                setHasPendingBookmarkOrderChanges(false); // Clear pending changes when switching category
+                setHasPendingBookmarkOrderChanges(false); 
                 setActiveCategory(catId);
             }}
             onShowPasswordDialog={() => setShowPasswordDialog(true)}
@@ -593,13 +580,11 @@ export default function HomePage() {
       </div>
   );
 
-  // Conditionally render DragDropContext only when client is ready
-  // This helps with react-beautiful-dnd initialization issues in StrictMode
   return isClientReadyForDnd ? (
     <DragDropContext onDragEnd={handleDragEndBookmarks}>
       {mainContent}
     </DragDropContext>
-  ) : mainContent; // Render without DragDropContext initially or on server
+  ) : mainContent;
 }
     
 
@@ -609,3 +594,4 @@ export default function HomePage() {
     
 
     
+
