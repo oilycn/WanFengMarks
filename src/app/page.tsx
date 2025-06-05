@@ -366,102 +366,52 @@ export default function HomePage() {
       console.log("Drag ended: Source and destination are the same.");
       return;
     }
-
-    // Create a copy of the currently displayed bookmarks (filtered by active category and search)
-    // This 'displayedBookmarks' should be the actual list rendered by BookmarkGrid
-    const currentDisplayedBookmarks = activeCategory === 'all' || !activeCategory
-      ? bookmarks.filter(bm => {
-          if (!isAdminAuthenticated && bm.isPrivate) return false;
-          const categoryOfBookmark = categories.find(c => c.id === bm.categoryId);
-          if (!isAdminAuthenticated && categoryOfBookmark && categoryOfBookmark.isPrivate) return false;
-          // Apply search filter if needed, but for drag, ensure we are working with the correct category subset
-          if (activeCategory !== 'all' && bm.categoryId !== activeCategory) return false; 
-          return true;
-        })
-      : bookmarks.filter(bm => bm.categoryId === activeCategory);
     
-    // Further filter by search query for the displayed list that was reordered
-    const itemsActuallyDisplayedAndReordered = currentDisplayedBookmarks.filter(bm => {
-        if (!searchQuery.trim()) return true;
-        const query = searchQuery.toLowerCase();
-        return (
-            bm.name.toLowerCase().includes(query) ||
-            (bm.description && bm.description.toLowerCase().includes(query)) ||
-            bm.url.toLowerCase().includes(query)
-        );
-    });
+    const currentDisplayedItems = displayedBookmarks; // This list was rendered and used for dragging
 
-
-    if (sourceIndex < 0 || sourceIndex >= itemsActuallyDisplayedAndReordered.length || destinationIndex < 0 || destinationIndex >= itemsActuallyDisplayedAndReordered.length) {
-        console.error("Drag ended: Invalid source or destination index.", { sourceIndex, destinationIndex, listLength: itemsActuallyDisplayedAndReordered.length});
-        fetchData(); // Fetch fresh data to recover from potential inconsistency
+    if (sourceIndex < 0 || sourceIndex >= currentDisplayedItems.length || destinationIndex < 0 || destinationIndex >= currentDisplayedItems.length) {
+        console.error("Drag ended: Invalid source or destination index based on displayedBookmarks.", { sourceIndex, destinationIndex, listLength: currentDisplayedItems.length});
+        fetchData(); 
         return;
     }
     
-    const itemsToReorder = Array.from(itemsActuallyDisplayedAndReordered);
-    const [movedItem] = itemsToReorder.splice(sourceIndex, 1);
-    itemsToReorder.splice(destinationIndex, 0, movedItem);
+    const reorderedDisplayedItems = Array.from(currentDisplayedItems);
+    const [movedItem] = reorderedDisplayedItems.splice(sourceIndex, 1);
+    reorderedDisplayedItems.splice(destinationIndex, 0, movedItem);
 
-    // Create a new global bookmarks array with the updated order for the active category
-    setBookmarks(prevAllBookmarks => {
-      // Get IDs of items that were reordered in the UI
-      const reorderedIdsInActiveCategory = itemsToReorder.map(bm => bm.id);
-
-      // Get bookmarks from other categories (or not in search results if search was active)
-      const otherBookmarks = prevAllBookmarks.filter(
-        bm => bm.categoryId !== activeCategory || !reorderedIdsInActiveCategory.includes(bm.id)
-      );
-      
-      // Reconstruct the full list: reordered items from active category first, then others.
-      // The key is to map IDs to their new priorities.
-      // The server action updateBookmarksOrderAction expects *all* bookmark IDs in their new global order.
-      
-      // A simpler approach for optimistic UI: update based on `itemsToReorder` for current view
-      // and let server handle full re-priority.
-      // For a more robust optimistic update, we need to calculate global priorities here.
-
-      // For now, let's update the order of all bookmarks to be sent to the server:
-      // Put the reordered items (from the active category) at the 'top' of the global list,
-      // then append items from other categories. This defines their new global priority.
-      // This is a simplification; a more robust approach would involve calculating actual priority numbers.
-      
-      const newGlobalOrderForServer = [...itemsToReorder, ...otherBookmarks.filter(bm => !reorderedIdsInActiveCategory.includes(bm.id))];
-      const orderedIdsForServer = newGlobalOrderForServer.map(bm => bm.id);
-
-      updateBookmarksOrderAction(orderedIdsForServer)
-        .then((res) => {
-          if (res.success) {
-            toast({ title: "书签顺序已更新" });
-            // Important: We need to update the local state to match the new order *after* server confirmation
-            // or rely on the optimistic update being correct. For now, let's refetch to ensure consistency.
-             fetchData(); // Refetch to get server-side sorted priorities
-          } else {
-            toast({ title: "更新书签顺序失败", description: "服务器未能保存顺序。", variant: "destructive" });
-            fetchData(); // Revert by fetching current server state
-          }
-        })
-        .catch(() => {
-          toast({ title: "更新书签顺序失败", description: "发生网络错误。", variant: "destructive" });
-          fetchData(); // Revert by fetching current server state
-        });
-
-      // For optimistic UI update, we need to merge `itemsToReorder` back into the full `bookmarks` list
-      // while preserving other categories.
-      const updatedFullBookmarks = prevAllBookmarks.map(bm => {
-        const reorderedItem = itemsToReorder.find(rib => rib.id === bm.id);
-        return reorderedItem || bm; // If it's in reordered list, use that version
-      }).filter(bm => {
-          // If bm was in itemsActuallyDisplayedAndReordered but not in itemsToReorder (should not happen with splice)
-          // or ensure it's still part of some valid list.
-          // This filter might be too aggressive.
-          return itemsToReorder.find(rib => rib.id === bm.id) || !itemsActuallyDisplayedAndReordered.find(adb => adb.id === bm.id);
-      });
-      
-      // A better optimistic update:
-      const activeCategoryItems = itemsToReorder;
-      const nonActiveCategoryItems = prevAllBookmarks.filter(bm => bm.categoryId !== activeCategory);
-      return [...activeCategoryItems, ...nonActiveCategoryItems]; // This is a simplified optimistic update
+    // Optimistically update the local state
+    setBookmarks(prevGlobalBookmarks => {
+      const idsInReorderedDisplayed = new Set(reorderedDisplayedItems.map(b => b.id));
+      const otherGlobalBookmarks = prevGlobalBookmarks.filter(bm => !idsInReorderedDisplayed.has(bm.id));
+      return [...reorderedDisplayedItems, ...otherGlobalBookmarks];
     });
+
+    // Prepare the list of ALL bookmark IDs for the server in the new global order.
+    const allOriginalBookmarks = bookmarks; // Get state before optimistic update
+    const idsInReorderedForServer = new Set(reorderedDisplayedItems.map(b => b.id));
+    const otherOriginalBookmarksForServer = allOriginalBookmarks.filter(bm => !idsInReorderedForServer.has(bm.id));
+    
+    const globallyOrderedIdsForServer = [
+        ...reorderedDisplayedItems.map(b => b.id), 
+        ...otherOriginalBookmarksForServer.map(b => b.id) 
+    ];
+    
+    // Call the server action AFTER the state update has been queued
+    updateBookmarksOrderAction(globallyOrderedIdsForServer)
+      .then((res) => {
+        if (res.success) {
+          toast({ title: "书签顺序已更新" });
+          fetchData(); 
+        } else {
+          toast({ title: "更新书签顺序失败", description: "服务器未能保存顺序。", variant: "destructive" });
+          fetchData(); 
+        }
+      })
+      .catch((error) => {
+        console.error("Error updating bookmark order:", error);
+        toast({ title: "更新书签顺序失败", description: "发生网络错误。", variant: "destructive" });
+        fetchData(); 
+      });
   };
 
 
@@ -480,11 +430,9 @@ export default function HomePage() {
     );
   });
 
-  // This 'displayedBookmarks' list is crucial for drag-and-drop.
-  // It's the list that BookmarkGrid will render and that onDragEnd will reorder.
   const displayedBookmarks = activeCategory === 'all' || !activeCategory
-    ? filteredBookmarksBySearch // Show all (respecting search and privacy)
-    : filteredBookmarksBySearch.filter(bm => bm.categoryId === activeCategory); // Show specific category (respecting search and privacy)
+    ? filteredBookmarksBySearch 
+    : filteredBookmarksBySearch.filter(bm => bm.categoryId === activeCategory);
 
 
   if (!isClient || isCheckingSetup || isLoading) { 
@@ -604,14 +552,12 @@ export default function HomePage() {
       {mainContent}
     </DragDropContext>
   ) : mainContent; 
-  // Render mainContent directly if DND is not ready,
-  // or conditionally render only parts that don't need DND
-  // For simplicity, we render the whole thing, DND interactions will just fail until ready.
-  // A better approach might be to show a slightly different UI or a more targeted loading state for DND.
 }
     
 
     
 
+
+    
 
     
