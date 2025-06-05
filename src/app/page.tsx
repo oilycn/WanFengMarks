@@ -13,10 +13,21 @@ import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, LogOut, Copy } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import {
+  getBookmarksAction,
+  addBookmarkAction,
+  updateBookmarkAction,
+  deleteBookmarkAction,
+} from '@/actions/bookmarkActions';
+import {
+  getCategoriesAction,
+  addCategoryAction,
+  updateCategoryAction,
+  deleteCategoryAction,
+} from '@/actions/categoryActions';
 
-const LS_BOOKMARKS_KEY = 'wanfeng_bookmarks_v1_zh';
-const LS_CATEGORIES_KEY = 'wanfeng_categories_v1_zh';
-const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1';
+
+const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1'; // Admin auth still local for UI control
 const ADMIN_PASSWORD = "7";
 
 const APP_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:9002';
@@ -33,6 +44,7 @@ export default function HomePage() {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   const [isEditBookmarkDialogOpen, setIsEditBookmarkDialogOpen] = useState(false);
   const [bookmarkToEdit, setBookmarkToEdit] = useState<Bookmark | null>(null);
@@ -52,86 +64,74 @@ export default function HomePage() {
     }
   }, []); 
 
-  useEffect(() => {
-    if (!isClient) return;
-
-    const storedBookmarks = localStorage.getItem(LS_BOOKMARKS_KEY);
-    if (storedBookmarks) {
-      const parsedBookmarks = JSON.parse(storedBookmarks).map((bm: Bookmark) => ({
-        ...bm,
-        description: bm.description || '',
-        icon: bm.icon,
-        isPrivate: bm.isPrivate || false
-      }));
-      setBookmarks(parsedBookmarks);
-    }
-
-    const storedCategories = localStorage.getItem(LS_CATEGORIES_KEY);
-    if (storedCategories) {
-      const parsedCategories = JSON.parse(storedCategories).map((cat: Category) => ({
-        ...cat,
-        isPrivate: cat.isPrivate || false
-      }));
-      setCategories(parsedCategories);
-    } else {
-      const defaultCategory = { id: 'default', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
-      setCategories([defaultCategory]);
-      localStorage.setItem(LS_CATEGORIES_KEY, JSON.stringify([defaultCategory]));
-    }
-
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === LS_BOOKMARKS_KEY && event.newValue) {
-        const parsedBookmarks = JSON.parse(event.newValue).map((bm: Bookmark) => ({
-          ...bm,
-          description: bm.description || '',
-          icon: bm.icon,
-          isPrivate: bm.isPrivate || false
-        }));
-        setBookmarks(parsedBookmarks);
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [fetchedBookmarks, fetchedCategories] = await Promise.all([
+        getBookmarksAction(),
+        getCategoriesAction(),
+      ]);
+      setBookmarks(fetchedBookmarks);
+      if (fetchedCategories.length > 0) {
+        setCategories(fetchedCategories);
+      } else {
+        // Ensure a default category exists if none are fetched (e.g., first run with empty server data)
+        const defaultCategory: Category = { id: 'default', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
+        // Optionally, you might want to add this default category to the server if it doesn't exist.
+        // For now, just setting it client-side if categories are empty.
+        // const savedDefaultCat = await addCategoryAction('通用书签', 'Folder', false);
+        setCategories([defaultCategory]);
       }
-      if (event.key === LS_CATEGORIES_KEY && event.newValue) {
-        const parsedCategories = JSON.parse(event.newValue).map((cat: Category) => ({
-         ...cat,
-         isPrivate: cat.isPrivate || false
-        }));
-        setCategories(parsedCategories);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-
-  }, [isClient]);
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+      toast({ title: "错误", description: "加载数据失败，请稍后重试。", variant: "destructive" });
+      // Fallback to a default category if server fails
+       if (categories.length === 0) {
+           const defaultCategory = { id: 'default', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
+           setCategories([defaultCategory]);
+       }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast, categories.length]); // Added categories.length to re-run if categories become empty
 
   useEffect(() => {
-    if (!isClient) return;
-    localStorage.setItem(LS_BOOKMARKS_KEY, JSON.stringify(bookmarks));
-  }, [bookmarks, isClient]);
+    if (isClient) {
+      fetchData();
+    }
+  }, [isClient, fetchData]);
+
 
   useEffect(() => {
-    if (!isClient) return;
-    localStorage.setItem(LS_CATEGORIES_KEY, JSON.stringify(categories));
-  }, [categories, isClient]);
-
-  useEffect(() => {
-    if(categories.length > 0 && !activeCategory) {
+    if(categories.length > 0 && !activeCategory && !isLoading) {
       const firstVisibleCategory = categories.find(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated));
       setActiveCategory(firstVisibleCategory?.id || 'all');
     }
-  }, [categories, activeCategory, isAdminAuthenticated]);
+  }, [categories, activeCategory, isAdminAuthenticated, isLoading]);
 
-  const handleAddBookmark = (newBookmarkData: Omit<Bookmark, 'id'>) => {
-    const bookmarkWithId = { ...newBookmarkData, id: Date.now().toString() + Math.random().toString(36).substring(2,7) };
-    setBookmarks(prev => [...prev, bookmarkWithId]);
-    setIsAddBookmarkDialogOpen(false);
-    setInitialDataForAddDialog(null); // Clear prefill data
+  const handleAddBookmark = async (newBookmarkData: Omit<Bookmark, 'id'>) => {
+    try {
+      const newBookmark = await addBookmarkAction(newBookmarkData);
+      setBookmarks(prev => [...prev, newBookmark]);
+      setIsAddBookmarkDialogOpen(false);
+      setInitialDataForAddDialog(null); // Clear prefill data
+      toast({ title: "书签已添加", description: `"${newBookmark.name}" 已成功添加。` });
+    } catch (error) {
+      console.error("Failed to add bookmark:", error);
+      toast({ title: "错误", description: "添加书签失败。", variant: "destructive" });
+    }
   };
 
-  const handleDeleteBookmark = (bookmarkId: string) => {
+  const handleDeleteBookmark = async (bookmarkId: string) => {
     if (!isAdminAuthenticated) return;
-    setBookmarks(prev => prev.filter(bm => bm.id !== bookmarkId));
+    try {
+      await deleteBookmarkAction(bookmarkId);
+      setBookmarks(prev => prev.filter(bm => bm.id !== bookmarkId));
+      toast({ title: "书签已删除", description: "书签已从服务器删除。", variant: "destructive" });
+    } catch (error) {
+      console.error("Failed to delete bookmark:", error);
+      toast({ title: "错误", description: "删除书签失败。", variant: "destructive" });
+    }
   };
 
   const handleOpenEditBookmarkDialog = (bookmark: Bookmark) => {
@@ -140,38 +140,61 @@ export default function HomePage() {
     setIsEditBookmarkDialogOpen(true);
   };
 
-  const handleUpdateBookmark = (updatedBookmark: Bookmark) => {
+  const handleUpdateBookmark = async (updatedBookmark: Bookmark) => {
     if (!isAdminAuthenticated) return;
-    setBookmarks(prev => prev.map(bm => bm.id === updatedBookmark.id ? updatedBookmark : bm));
-    setIsEditBookmarkDialogOpen(false);
-    setBookmarkToEdit(null);
-    toast({ title: "书签已更新", description: `"${updatedBookmark.name}" 已成功更新。` });
+    try {
+      const newUpdatedBookmark = await updateBookmarkAction(updatedBookmark);
+      setBookmarks(prev => prev.map(bm => bm.id === newUpdatedBookmark.id ? newUpdatedBookmark : bm));
+      setIsEditBookmarkDialogOpen(false);
+      setBookmarkToEdit(null);
+      toast({ title: "书签已更新", description: `"${newUpdatedBookmark.name}" 已成功更新。` });
+    } catch (error) {
+      console.error("Failed to update bookmark:", error);
+      toast({ title: "错误", description: "更新书签失败。", variant: "destructive" });
+    }
   };
 
-  const handleAddCategory = (categoryName: string, icon?: string, isPrivate?: boolean) => {
+  const handleAddCategory = async (categoryName: string, icon?: string, isPrivate?: boolean) => {
     if (!isAdminAuthenticated) return;
     if (categories.some(cat => cat.name.toLowerCase() === categoryName.toLowerCase())) {
       toast({ title: "错误", description: "分类名称已存在。", variant: "destructive" });
       return;
     }
-    const newCategory = {
-      id: Date.now().toString() + Math.random().toString(36).substring(2,7),
-      name: categoryName,
-      isVisible: true,
-      icon: icon || 'Folder',
-      isPrivate: isPrivate || false
-    };
-    setCategories(prev => [...prev, newCategory]);
+    try {
+      const newCategory = await addCategoryAction(categoryName, icon, isPrivate);
+      setCategories(prev => [...prev, newCategory]);
+      toast({ title: "分类已添加", description: `"${newCategory.name}" 已成功添加。` });
+    } catch (error) {
+      console.error("Failed to add category:", error);
+      toast({ title: "错误", description: "添加分类失败。", variant: "destructive" });
+    }
   };
 
-  const handleDeleteCategory = (categoryId: string) => {
+  const handleDeleteCategory = async (categoryId: string) => {
     if (!isAdminAuthenticated) return;
-    setBookmarks(prev => prev.filter(bm => bm.categoryId !== categoryId));
-    setCategories(prev => prev.filter(cat => cat.id !== categoryId && cat.id !== 'default'));
-     if (activeCategory === categoryId) {
-      const nextVisibleCategories = categories.filter(c => c.id !== categoryId && c.isVisible && (!c.isPrivate || isAdminAuthenticated));
-      const nextCategory = nextVisibleCategories.length > 0 ? nextVisibleCategories[0] : categories.find(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated));
-      setActiveCategory(nextCategory?.id || 'all');
+    try {
+      // First, delete all bookmarks in this category from the server
+      const bookmarksInCategory = bookmarks.filter(bm => bm.categoryId === categoryId);
+      for (const bm of bookmarksInCategory) {
+        await deleteBookmarkAction(bm.id);
+      }
+      // Then, delete the category itself
+      await deleteCategoryAction(categoryId);
+      
+      // Update client state
+      setBookmarks(prev => prev.filter(bm => bm.categoryId !== categoryId));
+      const oldCategoryName = categories.find(c => c.id === categoryId)?.name || '该分类';
+      setCategories(prev => prev.filter(cat => cat.id !== categoryId && cat.id !== 'default'));
+      
+      if (activeCategory === categoryId) {
+        const nextVisibleCategories = categories.filter(c => c.id !== categoryId && c.isVisible && (!c.isPrivate || isAdminAuthenticated));
+        const nextCategory = nextVisibleCategories.length > 0 ? nextVisibleCategories[0] : categories.find(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated));
+        setActiveCategory(nextCategory?.id || 'all');
+      }
+      toast({ title: "分类已删除", description: `"${oldCategoryName}" 及其所有书签已被删除。`, variant: "destructive" });
+    } catch (error) {
+      console.error("Failed to delete category or its bookmarks:", error);
+      toast({ title: "错误", description: "删除分类失败。", variant: "destructive" });
     }
   };
 
@@ -181,16 +204,23 @@ export default function HomePage() {
     setIsEditCategoryDialogOpen(true);
   };
 
-  const handleUpdateCategory = (updatedCategory: Category) => {
+  const handleUpdateCategory = async (updatedCategory: Category) => {
      if (!isAdminAuthenticated) return;
      if (categories.some(cat => cat.id !== updatedCategory.id && cat.name.toLowerCase() === updatedCategory.name.toLowerCase())) {
       toast({ title: "错误", description: "已存在同名分类。", variant: "destructive" });
       return;
     }
-    setCategories(prev => prev.map(cat => cat.id === updatedCategory.id ? updatedCategory : cat));
-    setIsEditCategoryDialogOpen(false);
-    setCategoryToEdit(null);
-    toast({ title: "分类已更新", description: `"${updatedCategory.name}" 已成功更新。` });
+    try {
+      const newUpdatedCategory = await updateCategoryAction(updatedCategory);
+      setCategories(prev => prev.map(cat => cat.id === newUpdatedCategory.id ? newUpdatedCategory : cat));
+      setIsEditCategoryDialogOpen(false);
+      setCategoryToEdit(null);
+      toast({ title: "分类已更新", description: `"${newUpdatedCategory.name}" 已成功更新。` });
+    } catch (error)
+    {
+      console.error("Failed to update category:", error);
+      toast({ title: "错误", description: "更新分类失败。", variant: "destructive" });
+    }
   };
 
   const handlePasswordSubmit = (password: string) => {
@@ -199,6 +229,8 @@ export default function HomePage() {
       localStorage.setItem(LS_ADMIN_AUTH_KEY, 'true');
       setShowPasswordDialog(false);
       toast({ title: "授权成功", description: "已进入管理模式。" });
+      // Re-fetch data in case private items are now visible
+      fetchData();
     } else {
       toast({ title: "密码错误", description: "请输入正确的管理员密码。", variant: "destructive" });
     }
@@ -213,6 +245,8 @@ export default function HomePage() {
         setActiveCategory(firstPublicCategory?.id || 'all');
     }
     toast({ title: "已退出", description: "已退出管理模式。" });
+    // Re-fetch data to hide private items
+    fetchData();
   };
   
   const handleOpenAddBookmarkDialog = () => {
@@ -254,7 +288,7 @@ export default function HomePage() {
     ? filteredBookmarksBySearch
     : filteredBookmarksBySearch.filter(bm => bm.categoryId === activeCategory);
 
-  if (!isClient) {
+  if (!isClient || isLoading) { // Show loading state while fetching or if not client yet
     return (
       <div className="flex flex-col min-h-screen items-center justify-center">
         <div className="animate-pulse text-2xl font-semibold text-primary">正在加载 晚风Marks...</div>
@@ -370,10 +404,3 @@ export default function HomePage() {
   );
 }
     
-
-    
-
-    
-
-
-
