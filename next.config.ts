@@ -25,10 +25,6 @@ const nextConfig: NextConfig = {
   // We are placing it under 'experimental' for broader compatibility with build systems.
   experimental: {
     serverActions: {
-      // This MUST match the 'Origin' header from the browser, including scheme and port.
-      // For your setup: https://bm.oily.cn:7443
-      allowedOrigins: ['https://bm.oily.cn:7443'],
-
       // This MUST match the 'X-Forwarded-Host' header value sent by your proxy.
       // For your setup: bm.oily.cn
       allowedForwardedHosts: ['bm.oily.cn'],
