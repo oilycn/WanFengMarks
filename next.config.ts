@@ -69,10 +69,4 @@ const nextConfig: NextConfig = {
   // If your NPM setup has `forward_scheme: "http"`, it might not be sending `X-Forwarded-Proto https` by default unless you add it.
 };
 
-// Dynamically wrap with bundle analyzer if ANALYZE=true
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-});
-
-export default withBundleAnalyzer(nextConfig);
+export default nextConfig;
