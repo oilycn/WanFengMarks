@@ -1,6 +1,0 @@
-name = "wfmarks" # 替换为你的 Worker 名称
-compatibility_date = "2025-06-05"
-
-# 这行告诉 Wrangler Next.js 的构建输出目录是 .next
-[pages_build_output]
-dir = ".next"
