@@ -6,7 +6,7 @@ import type { Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui/label'; // Label might not be needed for the new button style
 import { PlusCircle, Trash2, LogIn, Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, Save, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2, Eye, EyeOff, PenLine } from 'lucide-react';
 import {
   AlertDialog,
@@ -189,9 +189,45 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
         </nav>
       </ScrollArea>
       
-      <div className="p-3 border-t mt-auto space-y-2">
+      <div className="p-3 border-t mt-auto space-y-3"> {/* Increased space-y for better separation */}
         {isAdminAuthenticated && (
           <form onSubmit={handleAddCategorySubmit} className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Select value={newCategoryIcon} onValueChange={setNewCategoryIcon}>
+                <SelectTrigger className="flex-1 h-9 text-sm justify-start" aria-label="选择分类图标">
+                   <div className="flex items-center gap-2 truncate">
+                      {React.createElement(iconMap[newCategoryIcon] || iconMap['Default'], {className: "h-4 w-4 flex-shrink-0"})}
+                      <SelectValue placeholder="选择图标" />
+                   </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <ScrollArea className="h-[200px]">
+                    {availableIcons.map(icon => (
+                      <SelectItem key={icon.value} value={icon.value} className="text-xs">
+                        <div className="flex items-center gap-2">
+                          <icon.IconComponent className="h-4 w-4" />
+                          <span>{icon.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </ScrollArea>
+                </SelectContent>
+              </Select>
+
+              <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setNewCategoryIsPrivate(!newCategoryIsPrivate)}
+                  className="flex-1 flex items-center justify-start text-sm h-9"
+                  aria-label={newCategoryIsPrivate ? '设为公开分类' : '设为私密分类'}
+              >
+                  {newCategoryIsPrivate ? <EyeOff className="mr-2 h-4 w-4 flex-shrink-0" /> : <Eye className="mr-2 h-4 w-4 flex-shrink-0" />}
+                  <span className="truncate">
+                    {newCategoryIsPrivate ? '私密' : '公开'}
+                  </span>
+              </Button>
+            </div>
+
             <Input
               type="text"
               value={newCategoryName}
@@ -199,36 +235,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
               placeholder="新分类名称"
               className="h-9 text-sm"
             />
-            <Select value={newCategoryIcon} onValueChange={setNewCategoryIcon}>
-              <SelectTrigger className="h-9 text-sm">
-                 <div className="flex items-center gap-2">
-                    {React.createElement(iconMap[newCategoryIcon] || iconMap['Default'], {className: "h-4 w-4"})}
-                    <SelectValue placeholder="选择图标" />
-                 </div>
-              </SelectTrigger>
-              <SelectContent>
-                <ScrollArea className="h-[200px]">
-                  {availableIcons.map(icon => (
-                    <SelectItem key={icon.value} value={icon.value} className="text-xs">
-                      <div className="flex items-center gap-2">
-                        <icon.IconComponent className="h-4 w-4" />
-                        <span>{icon.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </ScrollArea>
-              </SelectContent>
-            </Select>
-            <Button
-                type="button"
-                variant="outline"
-                onClick={() => setNewCategoryIsPrivate(!newCategoryIsPrivate)}
-                className="w-full flex items-center justify-start text-sm h-9"
-                aria-label={newCategoryIsPrivate ? '设为公开分类' : '设为私密分类'}
-            >
-                {newCategoryIsPrivate ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-                {newCategoryIsPrivate ? '私密 (仅管理员可见)' : '公开 (所有人可见)'}
-            </Button>
+            
             <Button type="submit" className="w-full h-9 text-sm bg-primary hover:bg-primary/90">
               <PlusCircle className="mr-2 h-4 w-4" /> 添加分类
             </Button>
