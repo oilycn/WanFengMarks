@@ -6,7 +6,7 @@ import type { Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Checkbox } from '@/components/ui/checkbox';
+// Checkbox is removed
 import { Label } from '@/components/ui/label';
 import { PlusCircle, Trash2, LogIn, Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, Save, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2, Eye, EyeOff } from 'lucide-react';
 import AegisLogo from './AegisLogo';
@@ -213,14 +213,16 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                 </ScrollArea>
               </SelectContent>
             </Select>
-            <div className="flex items-center space-x-2">
-                <Checkbox 
-                    id="newCategoryPrivate" 
-                    checked={newCategoryIsPrivate} 
-                    onCheckedChange={(checked) => setNewCategoryIsPrivate(checked as boolean)}
-                />
-                <Label htmlFor="newCategoryPrivate" className="text-sm font-normal cursor-pointer">设为私密分类</Label>
-            </div>
+            <Button
+                type="button"
+                variant="outline"
+                onClick={() => setNewCategoryIsPrivate(!newCategoryIsPrivate)}
+                className="w-full flex items-center justify-start text-sm h-9"
+                aria-label={newCategoryIsPrivate ? '设为公开分类' : '设为私密分类'}
+            >
+                {newCategoryIsPrivate ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+                {newCategoryIsPrivate ? '私密 (仅管理员可见)' : '公开 (所有人可见)'}
+            </Button>
             <Button type="submit" className="w-full h-9 text-sm bg-primary hover:bg-primary/90">
               <PlusCircle className="mr-2 h-4 w-4" /> 添加分类
             </Button>

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox'; // Import Checkbox
+import { Eye, EyeOff } from 'lucide-react'; // Import Eye and EyeOff icons
 import {
   Dialog,
   DialogContent,
@@ -42,7 +42,7 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState<string>('');
-  const [isPrivate, setIsPrivate] = useState(false); // New state for privacy
+  const [isPrivate, setIsPrivate] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -149,16 +149,21 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="isPrivate" className="text-right">
-                私密
+              <Label htmlFor="privacyButton" className="text-right">
+                可见性
               </Label>
-              <div className="col-span-3 flex items-center space-x-2">
-                <Checkbox
-                  id="isPrivate"
-                  checked={isPrivate}
-                  onCheckedChange={(checked) => setIsPrivate(checked as boolean)}
-                />
-                <Label htmlFor="isPrivate" className="text-sm font-normal cursor-pointer">设为私密书签（仅管理员可见）</Label>
+              <div className="col-span-3">
+                <Button
+                  id="privacyButton"
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsPrivate(!isPrivate)}
+                  className="flex items-center w-full justify-start text-sm"
+                  aria-label={isPrivate ? '设为公开书签' : '设为私密书签'}
+                >
+                  {isPrivate ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+                  {isPrivate ? '私密 (仅管理员可见)' : '公开 (所有人可见)'}
+                </Button>
               </div>
             </div>
           </div>
