@@ -165,7 +165,7 @@ export default function HomePage() {
       setIsLoading(false);
       console.log("HomePage: fetchData finished. isLoading set to false.");
     }
-  }, [toast, categories.length]);
+  }, [toast]); // Removed categories.length from dependencies
 
   useEffect(() => {
     if (isClient && !isCheckingSetup) {
