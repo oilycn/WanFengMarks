@@ -5,7 +5,7 @@ import React from 'react';
 import type { Bookmark } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Link2, Trash2, ArrowUpRightSquare, EyeOff, PenLine } from 'lucide-react';
+import { Link2, Trash2, EyeOff, PenLine } from 'lucide-react';
 import Image from 'next/image';
 import {
   AlertDialog,
@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 interface BookmarkItemProps {
   bookmark: Bookmark;
   onDeleteBookmark: (id: string) => void;
-  onEditBookmark: (bookmark: Bookmark) => void; // New prop for editing
+  onEditBookmark: (bookmark: Bookmark) => void;
   isAdminAuthenticated: boolean;
 }
 
@@ -51,12 +51,12 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark,
   }
 
   return (
-    <Card className="group relative shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out overflow-hidden bg-card/70 backdrop-blur-sm border border-border/60 hover:border-primary/70 rounded-lg flex flex-col">
+    <Card className="group relative shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out overflow-hidden bg-card/70 backdrop-blur-sm border border-border/60 hover:border-primary/70 rounded-lg flex flex-col group-hover:bg-accent/10 group-focus-within:bg-accent/10">
       <a
         href={bookmark.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex-grow p-3 flex flex-col text-card-foreground hover:text-primary transition-colors"
+        className="flex-grow p-3 flex flex-col text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline"
         aria-label={`打开 ${bookmark.name}`}
       >
         <div className="flex items-start space-x-3">
@@ -78,7 +78,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark,
           <Link2 className={`h-8 w-8 text-muted-foreground fallback-icon ${favicon ? 'hidden' : ''} flex-shrink-0`} />
           
           <div className="flex-grow min-w-0">
-            <h3 className="text-sm font-semibold truncate /* Removed group-hover:underline */ flex items-center" title={bookmark.name}>
+            <h3 className="text-sm font-semibold truncate flex items-center" title={bookmark.name}>
               {bookmark.name}
               {bookmark.isPrivate && <EyeOff className="ml-1.5 h-3 w-3 text-muted-foreground/70 flex-shrink-0" title="私密书签"/>}
             </h3>
@@ -88,7 +88,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark,
               </p>
             )}
           </div>
-          <ArrowUpRightSquare className="h-4 w-4 text-muted-foreground/70 group-hover:text-primary transition-colors ml-auto flex-shrink-0 mt-0.5" />
+          {/* Removed ArrowUpRightSquare icon from here */}
         </div>
       </a>
       
