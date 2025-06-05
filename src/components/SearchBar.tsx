@@ -39,12 +39,12 @@ const SearchBar: React.FC<SearchBarProps> = ({ currentQuery, onQueryChange }) =>
   };
 
   return (
-    <form 
-      onSubmit={handleSearchSubmit} 
-      className="flex w-full max-w-xl items-center space-x-0 bg-background dark:bg-neutral-700/80 p-1 rounded-lg shadow-md"
+    <form
+      onSubmit={handleSearchSubmit}
+      className="flex w-full max-w-xl items-center space-x-0 bg-muted dark:bg-card p-1 rounded-lg shadow-md"
     >
       <Select value={selectedEngine} onValueChange={setSelectedEngine}>
-        <SelectTrigger 
+        <SelectTrigger
           className="w-auto min-w-[90px] bg-slate-100 hover:bg-slate-200 dark:bg-neutral-600 dark:hover:bg-neutral-500/90 border-r border-border dark:border-neutral-500/60 text-foreground/80 dark:text-neutral-300 focus:ring-primary h-9 text-xs px-2.5 rounded-l-md rounded-r-none shadow-none"
           aria-label="选择搜索引擎"
         >
@@ -69,11 +69,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ currentQuery, onQueryChange }) =>
         className="flex-grow bg-input dark:bg-input border-none text-foreground placeholder:text-muted-foreground dark:placeholder:text-neutral-400/70 focus:ring-0 text-sm h-9 px-3"
         aria-label="搜索网页或筛选书签"
       />
-      <Button 
-        type="submit" 
-        variant="default" 
-        size="icon" 
-        aria-label="搜索" 
+      <Button
+        type="submit"
+        variant="default"
+        size="icon"
+        aria-label="搜索"
         className="bg-primary hover:bg-primary/90 text-primary-foreground h-9 w-9 rounded-l-none rounded-r-md"
       >
         <Search className="h-4 w-4" />
