@@ -41,7 +41,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ currentQuery, onQueryChange }) =>
   return (
     <form 
       onSubmit={handleSearchSubmit} 
-      className="flex w-full max-w-xl items-center space-x-0 bg-background dark:bg-neutral-700/80 p-1 rounded-lg shadow-md"  // Increased max-w-lg to max-w-xl
+      className="flex w-full max-w-xl items-center space-x-0 bg-background dark:bg-neutral-700/80 p-1 rounded-lg shadow-md"
     >
       <Select value={selectedEngine} onValueChange={setSelectedEngine}>
         <SelectTrigger 
@@ -66,7 +66,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ currentQuery, onQueryChange }) =>
         placeholder="搜索网页 或 筛选下方书签..."
         value={currentQuery}
         onChange={(e) => onQueryChange(e.target.value)}
-        className="flex-grow bg-transparent dark:bg-transparent border-none text-foreground placeholder:text-muted-foreground dark:placeholder:text-neutral-400/70 focus:ring-0 text-sm h-9 px-3"
+        className="flex-grow bg-input dark:bg-input border-none text-foreground placeholder:text-muted-foreground dark:placeholder:text-neutral-400/70 focus:ring-0 text-sm h-9 px-3"
         aria-label="搜索网页或筛选书签"
       />
       <Button 
