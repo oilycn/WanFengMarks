@@ -4,16 +4,16 @@
 import React from 'react';
 import type { Bookmark, Category } from '@/types';
 import BookmarkItem from './BookmarkItem';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FolderOpen } from 'lucide-react';
+import { FolderOpen, SearchX } from 'lucide-react';
 
 interface BookmarkGridProps {
   bookmarks: Bookmark[];
-  categories: Category[]; // Now expects only relevant categories for the active view
+  categories: Category[]; 
   onDeleteBookmark: (id: string) => void;
   isAdminAuthenticated: boolean;
-  currentCategoryName?: string; // Name of the currently active category, or "All Bookmarks"
+  currentCategoryName?: string; 
   activeCategoryId: string | null;
+  searchQuery?: string;
 }
 
 const BookmarkGrid: React.FC<BookmarkGridProps> = ({ 
@@ -22,16 +22,27 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
     onDeleteBookmark, 
     isAdminAuthenticated,
     currentCategoryName,
-    activeCategoryId
+    activeCategoryId,
+    searchQuery
 }) => {
 
-  // If "All Bookmarks" is selected, or no specific category, group by actual categories
   const shouldGroup = activeCategoryId === 'all' || !activeCategoryId;
   
-  const categoriesToDisplay = shouldGroup ? categories.filter(c => c.isVisible && bookmarks.some(b => b.categoryId === c.id)) : categories.filter(c => c.id === activeCategoryId && c.isVisible);
+  const categoriesToDisplay = shouldGroup 
+    ? categories.filter(c => c.isVisible && bookmarks.some(b => b.categoryId === c.id)) 
+    : categories.filter(c => c.id === activeCategoryId && c.isVisible);
 
 
   if (bookmarks.length === 0) {
+     if (searchQuery && searchQuery.trim() !== '') {
+        return (
+          <div className="text-center py-12">
+            <SearchX className="mx-auto h-16 w-16 text-muted-foreground/50 mb-4" />
+            <h2 className="text-2xl font-semibold mb-2 text-foreground/80">未找到与 "{searchQuery}" 相关的书签</h2>
+            <p className="text-md text-muted-foreground">请尝试修改您的搜索词，或清除搜索框以显示所有书签。</p>
+          </div>
+        );
+     }
      return (
       <div className="text-center py-12">
         <FolderOpen className="mx-auto h-16 w-16 text-muted-foreground/50 mb-4" />
@@ -39,7 +50,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
         {isAdminAuthenticated ? (
           <p className="text-md text-muted-foreground">点击上方的 "添加书签" 按钮来添加新的书签吧！</p>
         ) : (
-          <p className="text-md text-muted-foreground">请先进入管理模式以添加书签。</p>
+          <p className="text-md text-muted-foreground">当前分类下没有书签。</p>
         )}
       </div>
     );
@@ -52,7 +63,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
           const categoryBookmarks = bookmarks.filter(
             (bookmark) => bookmark.categoryId === category.id
           );
-          if (categoryBookmarks.length === 0) return null; // Don't render empty categories in "All" view
+          if (categoryBookmarks.length === 0) return null;
 
           return (
             <section key={category.id} aria-labelledby={`category-title-${category.id}`}>
@@ -73,7 +84,6 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
           );
         })
       ) : (
-        // Single category view
         <section aria-labelledby={`category-title-main`}>
             {currentCategoryName && (
                  <h2 id={`category-title-main`} className="text-2xl font-semibold mb-4 text-primary font-headline border-b pb-2">

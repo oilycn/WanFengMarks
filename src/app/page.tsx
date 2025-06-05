@@ -6,13 +6,13 @@ import AppSidebar from '@/components/AppSidebar';
 import AppHeader from '@/components/AppHeader';
 import BookmarkGrid from '@/components/BookmarkGrid';
 import AddBookmarkDialog from '@/components/AddBookmarkDialog';
-import PasswordDialog from '@/components/PasswordDialog'; // 新增密码对话框
+import PasswordDialog from '@/components/PasswordDialog';
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Settings, PlusCircle, EyeOff, LogIn } from 'lucide-react';
+import { PlusCircle, EyeOff } from 'lucide-react';
 
-const LS_BOOKMARKS_KEY = 'aegisMarks_bookmarks_v2_zh'; // 更新版本以避免冲突
-const LS_CATEGORIES_KEY = 'aegisMarks_categories_v2_zh'; // 更新版本
+const LS_BOOKMARKS_KEY = 'aegisMarks_bookmarks_v2_zh';
+const LS_CATEGORIES_KEY = 'aegisMarks_categories_v2_zh';
 const ADMIN_PASSWORD = "7";
 
 export default function HomePage() {
@@ -23,9 +23,15 @@ export default function HomePage() {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     setIsClient(true);
+    // Check if already authenticated from a previous session (optional)
+    // const isAuthenticated = sessionStorage.getItem('isAdminAuthenticated');
+    // if (isAuthenticated === 'true') {
+    //   setIsAdminAuthenticated(true);
+    // }
   }, []);
 
   useEffect(() => {
@@ -33,8 +39,7 @@ export default function HomePage() {
 
     const storedBookmarks = localStorage.getItem(LS_BOOKMARKS_KEY);
     if (storedBookmarks) {
-      // 确保旧数据有 description 字段
-      const parsedBookmarks = JSON.parse(storedBookmarks).map((bm: Bookmark) => ({ ...bm, description: bm.description || '' }));
+      const parsedBookmarks = JSON.parse(storedBookmarks).map((bm: Bookmark) => ({ ...bm, description: bm.description || '', icon: bm.icon }));
       setBookmarks(parsedBookmarks);
     }
 
@@ -42,7 +47,7 @@ export default function HomePage() {
     if (storedCategories) {
       setCategories(JSON.parse(storedCategories));
     } else {
-      const defaultCategory = { id: 'default', name: '通用书签', isVisible: true };
+      const defaultCategory = { id: 'default', name: '通用书签', isVisible: true, icon: 'Folder' };
       setCategories([defaultCategory]);
       localStorage.setItem(LS_CATEGORIES_KEY, JSON.stringify([defaultCategory]));
     }
@@ -60,7 +65,8 @@ export default function HomePage() {
   
   useEffect(() => {
     if(categories.length > 0 && !activeCategory) {
-      setActiveCategory(categories[0].id);
+      const firstVisibleCategory = categories.find(c => c.isVisible);
+      setActiveCategory(firstVisibleCategory?.id || 'all');
     }
   }, [categories, activeCategory]);
 
@@ -72,26 +78,17 @@ export default function HomePage() {
   };
 
   const handleDeleteBookmark = (bookmarkId: string) => {
-    if (!isAdminAuthenticated) return; // 增加权限检查
+    if (!isAdminAuthenticated) return;
     setBookmarks(prev => prev.filter(bm => bm.id !== bookmarkId));
   };
 
-  const handleToggleCategoryVisibility = (categoryId: string) => {
-    if (!isAdminAuthenticated) return;
-    setCategories(prev =>
-      prev.map(cat =>
-        cat.id === categoryId ? { ...cat, isVisible: !cat.isVisible } : cat
-      )
-    );
-  };
-
-  const handleAddCategory = (categoryName: string) => {
+  const handleAddCategory = (categoryName: string, icon?: string) => {
     if (!isAdminAuthenticated) return;
     if (categories.some(cat => cat.name.toLowerCase() === categoryName.toLowerCase())) {
       console.warn("分类已存在");
       return;
     }
-    const newCategory = { id: Date.now().toString() + Math.random().toString(36).substring(2,7), name: categoryName, isVisible: true };
+    const newCategory = { id: Date.now().toString() + Math.random().toString(36).substring(2,7), name: categoryName, isVisible: true, icon: icon || 'Folder' };
     setCategories(prev => [...prev, newCategory]);
   };
   
@@ -100,13 +97,15 @@ export default function HomePage() {
     setBookmarks(prev => prev.filter(bm => bm.categoryId !== categoryId));
     setCategories(prev => prev.filter(cat => cat.id !== categoryId && cat.id !== 'default'));
      if (activeCategory === categoryId) {
-      setActiveCategory(categories.find(c => c.id !== categoryId)?.id || null);
+      const nextCategory = categories.find(c => c.id !== categoryId && c.isVisible) || categories.find(c => c.isVisible);
+      setActiveCategory(nextCategory?.id || 'all');
     }
   };
 
   const handlePasswordSubmit = (password: string) => {
     if (password === ADMIN_PASSWORD) {
       setIsAdminAuthenticated(true);
+      // sessionStorage.setItem('isAdminAuthenticated', 'true'); // Optional: persist session
       setShowPasswordDialog(false);
     } else {
       alert("密码错误！");
@@ -115,11 +114,22 @@ export default function HomePage() {
 
   const handleLogoutAdmin = () => {
     setIsAdminAuthenticated(false);
+    // sessionStorage.removeItem('isAdminAuthenticated'); // Optional: clear session
   };
   
+  const filteredBookmarksBySearch = bookmarks.filter(bm => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      bm.name.toLowerCase().includes(query) ||
+      (bm.description && bm.description.toLowerCase().includes(query)) ||
+      bm.url.toLowerCase().includes(query)
+    );
+  });
+
   const displayedBookmarks = activeCategory === 'all' 
-    ? bookmarks 
-    : bookmarks.filter(bm => bm.categoryId === activeCategory);
+    ? filteredBookmarksBySearch 
+    : filteredBookmarksBySearch.filter(bm => bm.categoryId === activeCategory);
 
   if (!isClient) {
     return (
@@ -135,13 +145,16 @@ export default function HomePage() {
         categories={categories}
         onAddCategory={handleAddCategory}
         onDeleteCategory={handleDeleteCategory}
-        onToggleVisibility={handleToggleCategoryVisibility}
         isAdminAuthenticated={isAdminAuthenticated}
         activeCategory={activeCategory}
         setActiveCategory={setActiveCategory}
+        onShowPasswordDialog={() => setShowPasswordDialog(true)}
       />
       <div className="flex-1 flex flex-col overflow-y-auto">
-        <AppHeader />
+        <AppHeader 
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+        />
         <main className="flex-grow p-4 md:p-6">
           {isAdminAuthenticated && (
             <div className="mb-4 flex justify-start items-center gap-2">
@@ -153,21 +166,15 @@ export default function HomePage() {
               </Button>
             </div>
           )}
-          {!isAdminAuthenticated && (
-            <div className="mb-4 flex justify-start">
-               <Button onClick={() => setShowPasswordDialog(true)} variant="outline" className="shadow-sm">
-                <LogIn className="mr-2 h-4 w-4" /> 进入管理模式
-              </Button>
-            </div>
-          )}
           
           <BookmarkGrid
-            bookmarks={displayedBookmarks} // 显示筛选后的书签
-            categories={categories.filter(c => activeCategory === 'all' || c.id === activeCategory)} // 只传递当前激活的或所有分类
+            bookmarks={displayedBookmarks}
+            categories={categories.filter(c => c.isVisible && (activeCategory === 'all' || c.id === activeCategory))}
             onDeleteBookmark={handleDeleteBookmark}
             isAdminAuthenticated={isAdminAuthenticated}
-            currentCategoryName={categories.find(c=>c.id === activeCategory)?.name || "全部书签"}
+            currentCategoryName={activeCategory === 'all' ? '全部书签' : categories.find(c=>c.id === activeCategory)?.name || "未知分类"}
             activeCategoryId={activeCategory}
+            searchQuery={searchQuery}
           />
         </main>
         <footer className="text-center py-3 border-t bg-background/50 text-xs text-muted-foreground">
@@ -179,7 +186,7 @@ export default function HomePage() {
         isOpen={isAddBookmarkDialogOpen}
         onClose={() => setIsAddBookmarkDialogOpen(false)}
         onAddBookmark={handleAddBookmark}
-        categories={categories}
+        categories={categories.filter(c => c.isVisible)}
       />
       <PasswordDialog
         isOpen={showPasswordDialog}

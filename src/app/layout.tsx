@@ -16,9 +16,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet" />
+        {/* 移除 Google Fonts 的直接链接，依赖 tailwind.config.ts 中的字体栈 */}
       </head>
       <body className="font-body antialiased selection:bg-primary selection:text-primary-foreground bg-background text-foreground">
         {children}
