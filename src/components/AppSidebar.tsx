@@ -6,10 +6,9 @@ import type { Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-// Checkbox is removed
 import { Label } from '@/components/ui/label';
 import { PlusCircle, Trash2, LogIn, Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, Save, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2, Eye, EyeOff } from 'lucide-react';
-import AegisLogo from './AegisLogo';
+// AegisLogo import is removed as it's now in AppHeader
 import {
   AlertDialog,
   AlertDialogAction,
@@ -125,10 +124,8 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
 
   return (
     <aside className="w-60 md:w-64 bg-card/60 backdrop-blur-md border-r flex flex-col h-full shadow-lg">
-      <div className="p-4 border-b">
-        <AegisLogo />
-      </div>
-      <ScrollArea className="flex-grow">
+      {/* Removed logo section from here */}
+      <ScrollArea className="flex-grow pt-3"> {/* Added pt-3 for spacing after removing logo */}
         <nav className="p-3 space-y-1">
           <Button
             variant={activeCategory === 'all' || categories.length === 0 ? 'secondary' : 'ghost'}

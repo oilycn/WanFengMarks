@@ -42,7 +42,7 @@ export default function HomePage() {
       const parsedBookmarks = JSON.parse(storedBookmarks).map((bm: Bookmark) => ({ 
         ...bm, 
         description: bm.description || '', 
-        icon: bm.icon,
+        icon: bm.icon, // Retain icon if it exists, otherwise it's undefined
         isPrivate: bm.isPrivate || false 
       }));
       setBookmarks(parsedBookmarks);
@@ -56,6 +56,7 @@ export default function HomePage() {
       }));
       setCategories(parsedCategories);
     } else {
+      // Default category if none are stored
       const defaultCategory = { id: 'default', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
       setCategories([defaultCategory]);
       localStorage.setItem(LS_CATEGORIES_KEY, JSON.stringify([defaultCategory]));
@@ -74,6 +75,7 @@ export default function HomePage() {
   
   useEffect(() => {
     if(categories.length > 0 && !activeCategory) {
+      // Set initial active category to the first visible one
       const firstVisibleCategory = categories.find(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated));
       setActiveCategory(firstVisibleCategory?.id || 'all');
     }
@@ -94,6 +96,7 @@ export default function HomePage() {
   const handleAddCategory = (categoryName: string, icon?: string, isPrivate?: boolean) => {
     if (!isAdminAuthenticated) return;
     if (categories.some(cat => cat.name.toLowerCase() === categoryName.toLowerCase())) {
+      // Consider using a toast notification here instead of console.warn
       console.warn("分类已存在");
       return;
     }
@@ -101,7 +104,7 @@ export default function HomePage() {
       id: Date.now().toString() + Math.random().toString(36).substring(2,7), 
       name: categoryName, 
       isVisible: true, 
-      icon: icon || 'Folder',
+      icon: icon || 'Folder', // Default icon if none provided
       isPrivate: isPrivate || false
     };
     setCategories(prev => [...prev, newCategory]);
@@ -109,8 +112,11 @@ export default function HomePage() {
   
   const handleDeleteCategory = (categoryId: string) => {
     if (!isAdminAuthenticated) return;
+    // Delete bookmarks in this category
     setBookmarks(prev => prev.filter(bm => bm.categoryId !== categoryId));
+    // Delete the category itself (ensure 'default' category cannot be deleted)
     setCategories(prev => prev.filter(cat => cat.id !== categoryId && cat.id !== 'default'));
+    // If active category was deleted, switch to 'all' or first available
      if (activeCategory === categoryId) {
       const nextVisibleCategories = categories.filter(c => c.id !== categoryId && c.isVisible && (!c.isPrivate || isAdminAuthenticated));
       const nextCategory = nextVisibleCategories.length > 0 ? nextVisibleCategories[0] : categories.find(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated));
@@ -124,7 +130,7 @@ export default function HomePage() {
       localStorage.setItem(LS_ADMIN_AUTH_KEY, 'true');
       setShowPasswordDialog(false);
     } else {
-      alert("密码错误！");
+      alert("密码错误！"); // Consider using a toast for errors
     }
   };
 
@@ -139,22 +145,29 @@ export default function HomePage() {
     }
   };
   
+  // Filter categories based on visibility and admin authentication status
   const visibleCategories = categories.filter(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated));
 
+  // Filter bookmarks based on search query and privacy
   const filteredBookmarksBySearch = bookmarks.filter(bm => {
+    // Hide private bookmarks if not admin
     if (!isAdminAuthenticated && bm.isPrivate) return false; 
+    
+    // Hide bookmarks in private categories if not admin
     const categoryOfBookmark = categories.find(c => c.id === bm.categoryId);
     if (!isAdminAuthenticated && categoryOfBookmark && categoryOfBookmark.isPrivate) return false;
 
-    if (!searchQuery.trim()) return true;
+    // Apply search query
+    if (!searchQuery.trim()) return true; // Show all if search is empty
     const query = searchQuery.toLowerCase();
     return (
       bm.name.toLowerCase().includes(query) ||
-      (bm.description && bm.description.toLowerCase().includes(query)) ||
+      (bm.description && bm.description.toLowerCase().includes(query)) || // Check description too
       bm.url.toLowerCase().includes(query)
     );
   });
 
+  // Further filter bookmarks by active category
   const displayedBookmarks = activeCategory === 'all' 
     ? filteredBookmarksBySearch 
     : filteredBookmarksBySearch.filter(bm => bm.categoryId === activeCategory);
@@ -168,53 +181,55 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <AppSidebar
-        categories={visibleCategories}
-        onAddCategory={handleAddCategory}
-        onDeleteCategory={handleDeleteCategory}
-        isAdminAuthenticated={isAdminAuthenticated}
-        activeCategory={activeCategory}
-        setActiveCategory={setActiveCategory}
-        onShowPasswordDialog={() => setShowPasswordDialog(true)}
+    <div className="flex flex-col h-screen overflow-hidden"> {/* Main container is now flex-col */}
+      <AppHeader 
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
       />
-      <div className="flex-1 flex flex-col overflow-y-auto bg-background">
-        <AppHeader 
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
+      <div className="flex flex-1 overflow-hidden"> {/* Container for sidebar and main content */}
+        <AppSidebar
+          categories={visibleCategories}
+          onAddCategory={handleAddCategory}
+          onDeleteCategory={handleDeleteCategory}
+          isAdminAuthenticated={isAdminAuthenticated}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+          onShowPasswordDialog={() => setShowPasswordDialog(true)}
         />
-        <main className="flex-grow p-4 md:p-6">
-          {isAdminAuthenticated && (
-            <div className="mb-4 flex justify-start items-center gap-2">
-              <Button onClick={() => setIsAddBookmarkDialogOpen(true)} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                <PlusCircle className="mr-2 h-4 w-4" /> 添加书签
-              </Button>
-              <Button variant="outline" onClick={handleLogoutAdmin}>
-                <EyeOff className="mr-2 h-4 w-4" /> 退出管理模式
-              </Button>
-            </div>
-          )}
-          
-          <BookmarkGrid
-            bookmarks={displayedBookmarks}
-            categories={categories} // Pass all categories for name/icon lookup, filtering done internally or by displayedBookmarks
-            onDeleteBookmark={handleDeleteBookmark}
-            isAdminAuthenticated={isAdminAuthenticated}
-            currentCategoryName={activeCategory === 'all' ? '全部书签' : categories.find(c=>c.id === activeCategory)?.name || "未知分类"}
-            activeCategoryId={activeCategory}
-            searchQuery={searchQuery}
-          />
-        </main>
-        <footer className="text-center py-3 border-t bg-background/50 text-xs text-muted-foreground">
-          &copy; {new Date().getFullYear()} 晚风Marks. 版权所有.
-        </footer>
+        <div className="flex-1 flex flex-col overflow-y-auto bg-background">
+          <main className="flex-grow p-4 md:p-6">
+            {isAdminAuthenticated && (
+              <div className="mb-4 flex justify-start items-center gap-2">
+                <Button onClick={() => setIsAddBookmarkDialogOpen(true)} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                  <PlusCircle className="mr-2 h-4 w-4" /> 添加书签
+                </Button>
+                <Button variant="outline" onClick={handleLogoutAdmin}>
+                  <EyeOff className="mr-2 h-4 w-4" /> 退出管理模式
+                </Button>
+              </div>
+            )}
+            
+            <BookmarkGrid
+              bookmarks={displayedBookmarks}
+              categories={categories} // Pass all categories for name/icon lookup, filtering done internally or by displayedBookmarks
+              onDeleteBookmark={handleDeleteBookmark}
+              isAdminAuthenticated={isAdminAuthenticated}
+              currentCategoryName={activeCategory === 'all' ? '全部书签' : categories.find(c=>c.id === activeCategory)?.name || "未知分类"}
+              activeCategoryId={activeCategory}
+              searchQuery={searchQuery}
+            />
+          </main>
+          <footer className="text-center py-3 border-t bg-background/50 text-xs text-muted-foreground">
+            &copy; {new Date().getFullYear()} 晚风Marks. 版权所有.
+          </footer>
+        </div>
       </div>
 
       <AddBookmarkDialog
         isOpen={isAddBookmarkDialogOpen}
         onClose={() => setIsAddBookmarkDialogOpen(false)}
         onAddBookmark={handleAddBookmark}
-        categories={visibleCategories.filter(c => c.id !== 'all')}
+        categories={visibleCategories.filter(c => c.id !== 'all')} // Exclude 'all' from category selection
       />
       <PasswordDialog
         isOpen={showPasswordDialog}
