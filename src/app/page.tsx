@@ -401,8 +401,9 @@ export default function HomePage() {
     reorderedDisplayedItems.splice(destinationIndex, 0, movedItem);
 
     setBookmarks(prevGlobalBookmarks => {
-      const idsInReorderedDisplayed = new Set(reorderedDisplayedItems.map(b => b.id));
-      const otherGlobalBookmarks = prevGlobalBookmarks.filter(bm => bm.categoryId !== activeCategory || !idsInReorderedDisplayed.has(bm.id));
+      // Filter out the items from the active category that are being reordered
+      const otherGlobalBookmarks = prevGlobalBookmarks.filter(bm => bm.categoryId !== activeCategory);
+      // Concatenate the reordered items (now at higher effective priority) with the rest
       return [...reorderedDisplayedItems, ...otherGlobalBookmarks];
     });
 
@@ -415,6 +416,7 @@ export default function HomePage() {
       return;
     }
 
+    // The `bookmarks` state already reflects the desired global order due to the logic in `handleDragEndBookmarks`
     const orderedIdsForServer = bookmarks.map(bm => bm.id);
 
     try {
@@ -422,15 +424,15 @@ export default function HomePage() {
       if (res.success) {
         toast({ title: "书签顺序已保存" });
         setHasPendingBookmarkOrderChanges(false);
-        fetchData(true); 
+        fetchData(true); // Refetch to confirm, preserving any *other* types of pending changes if they existed
       } else {
         toast({ title: "保存书签顺序失败", description: "服务器未能保存顺序。", variant: "destructive" });
-        fetchData(); 
+        fetchData(); // Revert to server state on failure
       }
     } catch (error) {
       console.error("Error saving bookmark order:", error);
       toast({ title: "保存书签顺序失败", description: "发生网络错误。", variant: "destructive" });
-      fetchData(); 
+      fetchData(); // Revert to server state on error
     }
   };
 
@@ -459,11 +461,23 @@ export default function HomePage() {
     console.log("HomePage: Render loading state. isClient:", isClient, "isCheckingSetup:", isCheckingSetup, "isLoading:", isLoading);
     return (
       <div className="flex flex-col min-h-screen items-center justify-center bg-background">
-        <svg className="animate-spin h-16 w-16 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        <svg className="animate-spin h-20 w-20 text-primary" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+          <circle
+            cx="25" cy="25" r="20"
+            fill="none"
+            stroke="hsl(var(--primary) / 0.25)"
+            strokeWidth="4"
+          ></circle>
+          <circle
+            cx="25" cy="25" r="20"
+            fill="none"
+            stroke="hsl(var(--primary))"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray="94.2477796076938 31.41592653589793"
+          ></circle>
         </svg>
-        <p className="mt-4 text-lg font-medium text-foreground">正在加载 晚风Marks...</p>
+        <p className="mt-6 text-lg font-medium text-foreground">正在加载 晚风Marks...</p>
       </div>
     );
   }
@@ -594,4 +608,5 @@ export default function HomePage() {
     
 
     
+
 
