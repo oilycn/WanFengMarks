@@ -252,6 +252,11 @@ export async function isSetupCompleteAction(): Promise<boolean> {
       return false;
     }
   } catch (error: any) {
+    // Check if the error is due to the config table not existing
+    if (error.message && (error.message.includes("Table 'config' doesn't exist") || (error.code && error.code === 'ER_NO_SUCH_TABLE'))) {
+      console.log('[AuthAction] isSetupCompleteAction: Config table does not exist. Returning FALSE (setup is not complete).');
+      return false;
+    }
     console.error(`[AuthAction] isSetupCompleteAction: Caught error: ${error.message}`, error);
     console.log('[AuthAction] isSetupCompleteAction: Returning FALSE due to error.');
     return false;
@@ -282,22 +287,33 @@ export async function getSelectedDatabaseTypeAction(): Promise<string> {
     }
 }
 
-export async function resetSetupStateAction(): Promise<void> {
+export async function resetSetupStateAction(): Promise<ActionResult> {
     noStore();
     console.log('[AuthAction] resetSetupStateAction: Attempting to reset setup state.');
     let connection: PoolConnection | null = null;
     try {
         connection = await connectToDatabase();
         await connection.beginTransaction();
-        console.log(`[AuthAction] resetSetupStateAction: Deleting config key: ${ADMIN_PASSWORD_KEY}`);
-        await connection.query("DELETE FROM config WHERE config_key = ?", [ADMIN_PASSWORD_KEY]);
-        console.log(`[AuthAction] resetSetupStateAction: Deleting config key: ${SETUP_COMPLETED_KEY}`);
-        await connection.query("DELETE FROM config WHERE config_key = ?", [SETUP_COMPLETED_KEY]);
+        
+        // Check if config table exists before attempting to delete from it
+        const [tables] = await connection.query<RowDataPacket[]>("SHOW TABLES LIKE 'config'");
+        if (tables.length > 0) {
+            console.log(`[AuthAction] resetSetupStateAction: 'config' table exists. Deleting keys.`);
+            console.log(`[AuthAction] resetSetupStateAction: Deleting config key: ${ADMIN_PASSWORD_KEY}`);
+            await connection.query("DELETE FROM config WHERE config_key = ?", [ADMIN_PASSWORD_KEY]);
+            console.log(`[AuthAction] resetSetupStateAction: Deleting config key: ${SETUP_COMPLETED_KEY}`);
+            await connection.query("DELETE FROM config WHERE config_key = ?", [SETUP_COMPLETED_KEY]);
+        } else {
+            console.log(`[AuthAction] resetSetupStateAction: 'config' table does not exist. No keys to delete.`);
+        }
+        
         await connection.commit();
-        console.log('[AuthAction] resetSetupStateAction: Setup state has been reset in MySQL config table.');
+        console.log('[AuthAction] resetSetupStateAction: Setup state has been reset.');
+        return { success: true, message: '应用配置已重置。您可以重新开始设置流程。' };
     } catch (error: any) {
         if (connection) await connection.rollback();
         console.error(`[AuthAction] resetSetupStateAction: Error resetting setup state. Message: ${error.message}`, error);
+        return { success: false, error: `重置配置失败: ${error.message}` };
     } finally {
         if (connection) connection.release();
     }
