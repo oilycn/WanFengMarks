@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useToast } from "@/hooks/use-toast";
+// Removed: import { useToast } from "@/hooks/use-toast";
 
 interface AddBookmarkDialogProps {
   isOpen: boolean;
@@ -47,14 +47,16 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState<string>('');
   const [isPrivate, setIsPrivate] = useState(false);
-  const { toast } = useToast();
+  const [validationError, setValidationError] = useState<string | null>(null);
+  // Removed: const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen) {
       setName(initialData?.name || '');
       setUrl(initialData?.url || '');
       setDescription(initialData?.description || '');
-      setIsPrivate(false); 
+      setIsPrivate(false);
+      setValidationError(null); // Reset validation error when dialog opens
 
       let newDefaultCategoryId = '';
       if (activeCategoryId && activeCategoryId !== 'all' && categories.some(cat => cat.id === activeCategoryId)) {
@@ -74,28 +76,34 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError(null); // Clear previous errors
+
     if (!name.trim() || !url.trim() || !categoryId) {
-      toast({ title: "错误", description: "名称、网址和分类为必填项。", variant: "destructive" });
+      setValidationError("名称、网址和分类为必填项。");
       return;
     }
     try {
       new URL(url.startsWith('http') ? url : `https://${url}`);
     } catch (_) {
-      toast({ title: "无效的URL", description: "请输入有效的URL。", variant: "destructive" });
+      setValidationError("请输入有效的网址，例如：https://example.com");
       return;
     }
 
     onAddBookmark({ name, url: url.startsWith('http') ? url : `https://${url}`, categoryId, description, isPrivate });
-    // toast({ title: "书签已添加", description: `"${name}" 已成功添加。` }); // Toast is not needed in popup as it closes
-    onClose(); 
+    onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent 
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        setValidationError(null); // Clear error when closing via X or Esc
+      }
+      onClose();
+    }}>
+      <DialogContent
         className="sm:max-w-[480px]"
         onInteractOutside={(event) => {
-          event.preventDefault(); // Prevent closing when clicking outside the dialog content
+          event.preventDefault();
         }}
       >
         <DialogHeader>
@@ -181,9 +189,17 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
                 </Button>
               </div>
             </div>
+            {validationError && (
+              <div className="col-span-4 mt-2 text-center">
+                <p className="text-sm font-medium text-destructive bg-destructive/10 p-2 rounded-md">{validationError}</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>取消</Button>
+            <Button type="button" variant="outline" onClick={() => {
+              setValidationError(null); // Clear error on cancel
+              onClose();
+            }}>取消</Button>
             <Button type="submit">保存书签</Button>
           </DialogFooter>
         </form>
