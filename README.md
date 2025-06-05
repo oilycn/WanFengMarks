@@ -1,16 +1,17 @@
 
 # 晚风Marks - 个性化书签导航
 
-晚风Marks 是一个使用 Next.js、Tailwind CSS 和 ShadCN UI 构建的现代化、可自托管的书签导航应用。它允许用户管理自己的书签，按分类组织，并提供了一个简洁美观的仪表盘界面。
+晚风Marks 是一个使用 Next.js、Tailwind CSS 和 ShadCN UI 构建的现代化、可自托管的书签导航应用。它允许用户管理自己的书签，按分类组织，并提供了一个简洁美观、响应式的仪表盘界面。
 
 ## 特性
 
 *   **书签管理**: 轻松添加、编辑、删除书签。
-*   **分类管理**: 创建和管理书签分类，支持自定义图标和私密性。
-*   **美观界面**: 基于 ShadCN UI 和 Tailwind CSS 的现代化、响应式设计。
+*   **分类管理**: 创建和管理书签分类，支持自定义图标、私密性和排序权重。
+*   **拖拽排序**: 在管理模式下，支持拖拽排序同一分类下的书签，并通过保存按钮持久化顺序。
+*   **美观界面**: 基于 ShadCN UI 和 Tailwind CSS 的现代化、响应式设计，适配桌面和移动设备。
 *   **搜索功能**: 快速搜索网页或筛选应用内书签。
 *   **时钟显示**: 首页集成美观的数字时钟。
-*   **管理模式**: 通过密码保护的管理模式进行书签和分类的增删改操作。
+*   **管理模式**: 通过密码保护的管理模式进行书签和分类的增删改及排序操作。
 *   **书签脚本 (Bookmarklet)**: 通过浏览器书签栏快速添加当前网页到晚风Marks。
 *   **MySQL 后端**: 数据持久化存储在 MySQL 数据库中。
 
@@ -19,6 +20,7 @@
 *   **框架**: Next.js (App Router)
 *   **UI 组件**: ShadCN UI
 *   **样式**: Tailwind CSS
+*   **拖拽**: React Beautiful DnD
 *   **数据库**: MySQL
 *   **语言**: TypeScript
 *   **(可选) AI 功能**: Genkit (如果集成)
@@ -34,7 +36,7 @@
 
 ```bash
 git clone <your-repository-url>
-cd wanfeng-marks 
+cd wanfeng-marks
 npm install
 # 或者
 # yarn install
@@ -76,6 +78,7 @@ npm run dev
 *   **浏览书签**: 按分类查看您的书签。
 *   **管理模式**: 点击侧边栏底部的 "进入管理模式" 按钮，输入您设置的管理员密码。
     *   在管理模式下，您可以添加、编辑、删除书签和分类。
+    *   在管理模式下，您可以对特定分类下的书签进行拖拽排序。排序后，分类标题旁会出现 "保存书签顺序" 按钮，点击即可持久化更改。
     *   管理模式下，右下角会出现浮动按钮，用于快速添加书签、复制书签脚本和退出管理模式。
 
 ### 6. 书签脚本 (Bookmarklet)
@@ -99,6 +102,7 @@ npm run dev
 *   `src/components/`: React UI 组件 (大部分基于 ShadCN)。
 *   `src/actions/`: Next.js Server Actions (用于后端逻辑，如数据库交互)。
 *   `src/lib/`: 工具函数和数据库连接逻辑 (如 `mysql.ts`)。
+*   `src/hooks/`: 自定义 React Hooks (如 `use-toast`, `use-mobile`)。
 *   `src/types/`: TypeScript 类型定义。
 *   `public/`: 静态资源。
 
@@ -109,4 +113,3 @@ npm run dev
 ## 许可证
 
 本项目采用 MIT 许可证。
-```
