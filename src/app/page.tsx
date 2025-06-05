@@ -11,7 +11,7 @@ import EditCategoryDialog from '@/components/EditCategoryDialog';
 import PasswordDialog from '@/components/PasswordDialog';
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, EyeOff, Eye, Copy } from 'lucide-react';
+import { PlusCircle, EyeOff, Copy } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 const LS_BOOKMARKS_KEY = 'wanfeng_bookmarks_v1_zh';
@@ -19,19 +19,12 @@ const LS_CATEGORIES_KEY = 'wanfeng_categories_v1_zh';
 const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1';
 const ADMIN_PASSWORD = "7";
 
-interface WanfengMarksWindow extends Window {
-  wanfengMarksOpenAddDialog?: (data: { name: string; url: string }) => void;
-}
+// IMPORTANT: For the bookmarklet to work correctly, especially during development,
+// ensure this URL matches where your "晚风Marks" app is running.
+// For production, this would be your deployed app's URL.
+const APP_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:9002';
 
-declare const window: WanfengMarksWindow;
-
-const BOOKMARKLET_SCRIPT = `javascript:(function(){
-  if (typeof window.wanfengMarksOpenAddDialog === 'function') {
-    window.wanfengMarksOpenAddDialog({name: document.title, url: window.location.href});
-  } else {
-    alert('请确保 "晚风Marks" 应用已在浏览器中打开并处于活动状态，然后重试此书签脚本。如果您尚未打开 "晚风Marks"，请先打开它。');
-  }
-})();`;
+const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);const wanfengWindow=window.open(\`\${appUrl}/?action=addFromBookmarklet&name=\${title}&url=\${pageUrl}\`, '_blank');if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks。请检查浏览器是否阻止了弹出窗口。');}})();`;
 
 export default function HomePage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -59,17 +52,19 @@ export default function HomePage() {
       setIsAdminAuthenticated(true);
     }
 
-    window.wanfengMarksOpenAddDialog = (data: { name: string; url: string }) => {
-      setInitialDataForAddDialog(data);
-      setIsAddBookmarkDialogOpen(true);
-    };
+    // Logic to handle opening dialog from bookmarklet via URL parameters
+    const queryParams = new URLSearchParams(window.location.search);
+    const action = queryParams.get('action');
+    const nameFromQuery = queryParams.get('name');
+    const urlFromQuery = queryParams.get('url');
 
-    return () => {
-      if (window.wanfengMarksOpenAddDialog) {
-        delete window.wanfengMarksOpenAddDialog;
-      }
-    };
-  }, []);
+    if (action === 'addFromBookmarklet' && nameFromQuery && urlFromQuery) {
+      setInitialDataForAddDialog({ name: decodeURIComponent(nameFromQuery), url: decodeURIComponent(urlFromQuery) });
+      setIsAddBookmarkDialogOpen(true);
+      // Clean the URL to prevent re-triggering on refresh
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []); // Runs once on client mount
 
   useEffect(() => {
     if (!isClient) return;
@@ -339,3 +334,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
