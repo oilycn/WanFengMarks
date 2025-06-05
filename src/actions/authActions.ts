@@ -1,36 +1,41 @@
 
 'use server';
 
-// IMPORTANT: This is an IN-MEMORY store for the admin password.
+// IMPORTANT: This is an IN-MEMORY store for the admin password and setup state.
 // It is NOT secure for production and will be lost on server restart.
-// Replace with secure, hashed password storage in a real database.
+// Replace with secure, hashed password storage and configuration in a real database.
 let memoryAdminPassword: string | null = null;
 let setupCompletedFlag = false;
+let selectedDatabaseType: string = 'temporary'; // Default to temporary
 
-const MIN_PASSWORD_LENGTH = 6;
+// const MIN_PASSWORD_LENGTH = 6; // Removed length restriction
 
 interface ActionResult {
   success: boolean;
   error?: string;
 }
 
-export async function setInitialAdminPasswordAction(password: string): Promise<ActionResult> {
+// Added databaseType parameter, though it's only stored in memory for now.
+export async function setInitialAdminConfigAction(password: string, databaseType: string): Promise<ActionResult> {
   if (setupCompletedFlag && memoryAdminPassword) {
     // This check might be too restrictive if an admin wants to *change* the password later
     // For now, it implies this action is only for the very first setup.
-    // Consider a separate 'changeAdminPasswordAction' for updates.
-    // return { success: false, error: "管理员密码已设置。如需更改，请使用密码修改功能。" };
   }
 
-  if (!password || password.length < MIN_PASSWORD_LENGTH) {
-    return { success: false, error: `密码长度至少为 ${MIN_PASSWORD_LENGTH} 位。` };
+  // Removed password length check
+  // if (!password || password.length < MIN_PASSWORD_LENGTH) {
+  //   return { success: false, error: `密码长度至少为 ${MIN_PASSWORD_LENGTH} 位。` };
+  // }
+  if (!password) {
+    return { success: false, error: `管理员密码不能为空。` };
   }
+
 
   // In a real app, hash the password here before storing
-  // e.g., using bcrypt or argon2
   memoryAdminPassword = password; // Storing plain text - FOR DEMO ONLY
+  selectedDatabaseType = databaseType; // Storing selected DB type in memory
   setupCompletedFlag = true;
-  console.log('Server Action: Initial admin password set (IN-MEMORY).');
+  console.log(`Server Action: Initial admin password set (IN-MEMORY). DB Type: ${selectedDatabaseType}`);
   return { success: true };
 }
 
@@ -56,10 +61,15 @@ export async function isSetupCompleteAction(): Promise<boolean> {
   return isComplete;
 }
 
+export async function getSelectedDatabaseTypeAction(): Promise<string> {
+    return selectedDatabaseType;
+}
+
 // Helper to reset setup state (for development/testing purposes)
 // This would not exist in a production app.
 export async function resetSetupStateAction(): Promise<void> {
     memoryAdminPassword = null;
     setupCompletedFlag = false;
+    selectedDatabaseType = 'temporary';
     console.log('Server Action: Setup state has been reset (IN-MEMORY).');
 }

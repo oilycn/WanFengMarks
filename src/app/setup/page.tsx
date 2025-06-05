@@ -8,19 +8,55 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ShieldCheck, KeyRound, Database, AlertTriangle } from 'lucide-react';
-import { setInitialAdminPasswordAction, isSetupCompleteAction } from '@/actions/authActions';
+import { ShieldCheck, KeyRound, Database, AlertTriangle, Server } from 'lucide-react';
+import { setInitialAdminConfigAction, isSetupCompleteAction } from '@/actions/authActions';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const databaseTypes = [
+  { value: 'temporary', label: '临时存储 (用于测试)' },
+  { value: 'mysql', label: 'MySQL' },
+  { value: 'postgresql', label: 'PostgreSQL' },
+  { value: 'mongodb', label: 'MongoDB' },
+];
+
+const dbConfigPlaceholders: Record<string, Array<{ name: string; label: string; placeholder: string }>> = {
+  mysql: [
+    { name: 'host', label: '主机', placeholder: 'localhost' },
+    { name: 'port', label: '端口', placeholder: '3306' },
+    { name: 'user', label: '用户名', placeholder: 'root' },
+    { name: 'password', label: '密码', placeholder: '数据库密码' },
+    { name: 'database', label: '数据库名', placeholder: 'wanfeng_marks' },
+  ],
+  postgresql: [
+    { name: 'host', label: '主机', placeholder: 'localhost' },
+    { name: 'port', label: '端口', placeholder: '5432' },
+    { name: 'user', label: '用户名', placeholder: 'postgres' },
+    { name: 'password', label: '密码', placeholder: '数据库密码' },
+    { name: 'database', label: '数据库名', placeholder: 'wanfeng_marks' },
+  ],
+  mongodb: [
+    { name: 'connectionString', label: '连接字符串', placeholder: 'mongodb://localhost:27017/wanfeng_marks' },
+  ],
+};
+
 
 export default function SetupPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [adminPassword, setAdminPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [selectedDbType, setSelectedDbType] = useState<string>(databaseTypes[0].value);
+  const [dbConfig, setDbConfig] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Prevent access if setup is already complete
     async function checkExistingSetup() {
       try {
         const setupComplete = await isSetupCompleteAction();
@@ -30,11 +66,14 @@ export default function SetupPage() {
         }
       } catch (err) {
         console.error("Error checking setup status on setup page:", err);
-        // Allow to proceed if check fails, maybe server is not fully ready for this check yet.
       }
     }
     checkExistingSetup();
   }, [router, toast]);
+
+  const handleDbConfigChange = (fieldName: string, value: string) => {
+    setDbConfig(prev => ({ ...prev, [fieldName]: value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,20 +87,21 @@ export default function SetupPage() {
       setError("两次输入的密码不一致。");
       return;
     }
-    if (adminPassword.length < 6) {
-      setError("管理员密码长度至少为6位。");
-      return;
-    }
+    // Removed password length check
+    // if (adminPassword.length < 6) {
+    //   setError("管理员密码长度至少为6位。");
+    //   return;
+    // }
 
     setIsSubmitting(true);
     try {
-      const result = await setInitialAdminPasswordAction(adminPassword);
+      // Pass selectedDbType to the action
+      const result = await setInitialAdminConfigAction(adminPassword, selectedDbType);
       if (result.success) {
         toast({
           title: "配置成功",
           description: "管理员密码已设置。正在跳转到主应用...",
         });
-        // localStorage.setItem('wanfeng_setup_complete_v1', 'true'); // Client flag, server is source of truth
         router.push('/');
       } else {
         setError(result.error || "设置管理员密码失败，请重试。");
@@ -84,6 +124,8 @@ export default function SetupPage() {
       setIsSubmitting(false);
     }
   };
+
+  const currentDbPlaceholders = dbConfigPlaceholders[selectedDbType] || [];
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-sky-100 dark:from-slate-900 dark:to-sky-900 p-4">
@@ -109,7 +151,7 @@ export default function SetupPage() {
                   type="password"
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
-                  placeholder="至少6位字符"
+                  placeholder="输入您的管理员密码"
                   required
                   disabled={isSubmitting}
                 />
@@ -128,19 +170,65 @@ export default function SetupPage() {
               </div>
             </div>
 
-            <div className="space-y-1 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-amber-700 dark:text-amber-300">
-                <div className="flex items-center font-medium">
-                    <Database className="mr-2 h-5 w-5 flex-shrink-0" />
-                    数据库说明
-                </div>
-                <p className="text-xs ">
-                    当前版本使用服务器内存进行书签和分类的临时存储。
-                    管理员密码也将存储在服务器内存中。
-                    <strong>重启服务器后，所有数据（包括此密码）将会丢失。</strong>
-                    后续版本将支持连接到持久化数据库。
-                </p>
+            <div className="space-y-4">
+              <h3 className="flex items-center text-lg font-semibold text-foreground">
+                <Server className="mr-2 h-5 w-5 text-primary" />
+                选择数据存储方式
+              </h3>
+              <div className="space-y-2">
+                <Label htmlFor="dbType">数据库类型</Label>
+                <Select value={selectedDbType} onValueChange={setSelectedDbType} disabled={isSubmitting}>
+                  <SelectTrigger id="dbType">
+                    <SelectValue placeholder="选择数据库类型" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {databaseTypes.map(db => (
+                      <SelectItem key={db.value} value={db.value}>
+                        {db.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedDbType !== 'temporary' && currentDbPlaceholders.length > 0 && (
+                <Card className="mt-4 bg-muted/50 p-4">
+                  <CardHeader className="p-0 pb-2">
+                    <CardTitle className="text-base">数据库配置 ({databaseTypes.find(db=>db.value === selectedDbType)?.label})</CardTitle>
+                    <CardDescription className="text-xs">
+                      注意：以下字段仅为UI占位符，实际的数据库连接和配置需手动在后端实现。
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0 space-y-3">
+                    {currentDbPlaceholders.map(field => (
+                      <div key={field.name} className="space-y-1">
+                        <Label htmlFor={`db-${field.name}`} className="text-xs">{field.label}</Label>
+                        <Input
+                          id={`db-${field.name}`}
+                          type={field.name.includes('password') ? 'password' : 'text'}
+                          placeholder={field.placeholder}
+                          value={dbConfig[field.name] || ''}
+                          onChange={(e) => handleDbConfigChange(field.name, e.target.value)}
+                          disabled // These are placeholders for now
+                          className="bg-background/50"
+                        />
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
+            <div className="space-y-1 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-amber-700 dark:text-amber-300">
+              <div className="flex items-center font-medium">
+                <Database className="mr-2 h-5 w-5 flex-shrink-0" />
+                重要说明
+              </div>
+              <p className="text-xs">
+                如果您选择 "临时存储"，所有数据（书签、分类、管理员密码）将存储在服务器内存中，并在服务器重启后丢失。
+                对于 MySQL, PostgreSQL, 或 MongoDB，您需要自行在后端代码中实现数据库连接和操作逻辑。当前选择这些选项不会自动配置数据库。
+              </p>
+            </div>
 
             {error && (
               <div className="mt-4 flex items-center rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm font-medium text-destructive">
