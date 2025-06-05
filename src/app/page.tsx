@@ -21,7 +21,8 @@ const ADMIN_PASSWORD = "7";
 
 const APP_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:9002';
 
-const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);let desc='';const metaDesc=document.querySelector('meta[name="description"]');if(metaDesc){desc=encodeURIComponent(metaDesc.content);}else{const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc){desc=encodeURIComponent(ogDesc.content);}}const popupWidth=500;const popupHeight=650;const left=(screen.width/2)-(popupWidth/2);const top=(screen.height/2)-(popupHeight/2);const wanfengWindow=window.open(\`\${appUrl}/?action=addFromBookmarklet&name=\${title}&url=\${pageUrl}&desc=\${desc}\`, 'wanfengMarksAddBookmarkPopup', \`toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=\${popupWidth}, height=\${popupHeight}, top=\${top}, left=\${left}\`);if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks书签添加窗口。请检查浏览器是否阻止了弹出窗口。');}})();`;
+// Updated to point to the new /add-bookmark-popup route
+const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);let desc='';const metaDesc=document.querySelector('meta[name="description"]');if(metaDesc){desc=encodeURIComponent(metaDesc.content);}else{const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc){desc=encodeURIComponent(ogDesc.content);}}const popupWidth=500;const popupHeight=650;const left=(screen.width/2)-(popupWidth/2);const top=(screen.height/2)-(popupHeight/2);const wanfengWindow=window.open(\`\${appUrl}/add-bookmark-popup?name=\${title}&url=\${pageUrl}&desc=\${desc}\`, 'wanfengMarksAddBookmarkPopup', \`toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=\${popupWidth}, height=\${popupHeight}, top=\${top}, left=\${left}\`);if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks书签添加窗口。请检查浏览器是否阻止了弹出窗口。');}})();`;
 
 export default function HomePage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -38,7 +39,7 @@ export default function HomePage() {
   const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
 
-  const [initialDataForAddDialog, setInitialDataForAddDialog] = useState<{ name?: string; url?: string; description?: string } | null>(null);
+  // Removed initialDataForAddDialog state as it's now handled by the popup page
 
   const { toast } = useToast();
 
@@ -48,23 +49,7 @@ export default function HomePage() {
     if (adminAuth === 'true') {
       setIsAdminAuthenticated(true);
     }
-
-    const queryParams = new URLSearchParams(window.location.search);
-    const action = queryParams.get('action');
-    const nameFromQuery = queryParams.get('name');
-    const urlFromQuery = queryParams.get('url');
-    const descFromQuery = queryParams.get('desc');
-
-    if (action === 'addFromBookmarklet' && nameFromQuery && urlFromQuery) {
-      setInitialDataForAddDialog({ 
-        name: decodeURIComponent(nameFromQuery), 
-        url: decodeURIComponent(urlFromQuery),
-        description: descFromQuery ? decodeURIComponent(descFromQuery) : undefined
-      });
-      setIsAddBookmarkDialogOpen(true);
-      // Clean the URL query parameters to prevent re-triggering on refresh
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    // Removed query param handling for bookmarklet, now handled by /add-bookmark-popup
   }, []); 
 
   useEffect(() => {
@@ -93,6 +78,32 @@ export default function HomePage() {
       setCategories([defaultCategory]);
       localStorage.setItem(LS_CATEGORIES_KEY, JSON.stringify([defaultCategory]));
     }
+
+    // Listen for storage changes to update bookmarks if added from popup
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === LS_BOOKMARKS_KEY && event.newValue) {
+        const parsedBookmarks = JSON.parse(event.newValue).map((bm: Bookmark) => ({
+          ...bm,
+          description: bm.description || '',
+          icon: bm.icon,
+          isPrivate: bm.isPrivate || false
+        }));
+        setBookmarks(parsedBookmarks);
+      }
+      if (event.key === LS_CATEGORIES_KEY && event.newValue) {
+        const parsedCategories = JSON.parse(event.newValue).map((cat: Category) => ({
+         ...cat,
+         isPrivate: cat.isPrivate || false
+        }));
+        setCategories(parsedCategories);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+
   }, [isClient]);
 
   useEffect(() => {
@@ -116,11 +127,6 @@ export default function HomePage() {
     const bookmarkWithId = { ...newBookmarkData, id: Date.now().toString() + Math.random().toString(36).substring(2,7) };
     setBookmarks(prev => [...prev, bookmarkWithId]);
     setIsAddBookmarkDialogOpen(false);
-    setInitialDataForAddDialog(null); 
-    // If this window is a popup opened by the bookmarklet, try to close it.
-    if (window.opener && window.name === 'wanfengMarksAddBookmarkPopup') {
-      window.close();
-    }
   };
 
   const handleDeleteBookmark = (bookmarkId: string) => {
@@ -210,17 +216,11 @@ export default function HomePage() {
   };
   
   const handleOpenAddBookmarkDialog = () => {
-    setInitialDataForAddDialog(null); 
     setIsAddBookmarkDialogOpen(true);
   };
 
   const handleCloseAddBookmarkDialog = () => {
     setIsAddBookmarkDialogOpen(false);
-    setInitialDataForAddDialog(null); 
-    // If this window is a popup opened by the bookmarklet, try to close it.
-    if (window.opener && window.name === 'wanfengMarksAddBookmarkPopup') {
-      window.close();
-    }
   };
 
   const handleCopyBookmarkletScript = async () => {
@@ -316,7 +316,7 @@ export default function HomePage() {
         onAddBookmark={handleAddBookmark}
         categories={visibleCategories.filter(c => c.id !== 'all')}
         activeCategoryId={activeCategory}
-        initialData={initialDataForAddDialog}
+        // initialData removed here as it was for direct page query params
       />
       {bookmarkToEdit && (
         <EditBookmarkDialog
@@ -343,3 +343,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
