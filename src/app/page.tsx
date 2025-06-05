@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import AppSidebar from '@/components/AppSidebar';
 import AppHeader from '@/components/AppHeader';
 import BookmarkGrid from '@/components/BookmarkGrid';
@@ -25,10 +26,9 @@ import {
   updateCategoryAction,
   deleteCategoryAction,
 } from '@/actions/categoryActions';
+import { isSetupCompleteAction, verifyAdminPasswordAction } from '@/actions/authActions'; // New auth actions
 
-
-const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1'; // Admin auth still local for UI control
-const ADMIN_PASSWORD = "7";
+const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1'; // Client-side flag for UI elements, not for actual security
 
 const APP_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:9002';
 
@@ -36,15 +36,17 @@ const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}
 
 
 export default function HomePage() {
+  const router = useRouter();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isAddBookmarkDialogOpen, setIsAddBookmarkDialogOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false); // UI state
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isCheckingSetup, setIsCheckingSetup] = useState(true);
 
   const [isEditBookmarkDialogOpen, setIsEditBookmarkDialogOpen] = useState(false);
   const [bookmarkToEdit, setBookmarkToEdit] = useState<Bookmark | null>(null);
@@ -58,11 +60,32 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsClient(true);
-    const adminAuth = localStorage.getItem(LS_ADMIN_AUTH_KEY);
-    if (adminAuth === 'true') {
-      setIsAdminAuthenticated(true);
+    // Check if setup is complete
+    async function checkSetup() {
+      try {
+        const setupComplete = await isSetupCompleteAction();
+        if (!setupComplete) {
+          router.push('/setup');
+        } else {
+          // Check for existing client-side auth session
+          const adminAuth = localStorage.getItem(LS_ADMIN_AUTH_KEY);
+          if (adminAuth === 'true') {
+            // Optionally re-verify with server if session is critical
+            // For now, just trust localStorage for UI toggling after initial password entry
+             setIsAdminAuthenticated(true);
+          }
+          setIsCheckingSetup(false);
+        }
+      } catch (error) {
+        console.error("Error checking setup status:", error);
+        toast({ title: "错误", description: "无法检查应用配置状态，请刷新。", variant: "destructive" });
+        // Potentially redirect to an error page or setup page as a fallback
+        router.push('/setup'); // Fallback to setup if check fails critically
+      }
     }
-  }, []); 
+    checkSetup();
+  }, [router, toast]);
+
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -75,17 +98,12 @@ export default function HomePage() {
       if (fetchedCategories.length > 0) {
         setCategories(fetchedCategories);
       } else {
-        // Ensure a default category exists if none are fetched (e.g., first run with empty server data)
         const defaultCategory: Category = { id: 'default', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
-        // Optionally, you might want to add this default category to the server if it doesn't exist.
-        // For now, just setting it client-side if categories are empty.
-        // const savedDefaultCat = await addCategoryAction('通用书签', 'Folder', false);
         setCategories([defaultCategory]);
       }
     } catch (error) {
       console.error("Failed to fetch data:", error);
       toast({ title: "错误", description: "加载数据失败，请稍后重试。", variant: "destructive" });
-      // Fallback to a default category if server fails
        if (categories.length === 0) {
            const defaultCategory = { id: 'default', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
            setCategories([defaultCategory]);
@@ -93,13 +111,13 @@ export default function HomePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast, categories.length]); // Added categories.length to re-run if categories become empty
+  }, [toast, categories.length]);
 
   useEffect(() => {
-    if (isClient) {
+    if (isClient && !isCheckingSetup) { // Only fetch data if setup is complete and client is ready
       fetchData();
     }
-  }, [isClient, fetchData]);
+  }, [isClient, isCheckingSetup, fetchData]);
 
 
   useEffect(() => {
@@ -114,7 +132,7 @@ export default function HomePage() {
       const newBookmark = await addBookmarkAction(newBookmarkData);
       setBookmarks(prev => [...prev, newBookmark]);
       setIsAddBookmarkDialogOpen(false);
-      setInitialDataForAddDialog(null); // Clear prefill data
+      setInitialDataForAddDialog(null); 
       toast({ title: "书签已添加", description: `"${newBookmark.name}" 已成功添加。` });
     } catch (error) {
       console.error("Failed to add bookmark:", error);
@@ -123,7 +141,10 @@ export default function HomePage() {
   };
 
   const handleDeleteBookmark = async (bookmarkId: string) => {
-    if (!isAdminAuthenticated) return;
+    if (!isAdminAuthenticated) { // This client-side check can remain for UI quick-hide
+        toast({ title: "未授权", description: "请先进入管理模式。", variant: "destructive" });
+        return;
+    }
     try {
       await deleteBookmarkAction(bookmarkId);
       setBookmarks(prev => prev.filter(bm => bm.id !== bookmarkId));
@@ -135,13 +156,19 @@ export default function HomePage() {
   };
 
   const handleOpenEditBookmarkDialog = (bookmark: Bookmark) => {
-    if (!isAdminAuthenticated) return;
+    if (!isAdminAuthenticated) {
+      toast({ title: "未授权", description: "请先进入管理模式。", variant: "destructive" });
+      return;
+    }
     setBookmarkToEdit(bookmark);
     setIsEditBookmarkDialogOpen(true);
   };
 
   const handleUpdateBookmark = async (updatedBookmark: Bookmark) => {
-    if (!isAdminAuthenticated) return;
+     if (!isAdminAuthenticated) {
+        toast({ title: "未授权", description: "请先进入管理模式。", variant: "destructive" });
+        return;
+    }
     try {
       const newUpdatedBookmark = await updateBookmarkAction(updatedBookmark);
       setBookmarks(prev => prev.map(bm => bm.id === newUpdatedBookmark.id ? newUpdatedBookmark : bm));
@@ -155,7 +182,10 @@ export default function HomePage() {
   };
 
   const handleAddCategory = async (categoryName: string, icon?: string, isPrivate?: boolean) => {
-    if (!isAdminAuthenticated) return;
+    if (!isAdminAuthenticated) {
+        toast({ title: "未授权", description: "请先进入管理模式。", variant: "destructive" });
+        return;
+    }
     if (categories.some(cat => cat.name.toLowerCase() === categoryName.toLowerCase())) {
       toast({ title: "错误", description: "分类名称已存在。", variant: "destructive" });
       return;
@@ -171,17 +201,17 @@ export default function HomePage() {
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
-    if (!isAdminAuthenticated) return;
+    if (!isAdminAuthenticated) {
+        toast({ title: "未授权", description: "请先进入管理模式。", variant: "destructive" });
+        return;
+    }
     try {
-      // First, delete all bookmarks in this category from the server
       const bookmarksInCategory = bookmarks.filter(bm => bm.categoryId === categoryId);
       for (const bm of bookmarksInCategory) {
         await deleteBookmarkAction(bm.id);
       }
-      // Then, delete the category itself
       await deleteCategoryAction(categoryId);
       
-      // Update client state
       setBookmarks(prev => prev.filter(bm => bm.categoryId !== categoryId));
       const oldCategoryName = categories.find(c => c.id === categoryId)?.name || '该分类';
       setCategories(prev => prev.filter(cat => cat.id !== categoryId && cat.id !== 'default'));
@@ -199,13 +229,19 @@ export default function HomePage() {
   };
 
   const handleOpenEditCategoryDialog = (category: Category) => {
-    if (!isAdminAuthenticated) return;
+     if (!isAdminAuthenticated) {
+        toast({ title: "未授权", description: "请先进入管理模式。", variant: "destructive" });
+        return;
+    }
     setCategoryToEdit(category);
     setIsEditCategoryDialogOpen(true);
   };
 
   const handleUpdateCategory = async (updatedCategory: Category) => {
-     if (!isAdminAuthenticated) return;
+     if (!isAdminAuthenticated) {
+        toast({ title: "未授权", description: "请先进入管理模式。", variant: "destructive" });
+        return;
+    }
      if (categories.some(cat => cat.id !== updatedCategory.id && cat.name.toLowerCase() === updatedCategory.name.toLowerCase())) {
       toast({ title: "错误", description: "已存在同名分类。", variant: "destructive" });
       return;
@@ -223,16 +259,21 @@ export default function HomePage() {
     }
   };
 
-  const handlePasswordSubmit = (password: string) => {
-    if (password === ADMIN_PASSWORD) {
-      setIsAdminAuthenticated(true);
-      localStorage.setItem(LS_ADMIN_AUTH_KEY, 'true');
-      setShowPasswordDialog(false);
-      toast({ title: "授权成功", description: "已进入管理模式。" });
-      // Re-fetch data in case private items are now visible
-      fetchData();
-    } else {
-      toast({ title: "密码错误", description: "请输入正确的管理员密码。", variant: "destructive" });
+  const handlePasswordSubmit = async (password: string) => {
+    try {
+      const PwasValid = await verifyAdminPasswordAction(password);
+      if (PwasValid) {
+        setIsAdminAuthenticated(true);
+        localStorage.setItem(LS_ADMIN_AUTH_KEY, 'true');
+        setShowPasswordDialog(false);
+        toast({ title: "授权成功", description: "已进入管理模式。" });
+        fetchData(); // Re-fetch data in case private items are now visible
+      } else {
+        toast({ title: "密码错误", description: "请输入正确的管理员密码。", variant: "destructive" });
+      }
+    } catch (error) {
+        console.error("Password verification error:", error);
+        toast({ title: "验证错误", description: "无法验证密码，请稍后再试。", variant: "destructive" });
     }
   };
 
@@ -245,18 +286,17 @@ export default function HomePage() {
         setActiveCategory(firstPublicCategory?.id || 'all');
     }
     toast({ title: "已退出", description: "已退出管理模式。" });
-    // Re-fetch data to hide private items
     fetchData();
   };
   
   const handleOpenAddBookmarkDialog = () => {
-    setInitialDataForAddDialog(null); // Clear any old prefill data
+    setInitialDataForAddDialog(null); 
     setIsAddBookmarkDialogOpen(true);
   };
 
   const handleCloseAddBookmarkDialog = () => {
     setIsAddBookmarkDialogOpen(false);
-    setInitialDataForAddDialog(null); // Clear prefill data on close
+    setInitialDataForAddDialog(null); 
   };
 
   const handleCopyBookmarkletScript = async () => {
@@ -288,7 +328,7 @@ export default function HomePage() {
     ? filteredBookmarksBySearch
     : filteredBookmarksBySearch.filter(bm => bm.categoryId === activeCategory);
 
-  if (!isClient || isLoading) { // Show loading state while fetching or if not client yet
+  if (!isClient || isCheckingSetup || isLoading) { 
     return (
       <div className="flex flex-col min-h-screen items-center justify-center">
         <div className="animate-pulse text-2xl font-semibold text-primary">正在加载 晚风Marks...</div>
@@ -320,9 +360,9 @@ export default function HomePage() {
                 <Button
                   onClick={handleOpenAddBookmarkDialog}
                   className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg 
-                             flex items-center justify-center
                              h-10 w-10 rounded-full p-0 
-                             transition-colors duration-200"
+                             flex items-center justify-center
+                             transition-all ease-in-out duration-500"
                   aria-label="添加书签"
                   title="添加书签"
                 >
@@ -330,10 +370,10 @@ export default function HomePage() {
                 </Button>
                 <Button
                   onClick={handleCopyBookmarkletScript}
-                  className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg
-                             flex items-center justify-center
+                  className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg 
                              h-10 w-10 rounded-full p-0
-                             transition-colors duration-200"
+                             flex items-center justify-center
+                             transition-all ease-in-out duration-500"
                   aria-label="复制书签脚本"
                   title="复制书签脚本"
                 >
@@ -341,10 +381,10 @@ export default function HomePage() {
                 </Button>
                  <Button
                   onClick={handleLogoutAdmin}
-                  className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg
-                             flex items-center justify-center
+                  className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg 
                              h-10 w-10 rounded-full p-0
-                             transition-colors duration-200"
+                             flex items-center justify-center
+                             transition-all ease-in-out duration-500"
                   aria-label="退出管理模式"
                   title="退出管理模式"
                 >
