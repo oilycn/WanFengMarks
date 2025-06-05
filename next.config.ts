@@ -25,6 +25,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Explicitly configure server actions.
+  // This can sometimes help with how Next.js handles action requests,
+  // especially in proxied environments.
+  serverActions: true,
 };
 
 export default nextConfig;
