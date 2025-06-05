@@ -21,7 +21,7 @@ const ADMIN_PASSWORD = "7";
 
 const APP_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:9002';
 
-const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);let desc='';const metaDesc=document.querySelector('meta[name="description"]');if(metaDesc){desc=encodeURIComponent(metaDesc.content);}else{const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc){desc=encodeURIComponent(ogDesc.content);}}const wanfengWindow=window.open(\`\${appUrl}/?action=addFromBookmarklet&name=\${title}&url=\${pageUrl}&desc=\${desc}\`, '_blank');if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks。请检查浏览器是否阻止了弹出窗口。');}})();`;
+const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);let desc='';const metaDesc=document.querySelector('meta[name="description"]');if(metaDesc){desc=encodeURIComponent(metaDesc.content);}else{const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc){desc=encodeURIComponent(ogDesc.content);}}const popupWidth=500;const popupHeight=650;const left=(screen.width/2)-(popupWidth/2);const top=(screen.height/2)-(popupHeight/2);const wanfengWindow=window.open(\`\${appUrl}/?action=addFromBookmarklet&name=\${title}&url=\${pageUrl}&desc=\${desc}\`, 'wanfengMarksAddBookmarkPopup', \`toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=\${popupWidth}, height=\${popupHeight}, top=\${top}, left=\${left}\`);if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks书签添加窗口。请检查浏览器是否阻止了弹出窗口。');}})();`;
 
 export default function HomePage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -62,6 +62,7 @@ export default function HomePage() {
         description: descFromQuery ? decodeURIComponent(descFromQuery) : undefined
       });
       setIsAddBookmarkDialogOpen(true);
+      // Clean the URL query parameters to prevent re-triggering on refresh
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []); 
@@ -116,6 +117,10 @@ export default function HomePage() {
     setBookmarks(prev => [...prev, bookmarkWithId]);
     setIsAddBookmarkDialogOpen(false);
     setInitialDataForAddDialog(null); 
+    // If this window is a popup opened by the bookmarklet, try to close it.
+    if (window.opener && window.name === 'wanfengMarksAddBookmarkPopup') {
+      window.close();
+    }
   };
 
   const handleDeleteBookmark = (bookmarkId: string) => {
@@ -212,6 +217,10 @@ export default function HomePage() {
   const handleCloseAddBookmarkDialog = () => {
     setIsAddBookmarkDialogOpen(false);
     setInitialDataForAddDialog(null); 
+    // If this window is a popup opened by the bookmarklet, try to close it.
+    if (window.opener && window.name === 'wanfengMarksAddBookmarkPopup') {
+      window.close();
+    }
   };
 
   const handleCopyBookmarkletScript = async () => {
