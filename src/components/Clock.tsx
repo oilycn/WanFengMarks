@@ -16,8 +16,8 @@ const Clock: React.FC = () => {
 
   if (!time) {
     return (
-      <div className="p-2 text-center w-auto min-w-[10rem] md:min-w-[11rem]">
-        <div className="text-xl font-bold font-headline tabular-nums animate-pulse text-neutral-700 dark:text-neutral-100">--:--:--</div>
+      <div className="p-1 text-center w-auto min-w-[8rem] md:min-w-[9rem]">
+        <div className="text-lg font-bold font-headline tabular-nums animate-pulse text-neutral-700 dark:text-neutral-100">--:--:--</div>
         <div className="text-xs mt-0.5 animate-pulse text-neutral-500 dark:text-neutral-300">正在加载日期...</div>
       </div>
     );
@@ -27,8 +27,8 @@ const Clock: React.FC = () => {
   const formattedDate = time.toLocaleDateString('zh-CN', { weekday: 'long', month: 'short', day: 'numeric' });
 
   return (
-    <div className="p-2 text-center w-auto min-w-[10rem] md:min-w-[11rem]">
-      <div className="text-2xl font-bold font-headline tabular-nums tracking-tight text-neutral-700 dark:text-neutral-100">
+    <div className="p-1 text-center w-auto min-w-[8rem] md:min-w-[9rem]">
+      <div className="text-lg font-bold font-headline tabular-nums tracking-tight text-neutral-700 dark:text-neutral-100">
         {formattedTime}
       </div>
       <div className="text-xs text-neutral-500 dark:text-neutral-300 mt-0.5">

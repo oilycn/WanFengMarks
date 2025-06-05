@@ -41,11 +41,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ currentQuery, onQueryChange }) =>
   return (
     <form 
       onSubmit={handleSearchSubmit} 
-      className="flex w-full max-w-lg items-center space-x-0 bg-background dark:bg-neutral-700/80 p-1 rounded-lg shadow-md"
+      className="flex w-full max-w-xl items-center space-x-0 bg-background dark:bg-neutral-700/80 p-1 rounded-lg shadow-md"  // Increased max-w-lg to max-w-xl
     >
       <Select value={selectedEngine} onValueChange={setSelectedEngine}>
         <SelectTrigger 
-          className="w-auto min-w-[90px] bg-transparent hover:bg-muted/50 dark:bg-transparent dark:hover:bg-neutral-600/50 border-r border-border dark:border-neutral-500/60 text-foreground/80 dark:text-neutral-300 focus:ring-primary h-9 text-xs px-2.5 rounded-l-md rounded-r-none shadow-none"
+          className="w-auto min-w-[90px] bg-slate-100 hover:bg-slate-200 dark:bg-neutral-600 dark:hover:bg-neutral-500/90 border-r border-border dark:border-neutral-500/60 text-foreground/80 dark:text-neutral-300 focus:ring-primary h-9 text-xs px-2.5 rounded-l-md rounded-r-none shadow-none"
           aria-label="选择搜索引擎"
         >
           <div className="flex items-center gap-1 truncate">
