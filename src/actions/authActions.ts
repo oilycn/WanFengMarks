@@ -1,6 +1,8 @@
 
 'use server';
 
+import { unstable_noStore as noStore } from 'next/cache';
+
 // IMPORTANT: This is an IN-MEMORY store for the admin password and setup state.
 // It is NOT secure for production and will be lost on server restart.
 // Replace with secure, hashed password storage and configuration in a real database.
@@ -42,6 +44,7 @@ export async function setInitialAdminConfigAction(password: string, databaseType
 }
 
 export async function verifyAdminPasswordAction(password: string): Promise<boolean> {
+  noStore(); // Opt out of caching for this action as well, just in case
   if (!setupCompletedFlag || !memoryAdminPassword) {
     console.warn('[AuthAction] Admin password verification attempted before setup or password is null.');
     return false; // No password set means verification fails
@@ -57,6 +60,7 @@ export async function verifyAdminPasswordAction(password: string): Promise<boole
 }
 
 export async function isSetupCompleteAction(): Promise<boolean> {
+  noStore(); // Opt out of caching for this action
   // The "setup" is considered complete if an admin password has been set.
   const isComplete = setupCompletedFlag && memoryAdminPassword !== null;
   console.log(`[AuthAction] isSetupCompleteAction called. setupCompletedFlag: ${setupCompletedFlag}, memoryAdminPassword: ${memoryAdminPassword ? 'set' : 'null'}, isComplete: ${isComplete}`);
@@ -64,6 +68,7 @@ export async function isSetupCompleteAction(): Promise<boolean> {
 }
 
 export async function getSelectedDatabaseTypeAction(): Promise<string> {
+    noStore(); // Opt out of caching for this action
     return selectedDatabaseType;
 }
 
