@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -7,21 +8,25 @@ import ControlsArea from '@/components/ControlsArea';
 import AddBookmarkDialog from '@/components/AddBookmarkDialog';
 import BookmarkGrid from '@/components/BookmarkGrid';
 import type { Bookmark, Category } from '@/types';
+import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Settings } from 'lucide-react';
 
-const LS_BOOKMARKS_KEY = 'aegisMarks_bookmarks_v1_zh'; // Changed key for Chinese version
-const LS_CATEGORIES_KEY = 'aegisMarks_categories_v1_zh'; // Changed key for Chinese version
+const LS_BOOKMARKS_KEY = 'aegisMarks_bookmarks_v1_zh';
+const LS_CATEGORIES_KEY = 'aegisMarks_categories_v1_zh';
 
 export default function HomePage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isAddBookmarkDialogOpen, setIsAddBookmarkDialogOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [showControls, setShowControls] = useState(false);
 
   useEffect(() => {
-    setIsClient(true); // Indicate client-side rendering is complete
+    setIsClient(true);
   }, []);
 
-  // Load data from localStorage on mount (only on client)
   useEffect(() => {
     if (!isClient) return;
 
@@ -40,7 +45,6 @@ export default function HomePage() {
     }
   }, [isClient]);
 
-  // Save data to localStorage when it changes (only on client)
   useEffect(() => {
     if (!isClient) return;
     localStorage.setItem(LS_BOOKMARKS_KEY, JSON.stringify(bookmarks));
@@ -71,7 +75,6 @@ export default function HomePage() {
 
   const handleAddCategory = (categoryName: string) => {
     if (categories.some(cat => cat.name.toLowerCase() === categoryName.toLowerCase())) {
-      // Potentially show a toast message for duplicate category name
       console.warn("分类已存在");
       return;
     }
@@ -81,11 +84,10 @@ export default function HomePage() {
   
   const handleDeleteCategory = (categoryId: string) => {
     setBookmarks(prev => prev.filter(bm => bm.categoryId !== categoryId));
-    setCategories(prev => prev.filter(cat => cat.id !== categoryId && cat.id !== 'default')); // Prevent deleting default
+    setCategories(prev => prev.filter(cat => cat.id !== categoryId && cat.id !== 'default'));
   };
 
   if (!isClient) {
-    // Render a loading state or null during SSR/SSG to avoid hydration mismatch with localStorage
     return (
       <div className="flex flex-col min-h-screen bg-background text-foreground items-center justify-center">
         <div className="animate-pulse text-2xl font-semibold text-primary">正在加载 AegisMarks...</div>
@@ -94,27 +96,48 @@ export default function HomePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-2 sm:px-6 lg:px-8 min-h-screen flex flex-col">
+    <div className="container mx-auto px-2 sm:px-4 lg:px-6 py-2 min-h-screen flex flex-col">
       <SiteHeader />
       <DashboardInfo />
-      <ControlsArea
-        categories={categories}
-        onAddCategory={handleAddCategory}
-        onToggleVisibility={handleToggleCategoryVisibility}
-        onDeleteCategory={handleDeleteCategory}
-        onOpenAddBookmarkDialog={() => setIsAddBookmarkDialogOpen(true)}
-      />
-      <main className="flex-grow mt-2">
+      
+      <main className="flex-grow mt-2 mb-6">
         <BookmarkGrid bookmarks={bookmarks} categories={categories} onDeleteBookmark={handleDeleteBookmark} />
       </main>
+
+      <Separator className="my-6" />
+
+      <div className="mb-6">
+        <Button variant="outline" onClick={() => setShowControls(!showControls)} className="mb-4 shadow-sm">
+          <Settings className="mr-2 h-4 w-4" />
+          {showControls ? '隐藏管理面板' : '显示管理面板'}
+        </Button>
+
+        {showControls && (
+          <Card className="bg-muted/30 shadow-md">
+            <CardHeader>
+              <CardTitle className="text-xl">内容管理</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ControlsArea
+                categories={categories}
+                onAddCategory={handleAddCategory}
+                onToggleVisibility={handleToggleCategoryVisibility}
+                onDeleteCategory={handleDeleteCategory}
+                onOpenAddBookmarkDialog={() => setIsAddBookmarkDialogOpen(true)}
+              />
+            </CardContent>
+          </Card>
+        )}
+      </div>
+      
       <AddBookmarkDialog
         isOpen={isAddBookmarkDialogOpen}
         onClose={() => setIsAddBookmarkDialogOpen(false)}
         onAddBookmark={handleAddBookmark}
         categories={categories}
       />
-      <footer className="text-center py-6 mt-auto border-t border-border">
-        <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} AegisMarks. 版权所有.</p>
+      <footer className="text-center py-4 mt-auto border-t border-border">
+        <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} AegisMarks. 版权所有.</p>
       </footer>
     </div>
   );

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -22,15 +23,15 @@ const ControlsArea: React.FC<ControlsAreaProps> = ({
   onOpenAddBookmarkDialog,
 }) => {
   return (
-    <section className="flex flex-col md:flex-row items-start gap-6 mb-6 md:mb-8">
+    <section className="flex flex-col md:flex-row items-start gap-4">
       <CategoryControls
         categories={categories}
         onAddCategory={onAddCategory}
         onToggleVisibility={onToggleVisibility}
         onDeleteCategory={onDeleteCategory}
       />
-      <Button onClick={onOpenAddBookmarkDialog} variant="default" size="lg" className="shadow-md self-start md:self-auto md:mt-[52px]"> {/* Approx CardHeader height + padding */}
-        <PlusCircle className="mr-2 h-5 w-5" /> 添加新书签
+      <Button onClick={onOpenAddBookmarkDialog} variant="default" size="default" className="shadow-sm self-start md:self-start mt-0 md:mt-1.5"> 
+        <PlusCircle className="mr-2 h-4 w-4" /> 添加新书签
       </Button>
     </section>
   );

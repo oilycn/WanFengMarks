@@ -1,12 +1,13 @@
+
 import React from 'react';
 import AegisLogo from './AegisLogo';
 import SearchBar from './SearchBar';
 
 const SiteHeader: React.FC = () => {
   return (
-    <header className="flex flex-col md:flex-row justify-between items-center py-4 md:py-6 border-b border-border mb-6 md:mb-8">
+    <header className="flex flex-col md:flex-row justify-between items-center py-3 md:py-4 border-b border-border/80 mb-4 md:mb-6">
       <AegisLogo />
-      <div className="mt-4 md:mt-0 w-full md:w-auto">
+      <div className="mt-3 md:mt-0 w-full md:w-auto">
         <SearchBar />
       </div>
     </header>

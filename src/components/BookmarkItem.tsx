@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -19,7 +20,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
-
 interface BookmarkItemProps {
   bookmark: Bookmark;
   onDeleteBookmark: (id: string) => void;
@@ -30,9 +30,11 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark 
   const getFaviconUrl = (url: string) => {
     try {
       const domain = new URL(url).hostname;
+      // Google S2 service provides 32x32 favicons, which is a good size.
       return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
     } catch (error) {
-      return ''; // Return empty string or a default icon path if URL is invalid
+      console.error("Invalid URL for favicon:", url, error);
+      return ''; 
     }
   };
   const favicon = getFaviconUrl(bookmark.url);
@@ -43,28 +45,34 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark 
   };
 
   return (
-    <Card className="group relative shadow-sm hover:shadow-lg transition-shadow duration-200 ease-in-out overflow-hidden">
-      <CardContent className="p-3 flex flex-col items-center justify-center aspect-square text-center">
+    <Card className="group relative shadow-sm hover:shadow-md transition-all duration-200 ease-in-out overflow-hidden bg-card/80 backdrop-blur-sm border border-border/50 hover:border-primary/50">
+      <CardContent className="p-2 flex flex-col items-center justify-center aspect-[3/2] text-center">
         <a
           href={bookmark.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex flex-col items-center justify-center w-full h-full text-card-foreground hover:text-primary transition-colors"
+          className="flex flex-col items-center justify-center w-full h-full text-card-foreground hover:text-primary transition-colors group"
           aria-label={`打开 ${bookmark.name}`}
         >
           {favicon ? (
             <Image 
               src={favicon} 
               alt={`${bookmark.name} 图标`} 
-              width={32} 
-              height={32} 
-              className="mb-2 rounded object-contain"
-              onError={(e) => (e.currentTarget.style.display = 'none')} // Hide if favicon fails to load
+              width={28} // Reduced size
+              height={28} // Reduced size
+              className="mb-1.5 rounded object-contain group-hover:scale-110 transition-transform"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                // Optionally, show a fallback generic icon if favicon fails
+                const fallbackIcon = e.currentTarget.parentElement?.querySelector('.fallback-icon');
+                if (fallbackIcon) fallbackIcon.classList.remove('hidden');
+              }}
             />
-          ) : (
-            <Link2 className="h-8 w-8 mb-2 opacity-70 group-hover:opacity-100" />
-          )}
-          <span className="text-sm font-medium truncate w-full px-1 group-hover:underline">
+          ) : null}
+          {/* Fallback icon, initially hidden if favicon is supposed to load */}
+          <Link2 className={`h-7 w-7 mb-1.5 opacity-60 group-hover:opacity-90 fallback-icon ${favicon ? 'hidden' : ''}`} />
+          
+          <span className="text-xs font-medium truncate w-full px-0.5 group-hover:underline leading-tight">
             {bookmark.name}
           </span>
         </a>
@@ -74,10 +82,10 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark 
            <Button
             variant="ghost"
             size="icon"
-            className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:bg-destructive/10"
+            className="absolute top-0.5 right-0.5 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive/70 hover:text-destructive hover:bg-destructive/10 p-0"
             aria-label={`删除 ${bookmark.name}`}
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash2 className="h-2.5 w-2.5" />
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
