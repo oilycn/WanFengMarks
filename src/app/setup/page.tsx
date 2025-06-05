@@ -1,150 +1,138 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ShieldCheck, KeyRound, Database, AlertTriangle, Server } from 'lucide-react';
-import { setInitialAdminConfigAction, isSetupCompleteAction } from '@/actions/authActions';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { ShieldCheck, KeyRound, Database, AlertTriangle, Server, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { 
+  setInitialAdminConfigAction, 
+  isSetupCompleteAction,
+  testMySQLConnectionAction,
+  initializeMySQLDatabaseAction
+} from '@/actions/authActions';
 
-const databaseTypes = [
-  { value: 'temporary', label: '临时存储 (用于测试)' },
-  { value: 'mysql', label: 'MySQL (推荐)' },
-  // { value: 'postgresql', label: 'PostgreSQL' },
-  // { value: 'mongodb', label: 'MongoDB' },
-];
-
-// Placeholders are mostly for show, actual config is via .env.local for MySQL
-const dbConfigPlaceholders: Record<string, Array<{ name: string; label: string; placeholder: string }>> = {
-  mysql: [
-    { name: 'host', label: '主机 (来自 .env.local)', placeholder: 'process.env.MYSQL_HOST' },
-    { name: 'port', label: '端口 (来自 .env.local)', placeholder: 'process.env.MYSQL_PORT' },
-    { name: 'user', label: '用户名 (来自 .env.local)', placeholder: 'process.env.MYSQL_USER' },
-    { name: 'database', label: '数据库名 (来自 .env.local)', placeholder: 'process.env.MYSQL_DATABASE' },
-  ],
-  // postgresql: [ // Keep for potential future expansion, but disabled for now
-  //   { name: 'host', label: '主机', placeholder: 'localhost' },
-  // ],
-  // mongodb: [ // Keep for potential future expansion, but disabled for now
-  //   { name: 'connectionString', label: '连接字符串', placeholder: 'mongodb://localhost:27017/wanfeng_marks' },
-  // ],
-};
-
+type SetupStep = 'initial' | 'testingConnection' | 'connectionFailed' | 'connectionSuccess' | 'initializingDb' | 'dbInitFailed' | 'dbInitSuccess' | 'passwordSetup' | 'submittingConfig';
 
 export default function SetupPage() {
   const router = useRouter();
   const { toast } = useToast();
+  
   const [adminPassword, setAdminPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [selectedDbType, setSelectedDbType] = useState<string>(databaseTypes[0].value); // Default to temporary
-  const [dbConfig, setDbConfig] = useState<Record<string, string>>({}); // Not actively used for MySQL config, reads from .env
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  
+  const [currentStep, setCurrentStep] = useState<SetupStep>('initial');
+  const [isLoading, setIsLoading] = useState(false); // General loading state for async operations
+  const [feedbackMessage, setFeedbackMessage] = useState<{type: 'error' | 'success' | 'info', message: string} | null>(null);
+  const [isCheckingInitialSetup, setIsCheckingInitialSetup] = useState(true);
+
+  const checkExistingSetup = useCallback(async () => {
+    setIsCheckingInitialSetup(true);
+    console.log("SetupPage: checkExistingSetup running.");
+    try {
+      const setupComplete = await isSetupCompleteAction();
+      console.log("SetupPage: setupComplete result from server:", setupComplete);
+      if (setupComplete) {
+        console.log("SetupPage: Setup already complete, redirecting to /");
+        router.push('/');
+      } else {
+        console.log("SetupPage: Setup not complete, proceeding with setup steps.");
+        setCurrentStep('initial'); // Start at the first actual setup step
+      }
+    } catch (err) {
+      console.error("SetupPage: Error checking setup status on setup page:", err);
+      setFeedbackMessage({ type: 'error', message: "无法检查现有配置状态，请确保数据库可访问或稍后重试。" });
+      setCurrentStep('initial'); // Allow user to try to proceed if check fails
+    } finally {
+      setIsCheckingInitialSetup(false);
+    }
+  }, [router]);
 
   useEffect(() => {
-    if (isSubmitting) {
-      console.log("SetupPage: isSubmitting is true, skipping useEffect check.");
-      return;
-    }
-
-    let active = true;
-    async function checkExistingSetup() {
-      console.log("SetupPage: checkExistingSetup running.");
-      try {
-        const setupComplete = await isSetupCompleteAction();
-        console.log("SetupPage: setupComplete result from server:", setupComplete);
-        if (active && setupComplete) {
-          console.log("SetupPage: Setup already complete, redirecting to /");
-          router.push('/');
-        } else if (active) {
-          console.log("SetupPage: Setup not complete, staying on page.");
-        }
-      } catch (err) {
-        if (active) {
-          console.error("SetupPage: Error checking setup status on setup page:", err);
-          // toast({ title: "错误", description: "检查配置状态失败。", variant: "destructive" });
-        }
-      }
-    }
     checkExistingSetup();
-    return () => { 
-      active = false; 
-      console.log("SetupPage: useEffect cleanup.");
-    };
-  }, [router, isSubmitting]); 
+  }, [checkExistingSetup]);
 
-  const handleDbConfigChange = (fieldName: string, value: string) => {
-    // This is mostly for show as MySQL config comes from .env.local
-    setDbConfig(prev => ({ ...prev, [fieldName]: value }));
+  const handleTestConnection = async () => {
+    setIsLoading(true);
+    setCurrentStep('testingConnection');
+    setFeedbackMessage(null);
+    const result = await testMySQLConnectionAction();
+    if (result.success) {
+      setFeedbackMessage({ type: 'success', message: result.message || '数据库连接成功！' });
+      setCurrentStep('connectionSuccess');
+    } else {
+      setFeedbackMessage({ type: 'error', message: result.error || '数据库连接测试失败。' });
+      setCurrentStep('connectionFailed');
+    }
+    setIsLoading(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    console.log("SetupPage: handleSubmit initiated.");
+  const handleInitializeDatabase = async () => {
+    setIsLoading(true);
+    setCurrentStep('initializingDb');
+    setFeedbackMessage(null);
+    const result = await initializeMySQLDatabaseAction();
+    if (result.success) {
+      setFeedbackMessage({ type: 'success', message: result.message || '数据库初始化成功！现在可以设置管理员密码。' });
+      setCurrentStep('dbInitSuccess'); // Transition to password setup phase
+    } else {
+      setFeedbackMessage({ type: 'error', message: result.error || '数据库初始化失败。' });
+      setCurrentStep('dbInitFailed');
+    }
+    setIsLoading(false);
+  };
 
-    if (selectedDbType !== 'temporary' && (!adminPassword || !confirmPassword)) {
-      setError("管理员密码和确认密码不能为空。");
-      console.log("SetupPage: Validation error - passwords empty for persistent DB.");
+  const handleSubmitAdminConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFeedbackMessage(null);
+
+    if (!adminPassword || !confirmPassword) {
+      setFeedbackMessage({type: 'error', message: "管理员密码和确认密码不能为空。"});
       return;
     }
-    if (selectedDbType !== 'temporary' && adminPassword !== confirmPassword) {
-      setError("两次输入的密码不一致。");
-      console.log("SetupPage: Validation error - passwords do not match for persistent DB.");
+    if (adminPassword !== confirmPassword) {
+      setFeedbackMessage({type: 'error', message: "两次输入的密码不一致。"});
       return;
     }
     
-    setIsSubmitting(true);
-    console.log("SetupPage: isSubmitting set to true.");
+    setIsLoading(true);
+    setCurrentStep('submittingConfig');
     try {
-      // If 'temporary' is selected, password can be empty (or handled differently by authAction)
-      const passwordToSet = selectedDbType === 'temporary' ? '' : adminPassword;
-      const result = await setInitialAdminConfigAction(passwordToSet, selectedDbType);
-      console.log("SetupPage: setInitialAdminConfigAction result:", result);
-
+      const result = await setInitialAdminConfigAction(adminPassword);
       if (result.success) {
         toast({
           title: "配置成功",
-          description: `初始配置已保存。数据库类型: ${databaseTypes.find(db=>db.value === selectedDbType)?.label}. 正在跳转...`,
+          description: "初始配置已保存。正在跳转到主页...",
         });
-        console.log("SetupPage: Setup successful, redirecting to /");
         router.push('/');
       } else {
-        setError(result.error || "设置初始配置失败，请重试。");
-        toast({
-          title: "配置失败",
-          description: result.error || "无法保存初始配置。",
-          variant: "destructive",
-        });
-        console.log("SetupPage: Setup failed:", result.error);
+        setFeedbackMessage({type: 'error', message: result.error || "设置管理员配置失败，请重试。"});
+        setCurrentStep('dbInitSuccess'); // Go back to password step on failure
       }
     } catch (err) {
-      console.error("SetupPage: handleSubmit error:", err);
+      console.error("SetupPage: handleSubmitAdminConfig error:", err);
       const errorMessage = err instanceof Error ? err.message : "发生未知错误。";
-      setError(`配置过程中发生错误: ${errorMessage}`);
-      toast({
-        title: "配置错误",
-        description: `无法完成初始配置: ${errorMessage}`,
-        variant: "destructive",
-      });
+      setFeedbackMessage({type: 'error', message: `配置过程中发生错误: ${errorMessage}`});
+      setCurrentStep('dbInitSuccess'); // Go back to password step
     } finally {
-      setIsSubmitting(false);
-      console.log("SetupPage: isSubmitting set to false.");
+      setIsLoading(false);
     }
   };
 
-  const currentDbPlaceholders = dbConfigPlaceholders[selectedDbType] || [];
+  if (isCheckingInitialSetup) {
+    return (
+       <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-sky-100 dark:from-slate-900 dark:to-sky-900 p-4">
+        <div className="flex items-center space-x-2 text-foreground">
+          <RefreshCw className="h-6 w-6 animate-spin" />
+          <p className="text-lg">正在检查配置状态...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-sky-100 dark:from-slate-900 dark:to-sky-900 p-4">
@@ -154,59 +142,83 @@ export default function SetupPage() {
             <ShieldCheck size={32} />
           </div>
           <CardTitle className="text-2xl">欢迎使用 晚风Marks</CardTitle>
-          <CardDescription>首次运行，请完成初始配置。</CardDescription>
+          <CardDescription>首次运行，请完成 MySQL 数据库配置。</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="flex items-center text-lg font-semibold text-foreground">
-                <Server className="mr-2 h-5 w-5 text-primary" />
-                选择数据存储方式
-              </h3>
-              <div className="space-y-2">
-                <Label htmlFor="dbType">数据库类型</Label>
-                <Select value={selectedDbType} onValueChange={setSelectedDbType} disabled={isSubmitting}>
-                  <SelectTrigger id="dbType">
-                    <SelectValue placeholder="选择数据库类型" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {databaseTypes.map(db => (
-                      <SelectItem key={db.value} value={db.value}>
-                        {db.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {selectedDbType === 'mysql' && (
-                <Card className="mt-4 bg-muted/50 p-4">
-                  <CardHeader className="p-0 pb-2">
-                    <CardTitle className="text-base">MySQL 配置说明</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0 space-y-3 text-xs">
-                    <p>MySQL 连接参数 (主机, 端口, 用户名, 密码, 数据库名) 应在项目根目录的 <code className="font-mono bg-gray-200 dark:bg-gray-700 p-0.5 rounded">.env.local</code> 文件中配置。</p>
-                    <p>例如: <br />
-                      <code className="block whitespace-pre-wrap font-mono bg-gray-200 dark:bg-gray-700 p-1 rounded text-[0.7rem]">
-                        MYSQL_HOST=localhost<br/>
-                        MYSQL_PORT=3306<br/>
-                        MYSQL_USER=your_user<br/>
-                        MYSQL_PASSWORD=your_password<br/>
-                        MYSQL_DATABASE=wanfeng_marks
-                      </code>
-                    </p>
-                     <p className="font-semibold mt-2">重要：请确保在启动应用前，已在您的MySQL服务器中手动创建了所需的表。建表语句请参考 <code className="font-mono bg-gray-200 dark:bg-gray-700 p-0.5 rounded">src/lib/mysql.ts</code> 文件中的注释。</p>
-                  </CardContent>
-                </Card>
-              )}
+          {/* Feedback Message Display */}
+          {feedbackMessage && (
+            <div className={`flex items-center rounded-md border p-3 text-sm font-medium
+              ${feedbackMessage.type === 'error' ? 'border-destructive/50 bg-destructive/10 text-destructive' : ''}
+              ${feedbackMessage.type === 'success' ? 'border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-300' : ''}
+              ${feedbackMessage.type === 'info' ? 'border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-300' : ''}
+            `}>
+              {feedbackMessage.type === 'error' && <AlertTriangle className="mr-2 h-4 w-4 flex-shrink-0" />}
+              {feedbackMessage.type === 'success' && <CheckCircle className="mr-2 h-4 w-4 flex-shrink-0" />}
+              {feedbackMessage.message}
             </div>
+          )}
 
+          {/* Step 1: MySQL Configuration Info & Test Connection */}
+          <div className="space-y-4">
+            <h3 className="flex items-center text-lg font-semibold text-foreground">
+              <Server className="mr-2 h-5 w-5 text-primary" />
+              1. MySQL 数据库连接
+            </h3>
+            <Card className="bg-muted/50 p-4">
+              <CardContent className="p-0 space-y-3 text-xs">
+                <p>MySQL 连接参数 (主机, 端口, 用户名, 密码, 数据库名) 必须在项目根目录的 <code className="font-mono bg-gray-200 dark:bg-gray-700 p-0.5 rounded text-xs">.env.local</code> 文件中预先配置好。</p>
+                <p>例如: <br />
+                  <code className="block whitespace-pre-wrap font-mono bg-gray-200 dark:bg-gray-700 p-1 rounded text-[0.7rem] leading-tight">
+                    MYSQL_HOST=localhost<br/>
+                    MYSQL_PORT=3306<br/>
+                    MYSQL_USER=your_user<br/>
+                    MYSQL_PASSWORD=your_password<br/>
+                    MYSQL_DATABASE=wanfeng_marks
+                  </code>
+                </p>
+                <p className="font-semibold mt-2">请确保您的 MySQL 服务器正在运行并且 <code className="font-mono bg-gray-200 dark:bg-gray-700 p-0.5 rounded text-xs">.env.local</code> 文件已正确配置。</p>
+              </CardContent>
+            </Card>
+            <Button 
+              onClick={handleTestConnection} 
+              className="w-full" 
+              disabled={isLoading || currentStep === 'connectionSuccess' || currentStep === 'dbInitSuccess' || currentStep === 'passwordSetup' || currentStep === 'submittingConfig'}
+            >
+              {isLoading && currentStep === 'testingConnection' && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+              {currentStep === 'connectionSuccess' || currentStep === 'dbInitSuccess' || currentStep === 'passwordSetup' || currentStep === 'submittingConfig' ? <CheckCircle className="mr-2 h-4 w-4" /> : null}
+              测试数据库连接
+            </Button>
+          </div>
 
-            {selectedDbType !== 'temporary' && (
-              <div className="space-y-4 border-t pt-4 mt-4">
-                <h3 className="flex items-center text-lg font-semibold text-foreground">
+          {/* Step 2: Initialize Database */}
+          {(currentStep === 'connectionSuccess' || currentStep === 'initializingDb' || currentStep === 'dbInitFailed' || currentStep === 'dbInitSuccess' || currentStep === 'passwordSetup' || currentStep === 'submittingConfig') && (
+            <div className="space-y-4 border-t pt-4 mt-4">
+              <h3 className="flex items-center text-lg font-semibold text-foreground">
+                <Database className="mr-2 h-5 w-5 text-primary" />
+                2. 初始化数据库表
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                此操作将在您的 MySQL 数据库中创建应用所需的表结构（如果它们尚不存在）。
+              </p>
+              <Button 
+                onClick={handleInitializeDatabase} 
+                className="w-full"
+                disabled={isLoading || currentStep !== 'connectionSuccess' && currentStep !== 'dbInitFailed' }
+              >
+                {isLoading && currentStep === 'initializingDb' && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                 {(currentStep === 'dbInitSuccess' || currentStep === 'passwordSetup' || currentStep === 'submittingConfig') ? <CheckCircle className="mr-2 h-4 w-4" /> : null}
+                初始化数据库 (建表)
+              </Button>
+            </div>
+          )}
+          
+          {/* Step 3: Admin Password Setup */}
+          {(currentStep === 'dbInitSuccess' || currentStep === 'passwordSetup' || currentStep === 'submittingConfig') && (
+            <form onSubmit={handleSubmitAdminConfig} className="space-y-6 border-t pt-4 mt-4">
+              <div>
+                <h3 className="flex items-center text-lg font-semibold text-foreground mb-3">
                   <KeyRound className="mr-2 h-5 w-5 text-primary" />
-                  设置管理员密码 (用于MySQL模式)
+                  3. 设置管理员密码
                 </h3>
                 <div className="space-y-2">
                   <Label htmlFor="adminPassword">管理员密码</Label>
@@ -216,11 +228,11 @@ export default function SetupPage() {
                     value={adminPassword}
                     onChange={(e) => setAdminPassword(e.target.value)}
                     placeholder="输入您的管理员密码"
-                    required={selectedDbType !== 'temporary'}
-                    disabled={isSubmitting}
+                    required
+                    disabled={isLoading}
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 mt-3">
                   <Label htmlFor="confirmPassword">确认管理员密码</Label>
                   <Input
                     id="confirmPassword"
@@ -228,36 +240,17 @@ export default function SetupPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="再次输入密码"
-                    required={selectedDbType !== 'temporary'}
-                    disabled={isSubmitting}
+                    required
+                    disabled={isLoading}
                   />
                 </div>
               </div>
-            )}
-
-
-            <div className="space-y-1 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-amber-700 dark:text-amber-300">
-              <div className="flex items-center font-medium">
-                <Database className="mr-2 h-5 w-5 flex-shrink-0" />
-                重要说明
-              </div>
-              <p className="text-xs">
-                如果您选择 "临时存储"，所有数据（书签、分类、管理员密码配置）将存储在服务器内存中，并在服务器重启后丢失 (无密码)。
-                对于 MySQL 模式，您需要已配置 <code className="font-mono bg-gray-200 dark:bg-gray-700 p-0.5 rounded">.env.local</code> 文件并手动创建数据库表。
-              </p>
-            </div>
-
-            {error && (
-              <div className="mt-4 flex items-center rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm font-medium text-destructive">
-                <AlertTriangle className="mr-2 h-4 w-4 flex-shrink-0" />
-                {error}
-              </div>
-            )}
-            
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? '正在保存...' : '保存配置并启动'}
-            </Button>
-          </form>
+              <Button type="submit" className="w-full" disabled={isLoading || currentStep !== 'dbInitSuccess' && currentStep !== 'passwordSetup'}>
+                {isLoading && currentStep === 'submittingConfig' ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : null}
+                保存配置并启动
+              </Button>
+            </form>
+          )}
         </CardContent>
         <CardFooter className="text-center text-xs text-muted-foreground">
            &copy; {new Date().getFullYear()} 晚风Marks. 初始配置.
