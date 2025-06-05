@@ -1,13 +1,13 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AppSidebar from '@/components/AppSidebar';
 import AppHeader from '@/components/AppHeader';
 import BookmarkGrid from '@/components/BookmarkGrid';
 import AddBookmarkDialog from '@/components/AddBookmarkDialog';
-import EditBookmarkDialog from '@/components/EditBookmarkDialog'; // New
-import EditCategoryDialog from '@/components/EditCategoryDialog'; // New
+import EditBookmarkDialog from '@/components/EditBookmarkDialog';
+import EditCategoryDialog from '@/components/EditCategoryDialog';
 import PasswordDialog from '@/components/PasswordDialog';
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,12 @@ const LS_CATEGORIES_KEY = 'wanfeng_categories_v1_zh';
 const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1';
 const ADMIN_PASSWORD = "7";
 
+interface WanfengMarksWindow extends Window {
+  wanfengMarksOpenAddDialog?: (data: { name: string; url: string }) => void;
+}
+
+declare const window: WanfengMarksWindow;
+
 export default function HomePage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -29,11 +35,12 @@ export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // State for editing
   const [isEditBookmarkDialogOpen, setIsEditBookmarkDialogOpen] = useState(false);
   const [bookmarkToEdit, setBookmarkToEdit] = useState<Bookmark | null>(null);
   const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
+
+  const [initialDataForAddDialog, setInitialDataForAddDialog] = useState<{ name?: string; url?: string } | null>(null);
 
   const { toast } = useToast();
 
@@ -43,6 +50,19 @@ export default function HomePage() {
     if (adminAuth === 'true') {
       setIsAdminAuthenticated(true);
     }
+
+    // Expose function to global window object
+    window.wanfengMarksOpenAddDialog = (data: { name: string; url: string }) => {
+      setInitialDataForAddDialog(data);
+      setIsAddBookmarkDialogOpen(true);
+    };
+
+    // Cleanup function when component unmounts
+    return () => {
+      if (window.wanfengMarksOpenAddDialog) {
+        delete window.wanfengMarksOpenAddDialog;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -90,11 +110,11 @@ export default function HomePage() {
     }
   }, [categories, activeCategory, isAdminAuthenticated]);
 
-
   const handleAddBookmark = (newBookmarkData: Omit<Bookmark, 'id'>) => {
     const bookmarkWithId = { ...newBookmarkData, id: Date.now().toString() + Math.random().toString(36).substring(2,7) };
     setBookmarks(prev => [...prev, bookmarkWithId]);
     setIsAddBookmarkDialogOpen(false);
+    setInitialDataForAddDialog(null); // Clear prefill data
   };
 
   const handleDeleteBookmark = (bookmarkId: string) => {
@@ -182,6 +202,17 @@ export default function HomePage() {
     }
     toast({ title: "已退出", description: "已退出管理模式。" });
   };
+  
+  const handleOpenAddBookmarkDialog = () => {
+    setInitialDataForAddDialog(null); // Ensure no prefill data for manual open
+    setIsAddBookmarkDialogOpen(true);
+  };
+
+  const handleCloseAddBookmarkDialog = () => {
+    setIsAddBookmarkDialogOpen(false);
+    setInitialDataForAddDialog(null); // Clear prefill data on close
+  };
+
 
   const visibleCategories = categories.filter(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated));
 
@@ -231,7 +262,7 @@ export default function HomePage() {
           <main className="flex-grow p-4 md:p-6">
             {isAdminAuthenticated && (
               <div className="mb-4 flex justify-start items-center gap-2">
-                <Button onClick={() => setIsAddBookmarkDialogOpen(true)} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                <Button onClick={handleOpenAddBookmarkDialog} className="bg-accent hover:bg-accent/90 text-accent-foreground">
                   <PlusCircle className="mr-2 h-4 w-4" /> 添加书签
                 </Button>
                 <Button variant="outline" onClick={handleLogoutAdmin}>
@@ -259,10 +290,11 @@ export default function HomePage() {
 
       <AddBookmarkDialog
         isOpen={isAddBookmarkDialogOpen}
-        onClose={() => setIsAddBookmarkDialogOpen(false)}
+        onClose={handleCloseAddBookmarkDialog}
         onAddBookmark={handleAddBookmark}
         categories={visibleCategories.filter(c => c.id !== 'all')}
         activeCategoryId={activeCategory}
+        initialData={initialDataForAddDialog}
       />
       {bookmarkToEdit && (
         <EditBookmarkDialog

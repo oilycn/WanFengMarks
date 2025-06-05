@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Eye, EyeOff } from 'lucide-react'; // Import Eye and EyeOff icons
+import { Eye, EyeOff } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,7 @@ interface AddBookmarkDialogProps {
   onAddBookmark: (bookmark: Omit<Bookmark, 'id'>) => void;
   categories: Category[];
   activeCategoryId?: string | null;
+  initialData?: { name?: string; url?: string } | null;
 }
 
 const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
@@ -39,6 +40,7 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
   onAddBookmark,
   categories,
   activeCategoryId,
+  initialData,
 }) => {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
@@ -49,17 +51,17 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setName('');
-      setUrl('');
-      setDescription('');
-      setIsPrivate(false);
+      setName(initialData?.name || '');
+      setUrl(initialData?.url || '');
+      setDescription(''); // Reset description for new entries or prefilled
+      setIsPrivate(false); // Default to public
 
       let newDefaultCategoryId = '';
       if (activeCategoryId && activeCategoryId !== 'all' && categories.some(cat => cat.id === activeCategoryId)) {
         newDefaultCategoryId = activeCategoryId;
       } else if (categories.length > 0) {
         const defaultCat = categories.find(c => c.id === 'default');
-        if (defaultCat && categories.some(c => c.id === 'default')) { // Ensure 'default' is in the passed categories
+        if (defaultCat && categories.some(c => c.id === 'default')) {
           newDefaultCategoryId = defaultCat.id;
         } else {
           newDefaultCategoryId = categories[0].id;
@@ -67,7 +69,7 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
       }
       setCategoryId(newDefaultCategoryId);
     }
-  }, [isOpen, categories, activeCategoryId]);
+  }, [isOpen, categories, activeCategoryId, initialData]);
 
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -85,7 +87,7 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
 
     onAddBookmark({ name, url: url.startsWith('http') ? url : `https://${url}`, categoryId, description, isPrivate });
     toast({ title: "书签已添加", description: `"${name}" 已成功添加。` });
-    onClose();
+    onClose(); // onClose should also handle clearing initialData in parent
   };
 
   return (
