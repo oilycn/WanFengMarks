@@ -13,55 +13,45 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**', 
+        hostname: '**',
       },
       {
         protocol: 'http',
-        hostname: '**', 
+        hostname: '**',
       },
     ],
   },
   serverActions: {
-    // This tells Next.js to trust requests originating from this specific host and port.
-    // It checks the `Origin` header from the browser.
-    allowedOrigins: ['https://bookmark.oily.cn:7443'],
-    // This tells Next.js to trust the X-Forwarded-Host header if it's one of these values.
-    // It checks the `X-Forwarded-Host` header sent by the proxy.
-    allowedForwardedHosts: ['bookmark.oily.cn'],
+    // Ensure this matches the 'Origin' header from the browser, including scheme and port.
+    // Example: https://your-proxied-domain.com:port
+    allowedOrigins: ['https://bm.oily.cn:7443'],
+
+    // Ensure this matches the 'X-Forwarded-Host' header value sent by your proxy.
+    // Example: your-proxied-domain.com (usually without port)
+    allowedForwardedHosts: ['bm.oily.cn'],
   },
-  // For development environment when using HTTPS proxy for HMR and other dev server communications.
-  // This also checks the `Origin` header.
-  allowedDevOrigins: ['https://bookmark.oily.cn:7443'],
-  // NOTE: If WebSocket connections (wss://) for Hot Module Replacement (HMR)
-  // are failing when using an HTTPS proxy (e.g., Nginx, Caddy, Nginx Proxy Manager),
-  // it's crucial that the proxy server itself is configured to correctly
-  // handle WebSocket upgrade requests for the `/_next/webpack-hmr` path.
-  // This typically involves:
-  // 1. Passing through the `Upgrade` and `Connection` headers.
-  //    Example for Nginx (to be added in NPM's Advanced tab for the host):
-  //    location /_next/webpack-hmr {
-  //        proxy_pass http://YOUR_NEXTJS_INTERNAL_IP:YOUR_NEXTJS_PORT; # e.g., http://10.10.10.253:9003
-  //        proxy_http_version 1.1;
-  //        proxy_set_header Upgrade $http_upgrade;
-  //        proxy_set_header Connection "upgrade";
-  //        proxy_set_header Host $host;
-  //        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  //        proxy_set_header X-Forwarded-Proto https;
-  //        # If X-Forwarded-Port is not automatically set to the original request port (7443)
-  //        # by $server_port, you might need to set it explicitly:
-  //        # proxy_set_header X-Forwarded-Port 7443; 
-  //    }
-  // 2. Ensuring the proxy can handle WSS, either by terminating SSL for WSS
-  //    and forwarding as WS, or by proxying WSS directly. NPM's "allow_websocket_upgrade: true" should handle this.
-  // 3. The `allowedDevOrigins` setting above helps Next.js trust the HMR origin for HTTP parts of HMR,
-  //    but the WebSocket protocol upgrade itself is managed at the proxy server level.
-  //
-  // For Server Actions (HTTP 500 "Invalid Server Actions request"):
-  // If issues persist despite `allowedOrigins` and `allowedForwardedHosts` being set,
-  // ensure your proxy (NPM) is sending the `X-Forwarded-Port` header with the correct
-  // external port (e.g., 7443). In NPM's "Advanced" tab for the host, add:
-  // proxy_set_header X-Forwarded-Port 7443; 
-  // (or proxy_set_header X-Forwarded-Port $server_port; if $server_port correctly reflects 7443)
+  // This is for the development server HMR and other dev-time communications.
+  // It should also match the 'Origin' header.
+  allowedDevOrigins: ['https://bm.oily.cn:7443'],
+  // For WebSocket (wss://) Hot Module Replacement (HMR) to work through a proxy,
+  // the proxy server itself (e.g., Nginx, Caddy, Nginx Proxy Manager) must be configured
+  // to properly upgrade WebSocket connections for the `/_next/webpack-hmr` path.
+  // This typically involves setting headers like `Upgrade` and `Connection "upgrade"`.
+  // Example Nginx config for HMR path:
+  // location /_next/webpack-hmr {
+  //     proxy_pass http://localhost:9003; # Your Next.js dev server
+  //     proxy_http_version 1.1;
+  //     proxy_set_header Upgrade $http_upgrade;
+  //     proxy_set_header Connection "upgrade";
+  //     proxy_set_header Host $host;
+  //     proxy_set_header X-Forwarded-Proto https;
+  // }
+  // Additionally, if Server Actions are still failing with a 500 error and
+  // "Invalid Server Actions request" (often due to host/origin mismatch),
+  // ensure your proxy is also sending the correct X-Forwarded-Port header.
+  // For Nginx Proxy Manager, in the "Advanced" tab for the proxy host, you might add:
+  // proxy_set_header X-Forwarded-Port 7443;
+  // (replace 7443 with the actual external port if different)
 };
 
 export default nextConfig;
