@@ -290,7 +290,7 @@ export default function HomePage() {
                              flex items-center justify-center
                              h-10 rounded-full p-0 
                              transition-all ease-in-out duration-500
-                             w-10 group-hover:w-auto group-hover:rounded-md group-hover:px-3 group-hover:py-2 group-hover:justify-start
+                             w-10 group-hover:w-44 group-hover:rounded-md group-hover:px-3 group-hover:py-2 group-hover:justify-start
                              delay-[2000ms] group-hover:delay-0"
                   aria-label="添加书签"
                   title="添加书签"
@@ -306,7 +306,7 @@ export default function HomePage() {
                              flex items-center justify-center
                              h-10 rounded-full p-0
                              transition-all ease-in-out duration-500
-                             w-10 group-hover:w-auto group-hover:rounded-md group-hover:px-3 group-hover:py-2 group-hover:justify-start
+                             w-10 group-hover:w-44 group-hover:rounded-md group-hover:px-3 group-hover:py-2 group-hover:justify-start
                              delay-[2000ms] group-hover:delay-0"
                   aria-label="复制书签脚本"
                   title="复制书签脚本"
@@ -322,7 +322,7 @@ export default function HomePage() {
                              flex items-center justify-center
                              h-10 rounded-full p-0
                              transition-all ease-in-out duration-500
-                             w-10 group-hover:w-auto group-hover:rounded-md group-hover:px-3 group-hover:py-2 group-hover:justify-start
+                             w-10 group-hover:w-44 group-hover:rounded-md group-hover:px-3 group-hover:py-2 group-hover:justify-start
                              delay-[2000ms] group-hover:delay-0"
                   aria-label="退出管理模式"
                   title="退出管理模式"
@@ -390,4 +390,5 @@ export default function HomePage() {
     
 
     
+
 
