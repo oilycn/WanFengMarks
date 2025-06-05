@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React from 'react'; // Import React
 import type { Bookmark } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,10 +32,11 @@ interface BookmarkItemProps {
   isDragging?: boolean;
 }
 
-const BookmarkItem: React.FC<BookmarkItemProps> = ({ 
-  bookmark, 
-  onDeleteBookmark, 
-  onEditBookmark, 
+// Wrap the component definition with React.memo
+const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
+  bookmark,
+  onDeleteBookmark,
+  onEditBookmark,
   isAdminAuthenticated,
   innerRef,
   draggableProps,
@@ -43,14 +44,14 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
   isDragging
 }) => {
   const { toast } = useToast();
-  
+
   const getFaviconUrl = (url: string) => {
     try {
       const domain = new URL(url).hostname;
-      return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`; 
+      return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
     } catch (error) {
       console.error("Invalid URL for favicon:", url, error);
-      return ''; 
+      return '';
     }
   };
   const favicon = getFaviconUrl(bookmark.url);
@@ -86,10 +87,10 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
             onClick={(e) => { if(isDragging) e.preventDefault();}} // Prevent navigation while dragging
           >
             {favicon ? (
-              <Image 
-                src={favicon} 
-                alt="" 
-                width={32} 
+              <Image
+                src={favicon}
+                alt=""
+                width={32}
                 height={32}
                 className="mt-0.5 rounded-md object-contain group-hover:scale-110 transition-transform flex-shrink-0"
                 onError={(e) => {
@@ -101,7 +102,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
               />
             ) : null}
             <Link2 className={`h-8 w-8 text-muted-foreground fallback-icon ${favicon ? 'hidden' : ''} flex-shrink-0`} />
-            
+
             <div className="flex-grow min-w-0">
               <h3 className="text-sm font-semibold truncate flex items-center" title={bookmark.name}>
                 {bookmark.name}
@@ -115,7 +116,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
             </div>
           </a>
         </div>
-        
+
         {isAdminAuthenticated && (
           <div className="absolute top-1 right-1 flex items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity space-x-0.5" style={isDragging ? { opacity: 1 } : {}}>
             <Button
@@ -158,6 +159,9 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
       </Card>
     </div>
   );
-};
+});
+
+// It's good practice to set a displayName for memoized components for better debugging
+BookmarkItem.displayName = 'BookmarkItem';
 
 export default BookmarkItem;
