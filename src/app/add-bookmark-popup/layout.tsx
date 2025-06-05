@@ -1,7 +1,6 @@
 
 // Minimal layout for the popup page
 import type { Metadata } from 'next';
-// import { Toaster } from "@/components/ui/toaster"; // Toaster not needed here
 import '../globals.css'; // Essential global styles
 
 export const metadata: Metadata = {
@@ -14,15 +13,9 @@ export default function PopupLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <html lang="zh-CN">
-      <head>
-        {/* Minimal head content */}
-      </head>
-      <body className="font-body antialiased bg-background"> 
-        {/* Changed bg-transparent to bg-background */}
-        {children}
-      </body>
-    </html>
-  );
+  // The root layout (src/app/layout.tsx) provides the <html> and <body> tags.
+  // This nested layout should just return its children.
+  // The styles for the popup's content area (like the semi-transparent background)
+  // are handled in src/app/add-bookmark-popup/page.tsx
+  return <>{children}</>;
 }
