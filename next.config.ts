@@ -13,15 +13,15 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'placehold.co',
+        hostname: '**', // 允许任何 HTTPS 主机名
         port: '',
         pathname: '/**',
       },
       {
-        protocol: 'https',
-        hostname: 'www.google.com',
+        protocol: 'http',
+        hostname: '**', // 允许任何 HTTP 主机名
         port: '',
-        pathname: '/s2/favicons/**',
+        pathname: '/**',
       },
     ],
   },
