@@ -6,7 +6,7 @@ import type { Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff } from 'lucide-react'; // Removed unused icon imports
+import { Eye, EyeOff } from 'lucide-react'; 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
@@ -42,7 +42,7 @@ const EditCategoryDialog: React.FC<EditCategoryDialogProps> = ({
   const [name, setName] = useState('');
   const [icon, setIcon] = useState<string>(globalAvailableIcons[0].value);
   const [isPrivate, setIsPrivate] = useState(false);
-  const [priority, setPriority] = useState<number>(0); // Added priority state
+  const [priority, setPriority] = useState<number>(0); 
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,7 +50,7 @@ const EditCategoryDialog: React.FC<EditCategoryDialogProps> = ({
       setName(categoryToEdit.name);
       setIcon(categoryToEdit.icon || globalAvailableIcons[0].value);
       setIsPrivate(categoryToEdit.isPrivate || false);
-      setPriority(categoryToEdit.priority || 0); // Initialize priority
+      setPriority(categoryToEdit.priority || 0); 
     }
   }, [isOpen, categoryToEdit]);
 
@@ -66,7 +66,7 @@ const EditCategoryDialog: React.FC<EditCategoryDialogProps> = ({
         name: name.trim(), 
         icon, 
         isPrivate,
-        priority: Number(priority) || 0 // Ensure priority is a number
+        priority: Number(priority) || 0 
     });
     onClose();
   };
@@ -129,7 +129,10 @@ const EditCategoryDialog: React.FC<EditCategoryDialogProps> = ({
                 id="edit-cat-priority"
                 type="number"
                 value={priority}
-                onChange={(e) => setPriority(parseInt(e.target.value, 10))}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  setPriority(isNaN(val) ? 0 : val); // Default to 0 if NaN
+                }}
                 className="col-span-3"
                 placeholder="数字越大越靠前"
               />
@@ -165,4 +168,3 @@ const EditCategoryDialog: React.FC<EditCategoryDialogProps> = ({
 };
 
 export default EditCategoryDialog;
-
