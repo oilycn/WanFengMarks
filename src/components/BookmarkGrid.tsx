@@ -5,80 +5,93 @@ import React from 'react';
 import type { Bookmark, Category } from '@/types';
 import BookmarkItem from './BookmarkItem';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { FolderOpen } from 'lucide-react';
 
 interface BookmarkGridProps {
   bookmarks: Bookmark[];
-  categories: Category[];
+  categories: Category[]; // Now expects only relevant categories for the active view
   onDeleteBookmark: (id: string) => void;
+  isAdminAuthenticated: boolean;
+  currentCategoryName?: string; // Name of the currently active category, or "All Bookmarks"
+  activeCategoryId: string | null;
 }
 
-const BookmarkGrid: React.FC<BookmarkGridProps> = ({ bookmarks, categories, onDeleteBookmark }) => {
-  const visibleCategories = categories.filter(category => category.isVisible);
+const BookmarkGrid: React.FC<BookmarkGridProps> = ({ 
+    bookmarks, 
+    categories, 
+    onDeleteBookmark, 
+    isAdminAuthenticated,
+    currentCategoryName,
+    activeCategoryId
+}) => {
 
-  if (bookmarks.length === 0 && visibleCategories.some(cat => cat.id === 'default')) {
+  // If "All Bookmarks" is selected, or no specific category, group by actual categories
+  const shouldGroup = activeCategoryId === 'all' || !activeCategoryId;
+  
+  const categoriesToDisplay = shouldGroup ? categories.filter(c => c.isVisible && bookmarks.some(b => b.categoryId === c.id)) : categories.filter(c => c.id === activeCategoryId && c.isVisible);
+
+
+  if (bookmarks.length === 0) {
      return (
-      <div className="text-center py-8">
-        <h2 className="text-xl font-semibold mb-2">还没有书签！</h2>
-        <p className="text-sm text-muted-foreground">点击下方的“显示管理面板”，然后“添加新书签”开始使用。</p>
+      <div className="text-center py-12">
+        <FolderOpen className="mx-auto h-16 w-16 text-muted-foreground/50 mb-4" />
+        <h2 className="text-2xl font-semibold mb-2 text-foreground/80">"{currentCategoryName || '此分类'}" 中没有书签</h2>
+        {isAdminAuthenticated ? (
+          <p className="text-md text-muted-foreground">点击上方的 "添加书签" 按钮来添加新的书签吧！</p>
+        ) : (
+          <p className="text-md text-muted-foreground">请先进入管理模式以添加书签。</p>
+        )}
       </div>
     );
   }
   
-  if (visibleCategories.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <h2 className="text-xl font-semibold mb-2">没有可见的分类</h2>
-        <p className="text-sm text-muted-foreground">在管理面板中切换分类可见性或添加新书签。</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      {visibleCategories.map((category, index) => {
-        const categoryBookmarks = bookmarks.filter(
-          (bookmark) => bookmark.categoryId === category.id
-        );
-
-        if (categoryBookmarks.length === 0 && category.id !== 'default' && !bookmarks.some(b => b.categoryId === 'default')) {
-           // Only show "empty category" message if it's not the default category OR if default is also empty
-          return (
-            <div key={category.id}>
-              <h2 className="text-xl font-semibold mb-2 text-primary/90 font-headline">{category.name}</h2>
-              <p className="text-sm text-muted-foreground pl-1">此分类下暂无书签。</p>
-              {visibleCategories.length > 1 && index < visibleCategories.length -1 && <Separator className="my-6" />}
-            </div>
+    <div className="space-y-8">
+      {shouldGroup ? (
+        categoriesToDisplay.map((category) => {
+          const categoryBookmarks = bookmarks.filter(
+            (bookmark) => bookmark.categoryId === category.id
           );
-        }
-        
-        // Don't render a category section if it's empty, unless it's the only category or default and bookmarks exist elsewhere
-        if (categoryBookmarks.length === 0 && (visibleCategories.length > 1 || (category.id === 'default' && bookmarks.some(b=>b.categoryId !== 'default')))) {
-            return null;
-        }
+          if (categoryBookmarks.length === 0) return null; // Don't render empty categories in "All" view
 
-
-        return (
-          <section key={category.id} aria-labelledby={`category-title-${category.id}`}>
-            <h2 id={`category-title-${category.id}`} className="text-xl font-semibold mb-3 text-primary/90 font-headline">
-              {category.name}
-            </h2>
-            {categoryBookmarks.length === 0 && (
-                 <p className="text-sm text-muted-foreground pl-1">此分类下暂无书签。</p>
+          return (
+            <section key={category.id} aria-labelledby={`category-title-${category.id}`}>
+              <h2 id={`category-title-${category.id}`} className="text-2xl font-semibold mb-4 text-primary font-headline border-b pb-2">
+                {category.name}
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+                {categoryBookmarks.map((bookmark) => (
+                  <BookmarkItem
+                    key={bookmark.id}
+                    bookmark={bookmark}
+                    onDeleteBookmark={onDeleteBookmark}
+                    isAdminAuthenticated={isAdminAuthenticated}
+                  />
+                ))}
+              </div>
+            </section>
+          );
+        })
+      ) : (
+        // Single category view
+        <section aria-labelledby={`category-title-main`}>
+            {currentCategoryName && (
+                 <h2 id={`category-title-main`} className="text-2xl font-semibold mb-4 text-primary font-headline border-b pb-2">
+                    {currentCategoryName}
+                </h2>
             )}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3">
-              {categoryBookmarks.map((bookmark) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+            {bookmarks.map((bookmark) => (
                 <BookmarkItem
-                  key={bookmark.id}
-                  bookmark={bookmark}
-                  onDeleteBookmark={onDeleteBookmark}
+                key={bookmark.id}
+                bookmark={bookmark}
+                onDeleteBookmark={onDeleteBookmark}
+                isAdminAuthenticated={isAdminAuthenticated}
                 />
-              ))}
+            ))}
             </div>
-            {visibleCategories.indexOf(category) < visibleCategories.length - 1 && <Separator className="my-6" />}
-          </section>
-        );
-      })}
+        </section>
+      )}
     </div>
   );
 };

@@ -1,40 +1,41 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Noto Sans SC', sans-serif;
 }
 
 @layer base {
   :root {
-    --background: 75 11% 88%; /* #E0E1DD Very light gray */
-    --foreground: 220 15% 25%; /* Dark slate blue/gray for text */
+    --background: 220 20% 96%; /* Light grayish blue */
+    --foreground: 220 15% 25%; 
 
-    --card: 0 0% 100%; /* White cards */
-    --card-foreground: 220 15% 20%; /* Dark text on cards */
+    --card: 0 0% 100%; 
+    --card-foreground: 220 15% 20%; 
 
     --popover: 0 0% 100%;
     --popover-foreground: 220 15% 20%;
 
-    --primary: 220 17% 57%; /* #778DA9 Slate blue */
-    --primary-foreground: 0 0% 100%; /* White text on primary */
+    --primary: 205 65% 55%; /* Adjusted primary blue from image */
+    --primary-foreground: 0 0% 100%; 
 
-    --secondary: 220 15% 90%; /* Lighter slate blue */
+    --secondary: 220 15% 90%; 
     --secondary-foreground: 220 15% 25%;
 
-    --muted: 220 15% 95%; /* Very light slate blue / gray */
+    --muted: 220 15% 95%; 
     --muted-foreground: 220 15% 45%;
 
-    --accent: 86 16% 61%; /* #A3B18A Pale, muted blue */
-    --accent-foreground: 86 15% 25%; /* Darker text on accent */
+    --accent: 160 60% 50%; /* Greenish accent from image */
+    --accent-foreground: 0 0% 100%; 
 
-    --destructive: 0 72% 51%; /* Adjusted destructive red */
+    --destructive: 0 72% 51%; 
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 15% 80%; /* Lighter border color */
-    --input: 220 15% 85%; /* Input background */
-    --ring: 220 17% 57%; /* Primary color for rings */
+    --border: 220 15% 88%; 
+    --input: 220 15% 92%; 
+    --ring: 205 65% 55%; 
 
     --radius: 0.5rem;
 
@@ -44,56 +45,39 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
 
-    /* Sidebar variables, can be adjusted if not directly used or to match theme */
-    --sidebar-background: 220 15% 96%;
-    --sidebar-foreground: 220 15% 25%;
-    --sidebar-primary: 220 17% 57%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 86 16% 75%;
-    --sidebar-accent-foreground: 86 15% 25%;
-    --sidebar-border: 220 15% 80%;
-    --sidebar-ring: 220 17% 57%;
+    --header-bg-image: url('https://placehold.co/1920x300.png?text= ')  ; /* Placeholder for header background */
   }
 
   .dark {
-    /* Keeping dark theme variables as placeholders, main focus is light theme */
     --background: 220 15% 10%;
-    --foreground: 75 11% 88%;
+    --foreground: 220 20% 96%;
 
     --card: 220 15% 15%;
-    --card-foreground: 75 11% 88%;
+    --card-foreground: 220 20% 96%;
 
     --popover: 220 15% 15%;
-    --popover-foreground: 75 11% 88%;
+    --popover-foreground: 220 20% 96%;
 
-    --primary: 220 17% 57%;
+    --primary: 205 65% 55%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 15% 25%;
-    --secondary-foreground: 75 11% 88%;
+    --secondary-foreground: 220 20% 96%;
 
     --muted: 220 15% 20%;
-    --muted-foreground: 75 11% 65%;
+    --muted-foreground: 220 15% 65%;
 
-    --accent: 86 16% 61%;
-    --accent-foreground: 86 15% 15%;
+    --accent: 160 60% 50%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
     --border: 220 15% 30%;
     --input: 220 15% 25%;
-    --ring: 220 17% 57%;
-
-    /* Dark Sidebar variables */
-    --sidebar-background: 220 15% 12%;
-    --sidebar-foreground: 75 11% 88%;
-    --sidebar-primary: 220 17% 57%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 86 16% 50%;
-    --sidebar-accent-foreground: 86 15% 15%;
-    --sidebar-border: 220 15% 30%;
-    --sidebar-ring: 220 17% 57%;
+    --ring: 205 65% 55%;
+    
+    --header-bg-image: url('https://placehold.co/1920x300.png?text=Dark+Mode+Header');
   }
 }
 
@@ -105,4 +89,11 @@ body {
     @apply bg-background text-foreground;
     @apply font-body;
   }
+}
+
+.header-background {
+  background-image: var(--header-bg-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }

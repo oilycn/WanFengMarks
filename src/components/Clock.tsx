@@ -2,13 +2,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+// Removed Card import as styling will be direct now
 
 const Clock: React.FC = () => {
-  const [time, setTime] = useState<Date | null>(null); // Initialize with null
+  const [time, setTime] = useState<Date | null>(null); 
 
   useEffect(() => {
-    // Set initial time on client mount to avoid hydration mismatch
     setTime(new Date()); 
     const timerId = setInterval(() => {
       setTime(new Date());
@@ -17,14 +16,11 @@ const Clock: React.FC = () => {
   }, []);
 
   if (!time) {
-    // Render a placeholder or null during SSR or before client mount
     return (
-      <Card className="shadow-sm w-full md:w-auto bg-card/90 backdrop-blur-sm">
-        <CardContent className="p-3 text-center">
-          <div className="text-3xl font-bold text-primary/80 font-headline tabular-nums animate-pulse">--:--:--</div>
-          <div className="text-xs text-muted-foreground mt-0.5 animate-pulse">正在加载日期...</div>
-        </CardContent>
-      </Card>
+      <div className="p-3 text-center bg-black/30 backdrop-blur-sm rounded-lg shadow-lg text-white w-48">
+        <div className="text-3xl font-bold font-headline tabular-nums animate-pulse">--:--:--</div>
+        <div className="text-xs mt-0.5 animate-pulse">正在加载日期...</div>
+      </div>
     );
   }
 
@@ -32,16 +28,14 @@ const Clock: React.FC = () => {
   const formattedDate = time.toLocaleDateString('zh-CN', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
 
   return (
-    <Card className="shadow-sm w-full md:w-auto bg-card/90 backdrop-blur-sm">
-      <CardContent className="p-3 text-center">
-        <div className="text-3xl font-bold text-primary/90 font-headline tabular-nums">
-          {formattedTime}
-        </div>
-        <div className="text-xs text-muted-foreground mt-0.5">
-          {formattedDate}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="p-3 text-center bg-black/40 backdrop-blur-sm rounded-lg shadow-xl text-white w-auto min-w-[12rem] md:min-w-[14rem]">
+      <div className="text-4xl md:text-5xl font-bold font-headline tabular-nums tracking-tight">
+        {formattedTime}
+      </div>
+      <div className="text-xs md:text-sm text-white/80 mt-1">
+        {formattedDate}
+      </div>
+    </div>
   );
 };
 

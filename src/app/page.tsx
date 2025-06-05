@@ -2,26 +2,27 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import SiteHeader from '@/components/SiteHeader';
-import DashboardInfo from '@/components/DashboardInfo';
-import ControlsArea from '@/components/ControlsArea';
-import AddBookmarkDialog from '@/components/AddBookmarkDialog';
+import AppSidebar from '@/components/AppSidebar';
+import AppHeader from '@/components/AppHeader';
 import BookmarkGrid from '@/components/BookmarkGrid';
+import AddBookmarkDialog from '@/components/AddBookmarkDialog';
+import PasswordDialog from '@/components/PasswordDialog'; // 新增密码对话框
 import type { Bookmark, Category } from '@/types';
-import { Separator } from '@/components/ui/separator';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings } from 'lucide-react';
+import { Settings, PlusCircle, EyeOff, LogIn } from 'lucide-react';
 
-const LS_BOOKMARKS_KEY = 'aegisMarks_bookmarks_v1_zh';
-const LS_CATEGORIES_KEY = 'aegisMarks_categories_v1_zh';
+const LS_BOOKMARKS_KEY = 'aegisMarks_bookmarks_v2_zh'; // 更新版本以避免冲突
+const LS_CATEGORIES_KEY = 'aegisMarks_categories_v2_zh'; // 更新版本
+const ADMIN_PASSWORD = "7";
 
 export default function HomePage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isAddBookmarkDialogOpen, setIsAddBookmarkDialogOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const [showControls, setShowControls] = useState(false);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -32,7 +33,9 @@ export default function HomePage() {
 
     const storedBookmarks = localStorage.getItem(LS_BOOKMARKS_KEY);
     if (storedBookmarks) {
-      setBookmarks(JSON.parse(storedBookmarks));
+      // 确保旧数据有 description 字段
+      const parsedBookmarks = JSON.parse(storedBookmarks).map((bm: Bookmark) => ({ ...bm, description: bm.description || '' }));
+      setBookmarks(parsedBookmarks);
     }
 
     const storedCategories = localStorage.getItem(LS_CATEGORIES_KEY);
@@ -54,6 +57,13 @@ export default function HomePage() {
     if (!isClient) return;
     localStorage.setItem(LS_CATEGORIES_KEY, JSON.stringify(categories));
   }, [categories, isClient]);
+  
+  useEffect(() => {
+    if(categories.length > 0 && !activeCategory) {
+      setActiveCategory(categories[0].id);
+    }
+  }, [categories, activeCategory]);
+
 
   const handleAddBookmark = (newBookmarkData: Omit<Bookmark, 'id'>) => {
     const bookmarkWithId = { ...newBookmarkData, id: Date.now().toString() + Math.random().toString(36).substring(2,7) };
@@ -62,10 +72,12 @@ export default function HomePage() {
   };
 
   const handleDeleteBookmark = (bookmarkId: string) => {
+    if (!isAdminAuthenticated) return; // 增加权限检查
     setBookmarks(prev => prev.filter(bm => bm.id !== bookmarkId));
   };
 
   const handleToggleCategoryVisibility = (categoryId: string) => {
+    if (!isAdminAuthenticated) return;
     setCategories(prev =>
       prev.map(cat =>
         cat.id === categoryId ? { ...cat, isVisible: !cat.isVisible } : cat
@@ -74,6 +86,7 @@ export default function HomePage() {
   };
 
   const handleAddCategory = (categoryName: string) => {
+    if (!isAdminAuthenticated) return;
     if (categories.some(cat => cat.name.toLowerCase() === categoryName.toLowerCase())) {
       console.warn("分类已存在");
       return;
@@ -83,62 +96,96 @@ export default function HomePage() {
   };
   
   const handleDeleteCategory = (categoryId: string) => {
+    if (!isAdminAuthenticated) return;
     setBookmarks(prev => prev.filter(bm => bm.categoryId !== categoryId));
     setCategories(prev => prev.filter(cat => cat.id !== categoryId && cat.id !== 'default'));
+     if (activeCategory === categoryId) {
+      setActiveCategory(categories.find(c => c.id !== categoryId)?.id || null);
+    }
   };
+
+  const handlePasswordSubmit = (password: string) => {
+    if (password === ADMIN_PASSWORD) {
+      setIsAdminAuthenticated(true);
+      setShowPasswordDialog(false);
+    } else {
+      alert("密码错误！");
+    }
+  };
+
+  const handleLogoutAdmin = () => {
+    setIsAdminAuthenticated(false);
+  };
+  
+  const displayedBookmarks = activeCategory === 'all' 
+    ? bookmarks 
+    : bookmarks.filter(bm => bm.categoryId === activeCategory);
 
   if (!isClient) {
     return (
-      <div className="flex flex-col min-h-screen bg-background text-foreground items-center justify-center">
+      <div className="flex flex-col min-h-screen items-center justify-center">
         <div className="animate-pulse text-2xl font-semibold text-primary">正在加载 AegisMarks...</div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-2 sm:px-4 lg:px-6 py-2 min-h-screen flex flex-col">
-      <SiteHeader />
-      <DashboardInfo />
-      
-      <main className="flex-grow mt-2 mb-6">
-        <BookmarkGrid bookmarks={bookmarks} categories={categories} onDeleteBookmark={handleDeleteBookmark} />
-      </main>
-
-      <Separator className="my-6" />
-
-      <div className="mb-6">
-        <Button variant="outline" onClick={() => setShowControls(!showControls)} className="mb-4 shadow-sm">
-          <Settings className="mr-2 h-4 w-4" />
-          {showControls ? '隐藏管理面板' : '显示管理面板'}
-        </Button>
-
-        {showControls && (
-          <Card className="bg-muted/30 shadow-md">
-            <CardHeader>
-              <CardTitle className="text-xl">内容管理</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ControlsArea
-                categories={categories}
-                onAddCategory={handleAddCategory}
-                onToggleVisibility={handleToggleCategoryVisibility}
-                onDeleteCategory={handleDeleteCategory}
-                onOpenAddBookmarkDialog={() => setIsAddBookmarkDialogOpen(true)}
-              />
-            </CardContent>
-          </Card>
-        )}
+    <div className="flex h-screen overflow-hidden">
+      <AppSidebar
+        categories={categories}
+        onAddCategory={handleAddCategory}
+        onDeleteCategory={handleDeleteCategory}
+        onToggleVisibility={handleToggleCategoryVisibility}
+        isAdminAuthenticated={isAdminAuthenticated}
+        activeCategory={activeCategory}
+        setActiveCategory={setActiveCategory}
+      />
+      <div className="flex-1 flex flex-col overflow-y-auto">
+        <AppHeader />
+        <main className="flex-grow p-4 md:p-6">
+          {isAdminAuthenticated && (
+            <div className="mb-4 flex justify-start items-center gap-2">
+              <Button onClick={() => setIsAddBookmarkDialogOpen(true)} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                <PlusCircle className="mr-2 h-4 w-4" /> 添加书签
+              </Button>
+              <Button variant="outline" onClick={handleLogoutAdmin}>
+                <EyeOff className="mr-2 h-4 w-4" /> 退出管理模式
+              </Button>
+            </div>
+          )}
+          {!isAdminAuthenticated && (
+            <div className="mb-4 flex justify-start">
+               <Button onClick={() => setShowPasswordDialog(true)} variant="outline" className="shadow-sm">
+                <LogIn className="mr-2 h-4 w-4" /> 进入管理模式
+              </Button>
+            </div>
+          )}
+          
+          <BookmarkGrid
+            bookmarks={displayedBookmarks} // 显示筛选后的书签
+            categories={categories.filter(c => activeCategory === 'all' || c.id === activeCategory)} // 只传递当前激活的或所有分类
+            onDeleteBookmark={handleDeleteBookmark}
+            isAdminAuthenticated={isAdminAuthenticated}
+            currentCategoryName={categories.find(c=>c.id === activeCategory)?.name || "全部书签"}
+            activeCategoryId={activeCategory}
+          />
+        </main>
+        <footer className="text-center py-3 border-t bg-background/50 text-xs text-muted-foreground">
+          &copy; {new Date().getFullYear()} AegisMarks. 版权所有.
+        </footer>
       </div>
-      
+
       <AddBookmarkDialog
         isOpen={isAddBookmarkDialogOpen}
         onClose={() => setIsAddBookmarkDialogOpen(false)}
         onAddBookmark={handleAddBookmark}
         categories={categories}
       />
-      <footer className="text-center py-4 mt-auto border-t border-border">
-        <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} AegisMarks. 版权所有.</p>
-      </footer>
+      <PasswordDialog
+        isOpen={showPasswordDialog}
+        onClose={() => setShowPasswordDialog(false)}
+        onSubmit={handlePasswordSubmit}
+      />
     </div>
   );
 }

@@ -1,10 +1,12 @@
+
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea'; // For description
 import {
   Dialog,
   DialogContent,
@@ -37,16 +39,35 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
 }) => {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
-  const [categoryId, setCategoryId] = useState<string>(categories.find(c => c.id === 'default')?.id || categories[0]?.id || '');
+  const [description, setDescription] = useState(''); // New state for description
+  const [categoryId, setCategoryId] = useState<string>('');
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      // Reset form fields when dialog opens
+      setName('');
+      setUrl('');
+      setDescription('');
+      // Set default category if categories exist and none is selected
+      if (categories.length > 0 && !categoryId) {
+        setCategoryId(categories.find(c => c.id === 'default')?.id || categories[0]?.id || '');
+      } else if (categories.length > 0 && categoryId) {
+        // Ensure selected category is still valid
+        if (!categories.some(c => c.id === categoryId)) {
+           setCategoryId(categories.find(c => c.id === 'default')?.id || categories[0]?.id || '');
+        }
+      }
+    }
+  }, [isOpen, categories, categoryId]);
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !url.trim() || !categoryId) {
-      toast({ title: "错误", description: "请填写所有字段。", variant: "destructive" });
+      toast({ title: "错误", description: "名称、网址和分类为必填项。", variant: "destructive" });
       return;
     }
-    // Basic URL validation
     try {
       new URL(url.startsWith('http') ? url : `https://${url}`);
     } catch (_) {
@@ -54,24 +75,14 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
       return;
     }
 
-    onAddBookmark({ name, url: url.startsWith('http') ? url : `https://${url}`, categoryId });
+    onAddBookmark({ name, url: url.startsWith('http') ? url : `https://${url}`, categoryId, description });
     toast({ title: "书签已添加", description: `"${name}" 已成功添加。` });
-    setName('');
-    setUrl('');
-    // setCategoryId(categories[0]?.id || ''); // Reset to first category or default
-    onClose();
+    onClose(); // Close dialog after successful submission
   };
   
-  React.useEffect(() => {
-    if (isOpen && (categories.length > 0 && !categoryId)) {
-         setCategoryId(categories.find(c => c.id === 'default')?.id || categories[0]?.id || '');
-    }
-  }, [isOpen, categories, categoryId]);
-
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle>添加新书签</DialogTitle>
           <DialogDescription>
@@ -82,7 +93,7 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
-                名称
+                名称*
               </Label>
               <Input
                 id="name"
@@ -95,7 +106,7 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="url" className="text-right">
-                网址
+                网址*
               </Label>
               <Input
                 id="url"
@@ -107,9 +118,22 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
                 required
               />
             </div>
+             <div className="grid grid-cols-4 items-start gap-4"> {/* Changed items-center to items-start for textarea */}
+              <Label htmlFor="description" className="text-right pt-2"> {/* Added pt-2 for alignment */}
+                描述
+              </Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="col-span-3"
+                placeholder="可选的网站描述或副标题"
+                rows={2}
+              />
+            </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="category" className="text-right">
-                分类
+                分类*
               </Label>
               <Select value={categoryId} onValueChange={setCategoryId} required>
                 <SelectTrigger className="col-span-3">
