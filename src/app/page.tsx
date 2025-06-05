@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const LS_BOOKMARKS_KEY = 'wanfeng_bookmarks_v1_zh';
 const LS_CATEGORIES_KEY = 'wanfeng_categories_v1_zh';
-const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1'; 
+const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1';
 const ADMIN_PASSWORD = "7";
 
 export default function HomePage() {
@@ -34,7 +34,7 @@ export default function HomePage() {
   const [bookmarkToEdit, setBookmarkToEdit] = useState<Bookmark | null>(null);
   const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
-  
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,11 +50,11 @@ export default function HomePage() {
 
     const storedBookmarks = localStorage.getItem(LS_BOOKMARKS_KEY);
     if (storedBookmarks) {
-      const parsedBookmarks = JSON.parse(storedBookmarks).map((bm: Bookmark) => ({ 
-        ...bm, 
-        description: bm.description || '', 
-        icon: bm.icon, 
-        isPrivate: bm.isPrivate || false 
+      const parsedBookmarks = JSON.parse(storedBookmarks).map((bm: Bookmark) => ({
+        ...bm,
+        description: bm.description || '',
+        icon: bm.icon,
+        isPrivate: bm.isPrivate || false
       }));
       setBookmarks(parsedBookmarks);
     }
@@ -82,7 +82,7 @@ export default function HomePage() {
     if (!isClient) return;
     localStorage.setItem(LS_CATEGORIES_KEY, JSON.stringify(categories));
   }, [categories, isClient]);
-  
+
   useEffect(() => {
     if(categories.length > 0 && !activeCategory) {
       const firstVisibleCategory = categories.find(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated));
@@ -122,16 +122,16 @@ export default function HomePage() {
       toast({ title: "错误", description: "分类名称已存在。", variant: "destructive" });
       return;
     }
-    const newCategory = { 
-      id: Date.now().toString() + Math.random().toString(36).substring(2,7), 
-      name: categoryName, 
-      isVisible: true, 
-      icon: icon || 'Folder', 
+    const newCategory = {
+      id: Date.now().toString() + Math.random().toString(36).substring(2,7),
+      name: categoryName,
+      isVisible: true,
+      icon: icon || 'Folder',
       isPrivate: isPrivate || false
     };
     setCategories(prev => [...prev, newCategory]);
   };
-  
+
   const handleDeleteCategory = (categoryId: string) => {
     if (!isAdminAuthenticated) return;
     setBookmarks(prev => prev.filter(bm => bm.categoryId !== categoryId));
@@ -182,11 +182,11 @@ export default function HomePage() {
     }
     toast({ title: "已退出", description: "已退出管理模式。" });
   };
-  
+
   const visibleCategories = categories.filter(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated));
 
   const filteredBookmarksBySearch = bookmarks.filter(bm => {
-    if (!isAdminAuthenticated && bm.isPrivate) return false; 
+    if (!isAdminAuthenticated && bm.isPrivate) return false;
     const categoryOfBookmark = categories.find(c => c.id === bm.categoryId);
     if (!isAdminAuthenticated && categoryOfBookmark && categoryOfBookmark.isPrivate) return false;
     if (!searchQuery.trim()) return true;
@@ -198,8 +198,8 @@ export default function HomePage() {
     );
   });
 
-  const displayedBookmarks = activeCategory === 'all' 
-    ? filteredBookmarksBySearch 
+  const displayedBookmarks = activeCategory === 'all'
+    ? filteredBookmarksBySearch
     : filteredBookmarksBySearch.filter(bm => bm.categoryId === activeCategory);
 
   if (!isClient) {
@@ -212,16 +212,16 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <AppHeader 
+      <AppHeader
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
       />
-      <div className="flex flex-1 overflow-hidden"> 
+      <div className="flex flex-1 overflow-hidden">
         <AppSidebar
           categories={visibleCategories}
           onAddCategory={handleAddCategory}
           onDeleteCategory={handleDeleteCategory}
-          onEditCategory={handleOpenEditCategoryDialog} // New
+          onEditCategory={handleOpenEditCategoryDialog}
           isAdminAuthenticated={isAdminAuthenticated}
           activeCategory={activeCategory}
           setActiveCategory={setActiveCategory}
@@ -239,12 +239,12 @@ export default function HomePage() {
                 </Button>
               </div>
             )}
-            
+
             <BookmarkGrid
               bookmarks={displayedBookmarks}
-              categories={categories} 
+              categories={categories}
               onDeleteBookmark={handleDeleteBookmark}
-              onEditBookmark={handleOpenEditBookmarkDialog} // New
+              onEditBookmark={handleOpenEditBookmarkDialog}
               isAdminAuthenticated={isAdminAuthenticated}
               currentCategoryName={activeCategory === 'all' ? '全部书签' : categories.find(c=>c.id === activeCategory)?.name || "未知分类"}
               activeCategoryId={activeCategory}
@@ -261,7 +261,8 @@ export default function HomePage() {
         isOpen={isAddBookmarkDialogOpen}
         onClose={() => setIsAddBookmarkDialogOpen(false)}
         onAddBookmark={handleAddBookmark}
-        categories={visibleCategories.filter(c => c.id !== 'all')} 
+        categories={visibleCategories.filter(c => c.id !== 'all')}
+        activeCategoryId={activeCategory}
       />
       {bookmarkToEdit && (
         <EditBookmarkDialog

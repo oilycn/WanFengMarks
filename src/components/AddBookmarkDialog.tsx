@@ -30,6 +30,7 @@ interface AddBookmarkDialogProps {
   onClose: () => void;
   onAddBookmark: (bookmark: Omit<Bookmark, 'id'>) => void;
   categories: Category[];
+  activeCategoryId?: string | null;
 }
 
 const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
@@ -37,6 +38,7 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
   onClose,
   onAddBookmark,
   categories,
+  activeCategoryId,
 }) => {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
@@ -50,16 +52,22 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
       setName('');
       setUrl('');
       setDescription('');
-      setIsPrivate(false); 
-      if (categories.length > 0 && !categoryId) {
-        setCategoryId(categories.find(c => c.id === 'default')?.id || categories[0]?.id || '');
-      } else if (categories.length > 0 && categoryId) {
-        if (!categories.some(c => c.id === categoryId)) {
-           setCategoryId(categories.find(c => c.id === 'default')?.id || categories[0]?.id || '');
+      setIsPrivate(false);
+
+      let newDefaultCategoryId = '';
+      if (activeCategoryId && activeCategoryId !== 'all' && categories.some(cat => cat.id === activeCategoryId)) {
+        newDefaultCategoryId = activeCategoryId;
+      } else if (categories.length > 0) {
+        const defaultCat = categories.find(c => c.id === 'default');
+        if (defaultCat && categories.some(c => c.id === 'default')) { // Ensure 'default' is in the passed categories
+          newDefaultCategoryId = defaultCat.id;
+        } else {
+          newDefaultCategoryId = categories[0].id;
         }
       }
+      setCategoryId(newDefaultCategoryId);
     }
-  }, [isOpen, categories, categoryId]);
+  }, [isOpen, categories, activeCategoryId]);
 
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -77,9 +85,9 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
 
     onAddBookmark({ name, url: url.startsWith('http') ? url : `https://${url}`, categoryId, description, isPrivate });
     toast({ title: "书签已添加", description: `"${name}" 已成功添加。` });
-    onClose(); 
+    onClose();
   };
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[480px]">
@@ -118,8 +126,8 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
                 required
               />
             </div>
-             <div className="grid grid-cols-4 items-start gap-4"> 
-              <Label htmlFor="description" className="text-right pt-2"> 
+             <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="description" className="text-right pt-2">
                 描述
               </Label>
               <Textarea
