@@ -4,7 +4,7 @@
 import React from 'react';
 import SearchBar from './SearchBar';
 import Clock from './Clock';
-import Weather from './Weather'; // 导入 Weather 组件
+import Weather from './Weather'; 
 
 interface AppHeaderProps {
   searchQuery: string;
@@ -13,7 +13,13 @@ interface AppHeaderProps {
 
 const AppHeader: React.FC<AppHeaderProps> = ({ searchQuery, setSearchQuery }) => {
   return (
-    <header className="h-48 md:h-40 p-4 md:p-6 flex flex-col md:flex-row items-center justify-between text-white header-background relative shadow-md" data-ai-hint="digital abstract">
+    <header 
+      className="h-48 md:h-40 p-4 md:p-6 flex flex-col md:flex-row items-center justify-between relative shadow-md bg-[hsl(var(--header-solid-bg))]" 
+      data-ai-hint="light gray abstract"
+    >
+      {/* The header-background-image class can be added above if an image is preferred over solid color */}
+      {/* <div className="absolute inset-0 bg-black/05 backdrop-blur-xs"></div> Removed overlay for solid background */}
+      
       <div className="w-full md:w-2/3 lg:w-1/2 z-10">
         <SearchBar currentQuery={searchQuery} onQueryChange={setSearchQuery} />
       </div>
@@ -21,7 +27,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({ searchQuery, setSearchQuery }) =>
         <Weather />
         <Clock />
       </div>
-      <div className="absolute inset-0 bg-black/10"></div>
     </header>
   );
 };

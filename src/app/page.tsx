@@ -11,8 +11,8 @@ import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, EyeOff } from 'lucide-react';
 
-const LS_BOOKMARKS_KEY = 'aegisMarks_bookmarks_v2_zh';
-const LS_CATEGORIES_KEY = 'aegisMarks_categories_v2_zh';
+const LS_BOOKMARKS_KEY = 'wanfeng_bookmarks_v1_zh'; // Updated key
+const LS_CATEGORIES_KEY = 'wanfeng_categories_v1_zh'; // Updated key
 const ADMIN_PASSWORD = "7";
 
 export default function HomePage() {
@@ -27,11 +27,6 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsClient(true);
-    // Check if already authenticated from a previous session (optional)
-    // const isAuthenticated = sessionStorage.getItem('isAdminAuthenticated');
-    // if (isAuthenticated === 'true') {
-    //   setIsAdminAuthenticated(true);
-    // }
   }, []);
 
   useEffect(() => {
@@ -105,7 +100,6 @@ export default function HomePage() {
   const handlePasswordSubmit = (password: string) => {
     if (password === ADMIN_PASSWORD) {
       setIsAdminAuthenticated(true);
-      // sessionStorage.setItem('isAdminAuthenticated', 'true'); // Optional: persist session
       setShowPasswordDialog(false);
     } else {
       alert("密码错误！");
@@ -114,7 +108,6 @@ export default function HomePage() {
 
   const handleLogoutAdmin = () => {
     setIsAdminAuthenticated(false);
-    // sessionStorage.removeItem('isAdminAuthenticated'); // Optional: clear session
   };
   
   const filteredBookmarksBySearch = bookmarks.filter(bm => {
@@ -134,7 +127,7 @@ export default function HomePage() {
   if (!isClient) {
     return (
       <div className="flex flex-col min-h-screen items-center justify-center">
-        <div className="animate-pulse text-2xl font-semibold text-primary">正在加载 AegisMarks...</div>
+        <div className="animate-pulse text-2xl font-semibold text-primary">正在加载 晚风Marks...</div>
       </div>
     );
   }
@@ -150,7 +143,7 @@ export default function HomePage() {
         setActiveCategory={setActiveCategory}
         onShowPasswordDialog={() => setShowPasswordDialog(true)}
       />
-      <div className="flex-1 flex flex-col overflow-y-auto">
+      <div className="flex-1 flex flex-col overflow-y-auto bg-background">
         <AppHeader 
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
@@ -178,7 +171,7 @@ export default function HomePage() {
           />
         </main>
         <footer className="text-center py-3 border-t bg-background/50 text-xs text-muted-foreground">
-          &copy; {new Date().getFullYear()} AegisMarks. 版权所有.
+          &copy; {new Date().getFullYear()} 晚风Marks. 版权所有.
         </footer>
       </div>
 

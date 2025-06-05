@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'AegisMarks 书签导航',
+  title: '晚风Marks 书签导航',
   description: '您的个性化书签仪表盘，集成时钟、天气和搜索功能。',
 };
 

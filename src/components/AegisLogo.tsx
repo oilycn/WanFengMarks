@@ -6,7 +6,7 @@ const AegisLogo: React.FC<{ className?: string }> = ({ className }) => {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <ShieldCheck className="h-7 w-7 text-primary" />
-      <h1 className="text-xl font-bold text-primary font-headline">AegisMarks</h1>
+      <h1 className="text-xl font-bold text-primary font-headline">晚风Marks</h1>
     </div>
   );
 };

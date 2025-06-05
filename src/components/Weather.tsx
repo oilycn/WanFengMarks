@@ -45,7 +45,7 @@ const Weather: React.FC = () => {
   }, []);
 
   return (
-    <div className="p-3 text-center bg-black/30 backdrop-blur-sm rounded-lg shadow-lg text-white min-w-[10rem]">
+    <div className="p-3 text-center bg-neutral-700/60 dark:bg-neutral-800/70 backdrop-blur-sm rounded-lg shadow-lg text-white min-w-[10rem]">
        <h3 className="text-sm font-semibold text-white/80 mb-1 text-left flex items-center">
           <Zap className="h-4 w-4 mr-1.5 text-yellow-400" />
           本地天气 (模拟)
