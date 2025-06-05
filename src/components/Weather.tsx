@@ -18,17 +18,19 @@ const Weather: React.FC = () => {
     if (desc.includes('风')) return Wind;
     if (desc.includes('毛毛雨')) return CloudDrizzle;
     if (desc.includes('雷')) return Zap;
-    return Zap;
+    return Zap; // Default icon
   };
 
 
   useEffect(() => {
     const fetchWeather = async () => {
       setLoading(true);
+      // Simulate API call delay
       setTimeout(() => {
+        // Mock weather data
         const mockDescriptions = ["晴朗", "多云", "小雨", "雷阵雨", "阴天"];
         const randomDesc = mockDescriptions[Math.floor(Math.random() * mockDescriptions.length)];
-        const randomTemp = Math.floor(Math.random() * 15) + 15; 
+        const randomTemp = Math.floor(Math.random() * 15) + 15; // Temp between 15-29°C
         
         setWeatherData({ 
           temp: `${randomTemp}°C`, 
@@ -39,6 +41,7 @@ const Weather: React.FC = () => {
       }, 1500);
     };
 
+    // Ensure this runs only on the client
     if (typeof window !== 'undefined') {
       fetchWeather();
     }
@@ -48,7 +51,7 @@ const Weather: React.FC = () => {
     <div className="p-3 text-center bg-neutral-700/60 dark:bg-neutral-800/70 backdrop-blur-sm rounded-lg shadow-lg text-white min-w-[10rem]">
        <h3 className="text-sm font-semibold text-white/80 mb-1 text-left flex items-center">
           <Zap className="h-4 w-4 mr-1.5 text-yellow-400" />
-          本地天气 (模拟)
+          城市天气 (模拟)
         </h3>
         {loading ? (
           <div className="animate-pulse py-2">
