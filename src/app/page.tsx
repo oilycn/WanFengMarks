@@ -19,7 +19,7 @@ import {
   addBookmarkAction,
   updateBookmarkAction,
   deleteBookmarkAction,
-  deleteBookmarksByCategoryIdAction, // New action
+  deleteBookmarksByCategoryIdAction,
 } from '@/actions/bookmarkActions';
 import {
   getCategoriesAction,
@@ -33,7 +33,7 @@ const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1';
 
 const APP_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:9002';
 
-const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);let desc='';const metaDesc=document.querySelector('meta[name="description"]');if(metaDesc){desc=encodeURIComponent(metaDesc.content);}}else{const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc){desc=encodeURIComponent(ogDesc.content);}}const popupWidth=500;const popupHeight=650;const left=(screen.width/2)-(popupWidth/2);const top=(screen.height/2)-(popupHeight/2);const wanfengWindow=window.open(\`\${appUrl}/add-bookmark-popup?name=\${title}&url=\${pageUrl}&desc=\${desc}\`, 'wanfengMarksAddBookmarkPopup', \`toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=\${popupWidth}, height=\${popupHeight}, top=\${top}, left=\${left}\`);if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks书签添加窗口。请检查浏览器是否阻止了弹出窗口。');}})();`;
+const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);let desc='';const metaDesc=document.querySelector('meta[name="description"]');if(metaDesc){desc=encodeURIComponent(metaDesc.content);}else{const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc){desc=encodeURIComponent(ogDesc.content);}}const popupWidth=500;const popupHeight=650;const left=(screen.width/2)-(popupWidth/2);const top=(screen.height/2)-(popupHeight/2);const wanfengWindow=window.open(\`\${appUrl}/add-bookmark-popup?name=\${title}&url=\${pageUrl}&desc=\${desc}\`, 'wanfengMarksAddBookmarkPopup', \`toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=\${popupWidth}, height=\${popupHeight}, top=\${top}, left=\${left}\`);if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks书签添加窗口。请检查浏览器是否阻止了弹出窗口。');}})();`;
 
 
 export default function HomePage() {
@@ -93,8 +93,6 @@ export default function HomePage() {
         }
         console.error("HomePage: Error checking setup status:", error);
         toast({ title: "错误", description: "无法检查应用配置状态，请刷新。", variant: "destructive" });
-        // Fallback to setup if check fails critically, though DB errors might mean setup page also fails.
-        // Consider a dedicated error page or graceful degradation if DB connection is a persistent issue.
         router.push('/setup'); 
       }
     }
@@ -120,11 +118,9 @@ export default function HomePage() {
       ]);
       setBookmarks(fetchedBookmarks);
       
-      // Ensure categories always has at least a default, even if DB fetch returns empty or error
       if (fetchedCategories && fetchedCategories.length > 0) {
         setCategories(fetchedCategories);
       } else {
-        // This fallback might not be strictly necessary if ensureDefaultCategory in action works robustly
         const defaultCategory: Category = { id: 'default-fallback-ui', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
         setCategories([defaultCategory]);
         console.warn("HomePage: Fetched categories was empty or undefined, using UI fallback.");
@@ -133,7 +129,7 @@ export default function HomePage() {
     } catch (error) {
       console.error("HomePage: Failed to fetch data:", error);
       toast({ title: "错误", description: "加载数据失败，请稍后重试。", variant: "destructive" });
-       if (categories.length === 0) { // Ensure categories is not empty for UI stability
+       if (categories.length === 0) { 
            const defaultCategory = { id: 'default-fallback-ui-error', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
            setCategories([defaultCategory]);
        }
@@ -141,7 +137,7 @@ export default function HomePage() {
       setIsLoading(false);
       console.log("HomePage: fetchData finished. isLoading set to false.");
     }
-  }, [toast, categories.length]); // categories.length can be removed if default handling is solid server-side
+  }, [toast, categories.length]);
 
   useEffect(() => {
     if (isClient && !isCheckingSetup) {
@@ -156,7 +152,6 @@ export default function HomePage() {
   useEffect(() => {
     if(categories.length > 0 && !activeCategory && !isLoading) {
       const firstVisibleCategory = categories.find(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated));
-      // Prioritize 'default' category if available and matches criteria
       const defaultCat = categories.find(c => c.name === '通用书签' && c.isVisible && (!c.isPrivate || isAdminAuthenticated));
       setActiveCategory(defaultCat?.id || firstVisibleCategory?.id || 'all');
     }
@@ -224,7 +219,6 @@ export default function HomePage() {
         toast({ title: "未授权", description: "请先进入管理模式。", variant: "destructive" });
         return;
     }
-    // Client-side check for existing name (server also checks)
     if (categories.some(cat => cat.name.toLowerCase() === categoryName.toLowerCase())) {
       toast({ title: "错误", description: "分类名称已存在。", variant: "destructive" });
       return;
@@ -246,21 +240,17 @@ export default function HomePage() {
         return;
     }
     try {
-      // Delete bookmarks associated with this category first
       const { deletedCount } = await deleteBookmarksByCategoryIdAction(categoryId);
       console.log(`Deleted ${deletedCount} bookmarks when deleting category ${categoryId}`);
       
-      // Then delete the category
       await deleteCategoryAction(categoryId);
       
-      // Update client state
       setBookmarks(prev => prev.filter(bm => bm.categoryId !== categoryId));
       const oldCategoryName = categories.find(c => c.id === categoryId)?.name || '该分类';
-      setCategories(prev => prev.filter(cat => cat.id !== categoryId)); // Keep 'default' if it's not the one deleted.
+      setCategories(prev => prev.filter(cat => cat.id !== categoryId)); 
       
       if (activeCategory === categoryId) {
         const nextVisibleCategories = categories.filter(c => c.id !== categoryId && c.isVisible && (!c.isPrivate || isAdminAuthenticated));
-        // Find '通用书签' by name as a reliable default fallback if it exists
         const defaultCat = categories.find(c => c.name === '通用书签' && c.isVisible && (!c.isPrivate || isAdminAuthenticated) && c.id !== categoryId);
         const nextCategory = defaultCat || (nextVisibleCategories.length > 0 ? nextVisibleCategories[0] : categories.find(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated) && c.id !== categoryId));
         setActiveCategory(nextCategory?.id || 'all');
@@ -287,7 +277,6 @@ export default function HomePage() {
         toast({ title: "未授权", description: "请先进入管理模式。", variant: "destructive" });
         return;
     }
-     // Client-side check for existing name (server also checks)
      if (categories.some(cat => cat.id !== updatedCategory.id && cat.name.toLowerCase() === updatedCategory.name.toLowerCase())) {
       toast({ title: "错误", description: "已存在同名分类。", variant: "destructive" });
       return;
@@ -314,7 +303,7 @@ export default function HomePage() {
         localStorage.setItem(LS_ADMIN_AUTH_KEY, 'true');
         setShowPasswordDialog(false);
         toast({ title: "授权成功", description: "已进入管理模式。" });
-        fetchData(); // Re-fetch data in case private items are now visible
+        fetchData(); 
       } else {
         toast({ title: "密码错误", description: "请输入正确的管理员密码。", variant: "destructive" });
       }
@@ -385,8 +374,6 @@ export default function HomePage() {
   }
   console.log("HomePage: Render main content. isClient:", isClient, "isCheckingSetup:", isCheckingSetup, "isLoading:", isLoading);
 
-  // Ensure `visibleCategories` always has something if `categories` is populated,
-  // especially considering 'all' is not part of `visibleCategories`.
   const categoriesForSidebar = visibleCategories.length > 0 ? visibleCategories : categories.filter(c => c.isVisible);
 
 
@@ -459,7 +446,7 @@ export default function HomePage() {
         isOpen={isAddBookmarkDialogOpen}
         onClose={handleCloseAddBookmarkDialog}
         onAddBookmark={handleAddBookmark}
-        categories={categoriesForSidebar.filter(c => c.id !== 'all')} // Pass only actual categories
+        categories={categoriesForSidebar.filter(c => c.id !== 'all')} 
         activeCategoryId={activeCategory}
         initialData={initialDataForAddDialog}
       />
@@ -469,7 +456,7 @@ export default function HomePage() {
           onClose={() => { setIsEditBookmarkDialogOpen(false); setBookmarkToEdit(null); }}
           onUpdateBookmark={handleUpdateBookmark}
           bookmarkToEdit={bookmarkToEdit}
-          categories={categoriesForSidebar.filter(c => c.id !== 'all')} // Pass only actual categories
+          categories={categoriesForSidebar.filter(c => c.id !== 'all')} 
         />
       )}
       {categoryToEdit && (
@@ -488,4 +475,6 @@ export default function HomePage() {
     </div>
   );
 }
+    
+
     
