@@ -2,82 +2,128 @@
 'use server';
 
 import { unstable_noStore as noStore } from 'next/cache';
+import { connectToDatabase } from '@/lib/mongodb';
+import bcrypt from 'bcryptjs';
+import type { Collection } from 'mongodb';
 
-// IMPORTANT: This is an IN-MEMORY store for the admin password and setup state.
-// It is NOT secure for production and will be lost on server restart.
-// Replace with secure, hashed password storage and configuration in a real database.
-let memoryAdminPassword: string | null = null;
-let setupCompletedFlag = false;
-let selectedDatabaseType: string = 'temporary'; // Default to temporary
+const CONFIG_COLLECTION = 'config';
+const ADMIN_CONFIG_ID = 'adminCredentials'; // Unique ID for the admin config document
 
-// const MIN_PASSWORD_LENGTH = 6; // Removed length restriction
+interface AdminConfigDocument {
+  _id: string;
+  hashedPassword?: string;
+  databaseType?: string;
+  setupCompleted?: boolean;
+}
 
 interface ActionResult {
   success: boolean;
   error?: string;
 }
 
-// Added databaseType parameter, though it's only stored in memory for now.
-export async function setInitialAdminConfigAction(password: string, databaseType: string): Promise<ActionResult> {
-  console.log('[AuthAction] Attempting to set initial admin config.');
-  if (setupCompletedFlag && memoryAdminPassword) {
-    // This check might be too restrictive if an admin wants to *change* the password later
-    // For now, it implies this action is only for the very first setup.
-  }
+async function getConfigCollection(): Promise<Collection<AdminConfigDocument>> {
+  const { db } = await connectToDatabase();
+  return db.collection<AdminConfigDocument>(CONFIG_COLLECTION);
+}
 
-  // Removed password length check
-  // if (!password || password.length < MIN_PASSWORD_LENGTH) {
-  //   return { success: false, error: `密码长度至少为 ${MIN_PASSWORD_LENGTH} 位。` };
-  // }
+export async function setInitialAdminConfigAction(password: string, databaseType: string): Promise<ActionResult> {
+  noStore();
+  console.log('[AuthAction] Attempting to set initial admin config.');
+
   if (!password) {
     console.log('[AuthAction] Admin password is empty. Setup failed.');
     return { success: false, error: `管理员密码不能为空。` };
   }
 
+  try {
+    const configCollection = await getConfigCollection();
+    const existingConfig = await configCollection.findOne({ _id: ADMIN_CONFIG_ID });
 
-  // In a real app, hash the password here before storing
-  memoryAdminPassword = password; // Storing plain text - FOR DEMO ONLY
-  selectedDatabaseType = databaseType; // Storing selected DB type in memory
-  setupCompletedFlag = true;
-  console.log(`[AuthAction] Admin config SET. setupCompletedFlag: ${setupCompletedFlag}, memoryAdminPassword: ${memoryAdminPassword ? 'set' : 'null'}, DB Type: ${selectedDatabaseType}`);
-  return { success: true };
+    if (existingConfig?.setupCompleted) {
+      // This case should ideally be prevented by client-side checks, but as a safeguard:
+      console.log('[AuthAction] Setup already completed. No changes made.');
+      // return { success: false, error: '初始配置已完成，不能重复设置。' };
+      // Allow re-setting for now, useful if DB was cleared but client still tries to set up.
+      // Or, if we want to allow password changes via a different mechanism later.
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await configCollection.updateOne(
+      { _id: ADMIN_CONFIG_ID },
+      { $set: { hashedPassword, databaseType, setupCompleted: true } },
+      { upsert: true }
+    );
+
+    console.log(`[AuthAction] Admin config SET in DB. DB Type: ${databaseType}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[AuthAction] Error setting initial admin config:', error);
+    return { success: false, error: '无法保存管理员配置到数据库。' };
+  }
 }
 
 export async function verifyAdminPasswordAction(password: string): Promise<boolean> {
-  noStore(); // Opt out of caching for this action as well, just in case
-  if (!setupCompletedFlag || !memoryAdminPassword) {
-    console.warn('[AuthAction] Admin password verification attempted before setup or password is null.');
-    return false; // No password set means verification fails
+  noStore();
+  console.log('[AuthAction] Verifying admin password.');
+  try {
+    const configCollection = await getConfigCollection();
+    const adminConfig = await configCollection.findOne({ _id: ADMIN_CONFIG_ID });
+
+    if (!adminConfig || !adminConfig.hashedPassword || !adminConfig.setupCompleted) {
+      console.warn('[AuthAction] Admin password verification attempted before setup or password is null in DB.');
+      return false;
+    }
+
+    const isValid = await bcrypt.compare(password, adminConfig.hashedPassword);
+    if (isValid) {
+      console.log('[AuthAction] Admin password verified (DB).');
+    } else {
+      console.warn('[AuthAction] Admin password verification failed (DB).');
+    }
+    return isValid;
+  } catch (error) {
+    console.error('[AuthAction] Error verifying admin password:', error);
+    return false;
   }
-  // In a real app, compare the provided password with the stored hash
-  const isValid = password === memoryAdminPassword;
-  if (isValid) {
-    console.log('[AuthAction] Admin password verified (IN-MEMORY).');
-  } else {
-    console.warn('[AuthAction] Admin password verification failed (IN-MEMORY).');
-  }
-  return isValid;
 }
 
 export async function isSetupCompleteAction(): Promise<boolean> {
-  noStore(); // Opt out of caching for this action
-  // The "setup" is considered complete if an admin password has been set.
-  const isComplete = setupCompletedFlag && memoryAdminPassword !== null;
-  console.log(`[AuthAction] isSetupCompleteAction called. setupCompletedFlag: ${setupCompletedFlag}, memoryAdminPassword: ${memoryAdminPassword ? 'set' : 'null'}, isComplete: ${isComplete}`);
-  return isComplete;
+  noStore();
+  console.log('[AuthAction] Checking if setup is complete.');
+  try {
+    const configCollection = await getConfigCollection();
+    const adminConfig = await configCollection.findOne({ _id: ADMIN_CONFIG_ID });
+    const isComplete = !!(adminConfig && adminConfig.hashedPassword && adminConfig.setupCompleted);
+    console.log(`[AuthAction] isSetupCompleteAction called. Admin config from DB: ${adminConfig ? 'found' : 'not found'}, isComplete: ${isComplete}`);
+    return isComplete;
+  } catch (error) {
+    console.error('[AuthAction] Error checking setup status:', error);
+    // In case of DB error, prevent app from proceeding as if setup is done.
+    // This might redirect to /setup, which is safer than a broken main app.
+    return false;
+  }
 }
 
 export async function getSelectedDatabaseTypeAction(): Promise<string> {
-    noStore(); // Opt out of caching for this action
-    return selectedDatabaseType;
+    noStore();
+    try {
+      const configCollection = await getConfigCollection();
+      const adminConfig = await configCollection.findOne({ _id: ADMIN_CONFIG_ID });
+      return adminConfig?.databaseType || 'temporary'; // Fallback if not set
+    } catch (error) {
+      console.error('[AuthAction] Error getting selected database type:', error);
+      return 'temporary'; // Fallback on error
+    }
 }
 
-// Helper to reset setup state (for development/testing purposes)
-// This would not exist in a production app.
 export async function resetSetupStateAction(): Promise<void> {
-    memoryAdminPassword = null;
-    setupCompletedFlag = false;
-    selectedDatabaseType = 'temporary';
-    console.log('[AuthAction] Setup state has been reset (IN-MEMORY).');
+    noStore();
+    try {
+        const configCollection = await getConfigCollection();
+        await configCollection.deleteOne({ _id: ADMIN_CONFIG_ID });
+        console.log('[AuthAction] Setup state has been reset in DB.');
+    } catch (error) {
+        console.error('[AuthAction] Error resetting setup state:', error);
+    }
 }
-

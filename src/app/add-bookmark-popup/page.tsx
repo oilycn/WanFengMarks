@@ -4,10 +4,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import AddBookmarkDialog from '@/components/AddBookmarkDialog';
 import type { Bookmark, Category } from '@/types';
-import '../globals.css'; // Import global styles for the dialog to look correct
+import '../globals.css';
 import { getCategoriesAction } from '@/actions/categoryActions';
 import { addBookmarkAction } from '@/actions/bookmarkActions';
-// Removed: import { useToast } from "@/hooks/use-toast";
+
 
 const AddBookmarkPopupPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -15,7 +15,6 @@ const AddBookmarkPopupPage = () => {
   const [initialData, setInitialData] = useState<{ name?: string; url?: string; description?: string } | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  // Removed: const { toast } = useToast();
 
 
   useEffect(() => {
@@ -26,18 +25,18 @@ const AddBookmarkPopupPage = () => {
     setIsLoadingCategories(true);
     try {
       const fetchedCategories = await getCategoriesAction();
-      if (fetchedCategories.length > 0) {
+      if (fetchedCategories && fetchedCategories.length > 0) {
         setCategories(fetchedCategories);
       } else {
-        // Fallback if no categories found
-        const defaultCategory = { id: 'default', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
+        // Fallback if no categories found or error during fetch
+        console.warn("Popup: No categories fetched or an error occurred, using fallback default.");
+        const defaultCategory = { id: 'default-fallback-popup', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
         setCategories([defaultCategory]);
       }
     } catch (error) {
       console.error("Popup: Failed to fetch categories:", error);
-      // toast({ title: "错误", description: "加载分类失败。", variant: "destructive" }); // Removed toast
-      const defaultCategory = { id: 'default', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
-      setCategories([defaultCategory]); // Ensure there's always a category
+      const defaultCategory = { id: 'default-fallback-popup-error', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
+      setCategories([defaultCategory]);
     } finally {
       setIsLoadingCategories(false);
     }
@@ -67,33 +66,44 @@ const AddBookmarkPopupPage = () => {
     if (!isClient) return;
     try {
       await addBookmarkAction(newBookmarkData);
-      window.close();
+      // Let the dialog's onClose handle window.close() after successful submission
     } catch (error) {
       console.error("Popup: Failed to add bookmark:", error);
-      // toast({ title: "添加失败", description: "无法保存书签，请重试。", variant: "destructive" }); // Removed toast
-      // Don't close window on error, let user try again or cancel.
-      // You could add a simple alert here if critical feedback is needed:
+      // Display error within the dialog or use alert for critical feedback
+      // This will be handled by AddBookmarkDialog's internal validation display now
       // alert("无法保存书签，请查看控制台获取更多信息。");
+      throw error; // Re-throw to allow AddBookmarkDialog to catch and display validation
     }
   };
 
-  const handleCloseDialog = () => {
+  const handleDialogClose = () => {
+    // This is called by AddBookmarkDialog on any close action (submit, cancel, X, Esc)
     window.close();
   };
+
 
   if (!isClient || isLoadingCategories) {
     return <div className="flex h-screen w-screen items-center justify-center bg-background"><p className="text-foreground">正在加载...</p></div>;
   }
 
-  const selectableCategories = categories.filter(c => c.id !== 'all' && c.isVisible);
+  // Filter out 'all' pseudo-category and ensure categories are visible
+  // For popup, we don't need to consider admin auth for category visibility
+  // as this is a direct "add to" action. If a category is private, it should still be listable if fetched.
+  const selectableCategories = categories.filter(c => c.id !== 'all' && c.id !== 'default-fallback-popup' && c.id !== 'default-fallback-popup-error');
+  
+  // Ensure at least one category is available for selection, use default if necessary
+  const finalCategories = selectableCategories.length > 0 
+    ? selectableCategories 
+    : [{ id: 'default', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false }];
+
 
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-background/80 backdrop-blur-sm p-4">
       <AddBookmarkDialog
         isOpen={isDialogOpen}
-        onClose={handleCloseDialog}
+        onClose={handleDialogClose} // This will now also trigger window.close
         onAddBookmark={handleAddBookmark}
-        categories={selectableCategories}
+        categories={finalCategories} // Pass the potentially refined list
         initialData={initialData}
       />
     </div>
