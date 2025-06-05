@@ -18,8 +18,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        body: ['Noto Sans SC', 'Inter', 'sans-serif'], // Added Noto Sans SC
-        headline: ['Noto Sans SC', 'Inter', 'sans-serif'], // Added Noto Sans SC
+        body: ['Inter', 'Noto Sans SC', 'sans-serif'], 
+        headline: ['Inter', 'Noto Sans SC', 'sans-serif'], 
         code: ['monospace'],
       },
       colors: {
@@ -63,7 +63,7 @@ export default {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))',
         },
-        sidebar: { // Kept for potential future use if sidebar component is used
+        sidebar: { 
           DEFAULT: 'hsl(var(--sidebar-background))',
           foreground: 'hsl(var(--sidebar-foreground))',
           primary: 'hsl(var(--sidebar-primary))',

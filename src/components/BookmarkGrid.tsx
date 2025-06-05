@@ -62,7 +62,7 @@ iconMap['Default'] = Folder;
 
 
 interface BookmarkGridProps {
-  bookmarks: Bookmark[]; // These are the displayedBookmarks from page.tsx
+  bookmarks: Bookmark[]; 
   categories: Category[]; 
   onDeleteBookmark: (id: string) => void;
   onEditBookmark: (bookmark: Bookmark) => void; 
@@ -90,29 +90,39 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
   const getCategoryById = (id: string) => categories.find(c => c.id === id);
   const canDrag = isAdminAuthenticated && activeCategoryId && activeCategoryId !== 'all';
 
-  const renderBookmarksList = (bookmarksToRender: Bookmark[]) => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-      {bookmarksToRender.map((bookmark, index) => (
-        <Draggable 
-          key={bookmark.id} 
-          draggableId={bookmark.id} 
-          index={index}
-          isDragDisabled={!canDrag}
-        >
-          {(provided, snapshot) => (
-            <BookmarkItem
-              bookmark={bookmark}
-              onDeleteBookmark={onDeleteBookmark}
-              onEditBookmark={onEditBookmark}
-              isAdminAuthenticated={isAdminAuthenticated}
-              innerRef={provided.innerRef}
-              draggableProps={provided.draggableProps}
-              dragHandleProps={provided.dragHandleProps}
-              isDragging={snapshot.isDragging}
-            />
-          )}
-        </Draggable>
-      ))}
+  const renderBookmarksList = (bookmarksToRender: Bookmark[], isDraggableContext: boolean) => (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+      {bookmarksToRender.map((bookmark, index) => 
+        isDraggableContext ? (
+          <Draggable 
+            key={bookmark.id} 
+            draggableId={bookmark.id} 
+            index={index}
+            isDragDisabled={!canDrag} // Redundant if isDraggableContext implies canDrag, but safe
+          >
+            {(provided, snapshot) => (
+              <BookmarkItem
+                bookmark={bookmark}
+                onDeleteBookmark={onDeleteBookmark}
+                onEditBookmark={onEditBookmark}
+                isAdminAuthenticated={isAdminAuthenticated}
+                innerRef={provided.innerRef}
+                draggableProps={provided.draggableProps}
+                dragHandleProps={provided.dragHandleProps}
+                isDragging={snapshot.isDragging}
+              />
+            )}
+          </Draggable>
+        ) : (
+          <BookmarkItem
+            key={bookmark.id}
+            bookmark={bookmark}
+            onDeleteBookmark={onDeleteBookmark}
+            onEditBookmark={onEditBookmark}
+            isAdminAuthenticated={isAdminAuthenticated}
+          />
+        )
+      )}
     </div>
   );
 
@@ -150,10 +160,9 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
     );
   }
   
-  // If a specific category is selected and user is admin, enable drag-and-drop
   if (canDrag && activeCategoryId) {
     return (
-      <section aria-labelledby={`category-title-main`}>
+      <>
         <div className="flex justify-between items-center mb-4 border-b pb-2">
             <h2 
                 id={`category-title-main`} 
@@ -171,25 +180,25 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
             )}
         </div>
         <Droppable 
-            key={activeCategoryId} // Ensures re-initialization on category change
+            key={activeCategoryId} 
             droppableId={activeCategoryId} 
             type="BOOKMARK" 
             isDropDisabled={!canDrag}
-            isCombineEnabled={false} // Explicitly set
-            ignoreContainerClipping={false} // Explicitly set
+            isCombineEnabled={false} 
+            ignoreContainerClipping={false}
         >
             {(provided, snapshot) => (
             <div 
                 {...provided.droppableProps} 
                 ref={provided.innerRef}
-                className={`min-h-[100px] rounded-md ${snapshot.isDraggingOver ? 'bg-accent/10' : ''}`} // Added min-h and draggingOver style
+                className={`min-h-[100px] rounded-md ${snapshot.isDraggingOver ? 'bg-accent/10' : ''}`}
             >
-                {renderBookmarksList(bookmarks)}
+                {renderBookmarksList(bookmarks, true)}
                 {provided.placeholder}
             </div>
             )}
         </Droppable>
-      </section>
+      </>
     );
   }
 
@@ -218,26 +227,13 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
                         {category.name}
                         {category.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
                     </h2>
-                    {/* Save button might appear here too if changes are global, but for now it's only for active reordered category */}
                  </div>
-                {/* Render bookmarks for "all" view without D&D wrappers */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-                  {categoryBookmarks.map((bookmark) => (
-                    <BookmarkItem
-                      key={bookmark.id}
-                      bookmark={bookmark}
-                      onDeleteBookmark={onDeleteBookmark}
-                      onEditBookmark={onEditBookmark}
-                      isAdminAuthenticated={isAdminAuthenticated}
-                    />
-                  ))}
-                </div>
+                {renderBookmarksList(categoryBookmarks, false)}
               </section>
             );
           })
       ) : ( 
-        // This case is for when a specific category is selected, but D&D is not enabled (e.g., user not admin)
-        <section aria-labelledby={`category-title-main`}>
+        <>
             <div className="flex justify-between items-center mb-4 border-b pb-2">
                 <h2 
                     id={`category-title-main`} 
@@ -247,24 +243,12 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
                     {currentCategoryName}
                     {categories.find(c => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
                 </h2>
-                {/* No save button here if not admin or no pending changes */}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-            {bookmarks.map((bookmark) => (
-                <BookmarkItem
-                  key={bookmark.id}
-                  bookmark={bookmark}
-                  onDeleteBookmark={onDeleteBookmark}
-                  onEditBookmark={onEditBookmark}
-                  isAdminAuthenticated={isAdminAuthenticated}
-                />
-            ))}
-            </div>
-        </section>
+            {renderBookmarksList(bookmarks, false)}
+        </>
       )}
     </div>
   );
 };
 
 export default BookmarkGrid;
-

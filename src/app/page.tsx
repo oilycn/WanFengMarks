@@ -12,8 +12,8 @@ import EditCategoryDialog from '@/components/EditCategoryDialog';
 import PasswordDialog from '@/components/PasswordDialog';
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'; // Added Sheet
-import { PlusCircle, LogOut, Copy, Save, Menu } from 'lucide-react'; // Added Menu
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'; // Added SheetHeader, SheetTitle
+import { PlusCircle, LogOut, Copy, Save, Menu } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import {
   DragDropContext,
@@ -41,7 +41,7 @@ const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1';
 
 const APP_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:9002';
 
-const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);let desc='';const metaDesc=document.querySelector('meta[name="description"]');if(metaDesc){desc=encodeURIComponent(metaDesc.content);} else {const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc){desc=encodeURIComponent(ogDesc.content);}}const popupWidth=500;const popupHeight=650;const left=(screen.width/2)-(popupWidth/2);const top=(screen.height/2)-(popupHeight/2);const wanfengWindow=window.open(\`\${appUrl}/add-bookmark-popup?name=\${title}&url=\${pageUrl}&desc=\${desc}\`, 'wanfengMarksAddBookmarkPopup', \`toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=\${popupWidth}, height=\${popupHeight}, top=\${top}, left=\${left}\`);if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks书签添加窗口。请检查浏览器是否阻止了弹出窗口。');}})();`;
+const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);let desc='';const metaDesc=document.querySelector('meta[name="description"]');if(metaDesc){desc=encodeURIComponent(metaDesc.content);}}else{const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc){desc=encodeURIComponent(ogDesc.content);}}const popupWidth=500;const popupHeight=650;const left=(screen.width/2)-(popupWidth/2);const top=(screen.height/2)-(popupHeight/2);const wanfengWindow=window.open(\`\${appUrl}/add-bookmark-popup?name=\${title}&url=\${pageUrl}&desc=\${desc}\`, 'wanfengMarksAddBookmarkPopup', \`toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=\${popupWidth}, height=\${popupHeight}, top=\${top}, left=\${left}\`);if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks书签添加窗口。请检查浏览器是否阻止了弹出窗口。');}})();`;
 
 
 export default function HomePage() {
@@ -79,8 +79,11 @@ export default function HomePage() {
   useEffect(() => {
     // This effect specifically handles setting isClientReadyForDnd
     // to ensure DragDropContext is rendered only after client is fully ready.
-    setIsClientReadyForDnd(true); 
-  }, []);
+    // It needs to be separate to avoid re-triggering when other dependencies of the main fetchData effect change.
+    if (isClient) {
+        setIsClientReadyForDnd(true); 
+    }
+  }, [isClient]);
 
 
   useEffect(() => {
@@ -162,7 +165,7 @@ export default function HomePage() {
       setIsLoading(false);
       console.log("HomePage: fetchData finished. isLoading set to false.");
     }
-  }, [toast, categories.length]); // categories.length dependency is okay here
+  }, [toast, categories.length]);
 
   useEffect(() => {
     if (isClient && !isCheckingSetup) {
@@ -198,11 +201,11 @@ export default function HomePage() {
   const handleAddBookmark = async (newBookmarkData: Omit<Bookmark, 'id' | 'priority'>) => {
     try {
       const newBookmark = await addBookmarkAction(newBookmarkData);
-      setBookmarks(prev => [...prev, newBookmark].sort((a,b) => b.priority - a.priority)); 
+      // No direct setBookmarks here, rely on fetchData to get the new correct order from server
       setIsAddBookmarkDialogOpen(false);
       setInitialDataForAddDialog(null); 
       toast({ title: "书签已添加", description: `"${newBookmark.name}" 已成功添加。` });
-      fetchData(hasPendingBookmarkOrderChanges); 
+      fetchData(hasPendingBookmarkOrderChanges); // Refetch data to get the new bookmark with server-assigned priority
     } catch (error) {
       console.error("Failed to add bookmark:", error);
       const errorMessage = error instanceof Error ? error.message : "添加书签失败。";
@@ -217,9 +220,10 @@ export default function HomePage() {
     }
     try {
       await deleteBookmarkAction(bookmarkId);
+      // Optimistically remove, then refetch to ensure consistency with server ordering
       setBookmarks(prev => prev.filter(bm => bm.id !== bookmarkId));
       toast({ title: "书签已删除", description: "书签已从服务器删除。", variant: "destructive" });
-      fetchData(hasPendingBookmarkOrderChanges); 
+      fetchData(hasPendingBookmarkOrderChanges); // Refetch to update priorities if needed
     } catch (error) {
       console.error("Failed to delete bookmark:", error);
       const errorMessage = error instanceof Error ? error.message : "删除书签失败。";
@@ -243,11 +247,12 @@ export default function HomePage() {
     }
     try {
       const newUpdatedBookmark = await updateBookmarkAction(updatedBookmark);
-      setBookmarks(prev => prev.map(bm => bm.id === newUpdatedBookmark.id ? newUpdatedBookmark : bm).sort((a,b) => b.priority - a.priority));
+      // Optimistic update, then refetch for order consistency
+      setBookmarks(prev => prev.map(bm => bm.id === newUpdatedBookmark.id ? newUpdatedBookmark : bm));
       setIsEditBookmarkDialogOpen(false);
       setBookmarkToEdit(null);
       toast({ title: "书签已更新", description: `"${newUpdatedBookmark.name}" 已成功更新。` });
-      fetchData(hasPendingBookmarkOrderChanges);
+      fetchData(hasPendingBookmarkOrderChanges); // Refetch to update priorities if needed
     } catch (error) {
       console.error("Failed to update bookmark:", error);
       const errorMessage = error instanceof Error ? error.message : "更新书签失败。";
@@ -286,9 +291,7 @@ export default function HomePage() {
       
       await deleteCategoryAction(categoryId);
       
-      setBookmarks(prev => prev.filter(bm => bm.categoryId !== categoryId));
       const oldCategoryName = categories.find(c => c.id === categoryId)?.name || '该分类';
-      setCategories(prev => prev.filter(cat => cat.id !== categoryId)); 
       
       if (activeCategory === categoryId) {
         const nextVisibleCategories = categories.filter(c => c.id !== categoryId && c.isVisible && (!c.isPrivate || isAdminAuthenticated));
@@ -404,47 +407,51 @@ export default function HomePage() {
       return;
     }
     
-    const currentDisplayedItems = displayedBookmarks; 
-
-    if (sourceIndex < 0 || sourceIndex >= currentDisplayedItems.length || destinationIndex < 0 || destinationIndex >= currentDisplayedItems.length) {
-        console.error("Drag ended: Invalid source or destination index based on displayedBookmarks.", { sourceIndex, destinationIndex, listLength: currentDisplayedItems.length});
+    const itemsInActiveCategory = bookmarks.filter(bm => bm.categoryId === activeCategory);
+    
+    if (sourceIndex < 0 || sourceIndex >= itemsInActiveCategory.length || destinationIndex < 0 || destinationIndex >= itemsInActiveCategory.length) {
+        console.error("Drag ended: Invalid source or destination index based on itemsInActiveCategory.", { sourceIndex, destinationIndex, listLength: itemsInActiveCategory.length});
         return;
     }
     
-    const reorderedDisplayedItems = Array.from(currentDisplayedItems);
-    const [movedItem] = reorderedDisplayedItems.splice(sourceIndex, 1);
-    reorderedDisplayedItems.splice(destinationIndex, 0, movedItem);
+    const reorderedItemsInActiveCategory = Array.from(itemsInActiveCategory);
+    const [movedItem] = reorderedItemsInActiveCategory.splice(sourceIndex, 1);
+    reorderedItemsInActiveCategory.splice(destinationIndex, 0, movedItem);
 
+    // Optimistic UI Update
     setBookmarks(prevGlobalBookmarks => {
       const otherGlobalBookmarks = prevGlobalBookmarks.filter(bm => bm.categoryId !== activeCategory);
-      return [...reorderedDisplayedItems, ...otherGlobalBookmarks];
+      // Place reordered items first, then others. Server will handle actual priority values.
+      return [...reorderedItemsInActiveCategory, ...otherGlobalBookmarks];
     });
 
     setHasPendingBookmarkOrderChanges(true);
   };
 
   const handleSaveBookmarksOrder = async () => {
-    if (!isAdminAuthenticated || !hasPendingBookmarkOrderChanges) {
-      toast({ title: "无需保存", description: "书签顺序未更改或未授权。", variant: "default" });
+    if (!isAdminAuthenticated || !hasPendingBookmarkOrderChanges || !activeCategory || activeCategory === 'all') {
+      toast({ title: "无需保存", description: "书签顺序未更改、未授权或未选择特定分类。", variant: "default" });
       return;
     }
 
-    const orderedIdsForServer = bookmarks.map(bm => bm.id);
+    // Construct the list of IDs based on the current *global* bookmark state,
+    // which already reflects the optimistic reordering (reordered category items are at the top).
+    const globallyOrderedIdsForServer = bookmarks.map(bm => bm.id);
 
     try {
-      const res = await updateBookmarksOrderAction(orderedIdsForServer);
+      const res = await updateBookmarksOrderAction(globallyOrderedIdsForServer);
       if (res.success) {
         toast({ title: "书签顺序已保存" });
         setHasPendingBookmarkOrderChanges(false);
-        fetchData(true); 
+        fetchData(true); // Refetch, preserving other pending changes (if any)
       } else {
         toast({ title: "保存书签顺序失败", description: "服务器未能保存顺序。", variant: "destructive" });
-        fetchData(); 
+        fetchData(); // Revert to server state on failure
       }
     } catch (error) {
       console.error("Error saving bookmark order:", error);
       toast({ title: "保存书签顺序失败", description: "发生网络错误。", variant: "destructive" });
-      fetchData(); 
+      fetchData(); // Revert to server state on failure
     }
   };
 
@@ -508,7 +515,10 @@ export default function HomePage() {
         <div className="flex flex-1 overflow-hidden">
           {isMobile ? (
             <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
-              <SheetContent side="left" className="p-0 w-64 sm:w-72">
+              <SheetContent side="left" className="p-0 w-64 sm:w-72 flex flex-col h-full">
+                <SheetHeader className="p-4 border-b flex-shrink-0">
+                  <SheetTitle className="text-lg font-semibold">导航菜单</SheetTitle>
+                </SheetHeader>
                 <AppSidebar
                   categories={categoriesForSidebar}
                   onAddCategory={handleAddCategory}
@@ -521,6 +531,7 @@ export default function HomePage() {
                     setShowPasswordDialog(true);
                     setIsMobileSidebarOpen(false); // Close sidebar when opening password dialog
                   }}
+                  className="flex-grow border-r-0 shadow-none"
                 />
               </SheetContent>
             </Sheet>
@@ -534,7 +545,7 @@ export default function HomePage() {
               activeCategory={activeCategory}
               setActiveCategory={handleSetActiveCategory}
               onShowPasswordDialog={() => setShowPasswordDialog(true)}
-              className="hidden md:flex" // Hide on mobile, flex on md+
+              className="hidden md:flex" 
             />
           )}
           <div className="flex-1 flex flex-col overflow-y-auto bg-background relative">
@@ -626,16 +637,4 @@ export default function HomePage() {
     </DragDropContext>
   ) : mainContent;
 }
-    
-
-    
-
-
-    
-
-    
-
-
-
-
     
