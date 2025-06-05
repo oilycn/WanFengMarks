@@ -4,9 +4,10 @@
 import React from 'react';
 import type { Bookmark, Category } from '@/types';
 import BookmarkItem from './BookmarkItem';
-import { FolderOpen, SearchX, EyeOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { FolderOpen, SearchX, EyeOff, Save } from 'lucide-react';
 import { Droppable, Draggable } from 'react-beautiful-dnd';
-import { Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, Save, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2, Eye } from 'lucide-react';
+import { Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2, Eye } from 'lucide-react';
 
 
 const availableIcons: { name: string; value: string; IconComponent: React.ElementType }[] = [
@@ -69,6 +70,8 @@ interface BookmarkGridProps {
   currentCategoryName?: string; 
   activeCategoryId: string | null;
   searchQuery?: string;
+  hasPendingOrderChanges: boolean;
+  onSaveOrder: () => void;
 }
 
 const BookmarkGrid: React.FC<BookmarkGridProps> = ({ 
@@ -79,13 +82,15 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
     isAdminAuthenticated,
     currentCategoryName,
     activeCategoryId,
-    searchQuery
+    searchQuery,
+    hasPendingOrderChanges,
+    onSaveOrder
 }) => {
 
   const getCategoryById = (id: string) => categories.find(c => c.id === id);
   const canDrag = isAdminAuthenticated && activeCategoryId && activeCategoryId !== 'all';
 
-  const renderBookmarks = (bookmarksToRender: Bookmark[], droppableId: string) => (
+  const renderBookmarksList = (bookmarksToRender: Bookmark[]) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
       {bookmarksToRender.map((bookmark, index) => (
         <Draggable 
@@ -112,7 +117,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
   );
 
 
-  if (bookmarks.length === 0) {
+  if (bookmarks.length === 0 && activeCategoryId !== 'all') {
      if (searchQuery && searchQuery.trim() !== '') {
         return (
           <div className="text-center py-12">
@@ -148,32 +153,43 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
   // If a specific category is selected and user is admin, enable drag-and-drop
   if (canDrag && activeCategoryId) {
     return (
-      <Droppable 
-        droppableId={activeCategoryId} 
-        type="BOOKMARK" 
-        isDropDisabled={!canDrag}
-        isCombineEnabled={false}
-        ignoreContainerClipping={false}
-      >
-        {(provided) => (
-          <div {...provided.droppableProps} ref={provided.innerRef}>
-            <section aria-labelledby={`category-title-main`}>
-              {currentCategoryName && (
-                   <h2 
-                      id={`category-title-main`} 
-                      className="text-xl font-semibold mb-4 text-foreground border-b pb-2 flex items-center"
-                    >
-                      {categories.find(c => c.id === activeCategoryId)?.icon && React.createElement(iconMap[categories.find(c => c.id === activeCategoryId)?.icon || 'Default'] || iconMap['Default'], {className: "mr-2 h-5 w-5 text-primary flex-shrink-0"})}
-                      {currentCategoryName}
-                      {categories.find(c => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
-                  </h2>
-              )}
-              {renderBookmarks(bookmarks, activeCategoryId)}
-              {provided.placeholder}
-            </section>
-          </div>
-        )}
-      </Droppable>
+      <section aria-labelledby={`category-title-main`}>
+        <div className="flex justify-between items-center mb-4 border-b pb-2">
+            <h2 
+                id={`category-title-main`} 
+                className="text-xl font-semibold text-foreground flex items-center"
+            >
+                {categories.find(c => c.id === activeCategoryId)?.icon && React.createElement(iconMap[categories.find(c => c.id === activeCategoryId)?.icon || 'Default'] || iconMap['Default'], {className: "mr-2 h-5 w-5 text-primary flex-shrink-0"})}
+                {currentCategoryName}
+                {categories.find(c => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
+            </h2>
+            {isAdminAuthenticated && hasPendingOrderChanges && (
+                <Button onClick={onSaveOrder} size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+                    <Save className="mr-2 h-4 w-4" />
+                    保存书签顺序
+                </Button>
+            )}
+        </div>
+        <Droppable 
+            key={activeCategoryId} // Ensures re-initialization on category change
+            droppableId={activeCategoryId} 
+            type="BOOKMARK" 
+            isDropDisabled={!canDrag}
+            isCombineEnabled={false} // Explicitly set
+            ignoreContainerClipping={false} // Explicitly set
+        >
+            {(provided, snapshot) => (
+            <div 
+                {...provided.droppableProps} 
+                ref={provided.innerRef}
+                className={`min-h-[100px] rounded-md ${snapshot.isDraggingOver ? 'bg-accent/10' : ''}`} // Added min-h and draggingOver style
+            >
+                {renderBookmarksList(bookmarks)}
+                {provided.placeholder}
+            </div>
+            )}
+        </Droppable>
+      </section>
     );
   }
 
@@ -193,14 +209,17 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
 
             return (
               <section key={category.id} aria-labelledby={`category-title-${category.id}`}>
-                <h2 
-                  id={`category-title-${category.id}`} 
-                  className="text-xl font-semibold mb-4 text-foreground border-b pb-2 flex items-center"
-                >
-                  <IconComponent className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
-                  {category.name}
-                  {category.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
-                </h2>
+                 <div className="flex justify-between items-center mb-4 border-b pb-2">
+                    <h2 
+                        id={`category-title-${category.id}`} 
+                        className="text-xl font-semibold text-foreground flex items-center"
+                    >
+                        <IconComponent className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
+                        {category.name}
+                        {category.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
+                    </h2>
+                    {/* Save button might appear here too if changes are global, but for now it's only for active reordered category */}
+                 </div>
                 {/* Render bookmarks for "all" view without D&D wrappers */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
                   {categoryBookmarks.map((bookmark) => (
@@ -218,19 +237,18 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
           })
       ) : ( 
         // This case is for when a specific category is selected, but D&D is not enabled (e.g., user not admin)
-        // Or, this part might be redundant if the `canDrag` condition above handles it.
-        // For safety, providing a non-D&D render path for single category view.
         <section aria-labelledby={`category-title-main`}>
-            {currentCategoryName && (
-                 <h2 
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+                <h2 
                     id={`category-title-main`} 
-                    className="text-xl font-semibold mb-4 text-foreground border-b pb-2 flex items-center"
-                  >
+                    className="text-xl font-semibold text-foreground flex items-center"
+                >
                     {categories.find(c => c.id === activeCategoryId)?.icon && React.createElement(iconMap[categories.find(c => c.id === activeCategoryId)?.icon || 'Default'] || iconMap['Default'], {className: "mr-2 h-5 w-5 text-primary flex-shrink-0"})}
                     {currentCategoryName}
                     {categories.find(c => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
                 </h2>
-            )}
+                {/* No save button here if not admin or no pending changes */}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
             {bookmarks.map((bookmark) => (
                 <BookmarkItem
@@ -249,3 +267,4 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
 };
 
 export default BookmarkGrid;
+
