@@ -7,7 +7,7 @@ import type { Bookmark, Category } from '@/types';
 import '../globals.css'; // Import global styles for the dialog to look correct
 import { getCategoriesAction } from '@/actions/categoryActions';
 import { addBookmarkAction } from '@/actions/bookmarkActions';
-import { useToast } from "@/hooks/use-toast"; // Keep toast for potential errors
+// Removed: import { useToast } from "@/hooks/use-toast";
 
 const AddBookmarkPopupPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -15,7 +15,7 @@ const AddBookmarkPopupPage = () => {
   const [initialData, setInitialData] = useState<{ name?: string; url?: string; description?: string } | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  const { toast } = useToast();
+  // Removed: const { toast } = useToast();
 
 
   useEffect(() => {
@@ -29,19 +29,19 @@ const AddBookmarkPopupPage = () => {
       if (fetchedCategories.length > 0) {
         setCategories(fetchedCategories);
       } else {
-        // Fallback if no categories found, though ideally main app populates this
+        // Fallback if no categories found
         const defaultCategory = { id: 'default', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
         setCategories([defaultCategory]);
       }
     } catch (error) {
       console.error("Popup: Failed to fetch categories:", error);
-      toast({ title: "错误", description: "加载分类失败。", variant: "destructive" });
+      // toast({ title: "错误", description: "加载分类失败。", variant: "destructive" }); // Removed toast
       const defaultCategory = { id: 'default', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
       setCategories([defaultCategory]); // Ensure there's always a category
     } finally {
       setIsLoadingCategories(false);
     }
-  }, [toast]);
+  }, []);
 
 
   useEffect(() => {
@@ -67,15 +67,13 @@ const AddBookmarkPopupPage = () => {
     if (!isClient) return;
     try {
       await addBookmarkAction(newBookmarkData);
-      // No need to show toast here, as window closes.
-      // The main page (if open) would ideally reflect the change if it polls or uses a real-time DB.
-      // For now, localStorage on main page won't update automatically from this server action.
-      // A more robust solution would involve websockets or server-sent events if instant reflection on main page is needed without refresh.
       window.close();
     } catch (error) {
       console.error("Popup: Failed to add bookmark:", error);
-      toast({ title: "添加失败", description: "无法保存书签，请重试。", variant: "destructive" });
+      // toast({ title: "添加失败", description: "无法保存书签，请重试。", variant: "destructive" }); // Removed toast
       // Don't close window on error, let user try again or cancel.
+      // You could add a simple alert here if critical feedback is needed:
+      // alert("无法保存书签，请查看控制台获取更多信息。");
     }
   };
 
@@ -87,7 +85,7 @@ const AddBookmarkPopupPage = () => {
     return <div className="flex h-screen w-screen items-center justify-center bg-background"><p className="text-foreground">正在加载...</p></div>;
   }
 
-  const selectableCategories = categories.filter(c => c.id !== 'all' && c.isVisible); // Assuming private categories are handled by server or not relevant for popup
+  const selectableCategories = categories.filter(c => c.id !== 'all' && c.isVisible);
 
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-background/80 backdrop-blur-sm p-4">
