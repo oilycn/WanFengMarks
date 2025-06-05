@@ -27,10 +27,11 @@ const nextConfig: NextConfig = {
   },
   // Explicitly configure server actions.
   serverActions: {
-    allowedOrigins: ['bookmark.oily.cn:7443'],
+    allowedOrigins: ['https://bookmark.oily.cn:7443'], // Added https://
+    allowedForwardedHosts: ['bookmark.oily.cn'], // Moved from experimental
   },
   // Configure allowed origins for the development server
-  allowedDevOrigins: ['bookmark.oily.cn:7443'],
+  allowedDevOrigins: ['https://bookmark.oily.cn:7443'], // Added https://
 };
 
 export default nextConfig;
