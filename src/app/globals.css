@@ -45,9 +45,9 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
 
-    /* Updated header background to a solid gray color */
-    --header-solid-bg: 0 0% 90%; /* Light gray for header */
-    --header-bg-image: url('https://placehold.co/1920x300/e0e0e0/e0e0e0.png') data-ai-hint="light gray solid"; /* Kept for reference, but solid color is primary */
+    /* Updated header background to a deep gray color */
+    --header-solid-bg: 220 10% 25%; /* Deep Gray for light theme header base */
+    --header-bg-image: url('https://placehold.co/1920x300/404759/404759.png') data-ai-hint="deep gray solid"; /* Kept for reference */
   }
 
   .dark {
@@ -80,8 +80,8 @@ body {
     --ring: 205 65% 55%;
     
     /* Updated header background for dark mode */
-    --header-solid-bg: 0 0% 15%; /* Dark gray for header in dark mode */
-    --header-bg-image: url('https://placehold.co/1920x300/262626/262626.png') data-ai-hint="dark gray solid"; /* Kept for reference */
+    --header-solid-bg: 220 10% 10%; /* Very Deep Gray for dark theme header base */
+    --header-bg-image: url('https://placehold.co/1920x300/1a1d21/1a1d21.png') data-ai-hint="very deep gray solid"; /* Kept for reference */
   }
 }
 

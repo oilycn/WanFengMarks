@@ -14,11 +14,11 @@ interface AppHeaderProps {
 const AppHeader: React.FC<AppHeaderProps> = ({ searchQuery, setSearchQuery }) => {
   return (
     <header 
-      className="h-48 md:h-40 p-4 md:p-6 flex flex-col md:flex-row items-center justify-between relative shadow-md bg-[hsl(var(--header-solid-bg))]" 
-      data-ai-hint="light gray abstract"
+      className="h-48 md:h-40 p-4 md:p-6 flex flex-col md:flex-row items-center justify-between relative shadow-md bg-[hsl(var(--header-solid-bg))] bg-opacity-90 dark:bg-opacity-90 backdrop-blur-sm" 
+      data-ai-hint="deep gray abstract"
     >
-      {/* The header-background-image class can be added above if an image is preferred over solid color */}
-      {/* <div className="absolute inset-0 bg-black/05 backdrop-blur-xs"></div> Removed overlay for solid background */}
+      {/* The header-background-image class can be added above if an image is preferred over solid color using CSS variable */}
+      {/* Example: className="... header-background-image" and then manage opacity via an overlay div if needed */}
       
       <div className="w-full md:w-2/3 lg:w-1/2 z-10">
         <SearchBar currentQuery={searchQuery} onQueryChange={setSearchQuery} />
