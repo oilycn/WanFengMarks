@@ -20,14 +20,16 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  serverActions: {
-    // This MUST match the 'Origin' header from the browser, including scheme and port.
-    // For your setup: https://bm.oily.cn:7443
-    allowedOrigins: ['https://bm.oily.cn:7443'],
+  experimental: { // Moved serverActions under experimental
+    serverActions: {
+      // This MUST match the 'Origin' header from the browser, including scheme and port.
+      // For your setup: https://bm.oily.cn:7443
+      allowedOrigins: ['https://bm.oily.cn:7443'],
 
-    // This MUST match the 'X-Forwarded-Host' header value sent by your proxy.
-    // For your setup: bm.oily.cn
-    allowedForwardedHosts: ['bm.oily.cn'],
+      // This MUST match the 'X-Forwarded-Host' header value sent by your proxy.
+      // For your setup: bm.oily.cn
+      allowedForwardedHosts: ['bm.oily.cn'],
+    },
   },
   // This is for the development server HMR and other dev-time communications.
   // It should also match the 'Origin' header.
@@ -57,7 +59,7 @@ const nextConfig: NextConfig = {
   // For Nginx Proxy Manager, in the "Advanced" tab for the proxy host (bm.oily.cn),
   // you would add:
   //   proxy_set_header X-Forwarded-Proto https;
-  //   proxy_set_header X-Forwarded-Host $host; // Or "bm.oily.cn" if $host is problematic
+  //   proxy_set_header X-Forwarded-Host $host; # Or "bm.oily.cn" if $host is problematic
   //   proxy_set_header X-Forwarded-Port 7443;
   //
   // The $host variable in Nginx usually contains the original host requested by the client.
