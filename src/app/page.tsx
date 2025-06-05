@@ -11,7 +11,7 @@ import EditCategoryDialog from '@/components/EditCategoryDialog';
 import PasswordDialog from '@/components/PasswordDialog';
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, EyeOff, Copy } from 'lucide-react';
+import { PlusCircle, LogOut, Copy } from 'lucide-react'; // Changed EyeOff to LogOut
 import { useToast } from "@/hooks/use-toast";
 
 const LS_BOOKMARKS_KEY = 'wanfeng_bookmarks_v1_zh';
@@ -21,7 +21,6 @@ const ADMIN_PASSWORD = "7";
 
 const APP_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:9002';
 
-// Updated to point to the new /add-bookmark-popup route
 const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);let desc='';const metaDesc=document.querySelector('meta[name="description"]');if(metaDesc){desc=encodeURIComponent(metaDesc.content);}else{const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc){desc=encodeURIComponent(ogDesc.content);}}const popupWidth=500;const popupHeight=650;const left=(screen.width/2)-(popupWidth/2);const top=(screen.height/2)-(popupHeight/2);const wanfengWindow=window.open(\`\${appUrl}/add-bookmark-popup?name=\${title}&url=\${pageUrl}&desc=\${desc}\`, 'wanfengMarksAddBookmarkPopup', \`toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=\${popupWidth}, height=\${popupHeight}, top=\${top}, left=\${left}\`);if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks书签添加窗口。请检查浏览器是否阻止了弹出窗口。');}})();`;
 
 export default function HomePage() {
@@ -39,8 +38,6 @@ export default function HomePage() {
   const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
 
-  // Removed initialDataForAddDialog state as it's now handled by the popup page
-
   const { toast } = useToast();
 
   useEffect(() => {
@@ -49,7 +46,6 @@ export default function HomePage() {
     if (adminAuth === 'true') {
       setIsAdminAuthenticated(true);
     }
-    // Removed query param handling for bookmarklet, now handled by /add-bookmark-popup
   }, []); 
 
   useEffect(() => {
@@ -79,7 +75,6 @@ export default function HomePage() {
       localStorage.setItem(LS_CATEGORIES_KEY, JSON.stringify([defaultCategory]));
     }
 
-    // Listen for storage changes to update bookmarks if added from popup
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === LS_BOOKMARKS_KEY && event.newValue) {
         const parsedBookmarks = JSON.parse(event.newValue).map((bm: Bookmark) => ({
@@ -277,18 +272,44 @@ export default function HomePage() {
           setActiveCategory={setActiveCategory}
           onShowPasswordDialog={() => setShowPasswordDialog(true)}
         />
-        <div className="flex-1 flex flex-col overflow-y-auto bg-background">
-          <main className="flex-grow p-4 md:p-6">
+        <div className="flex-1 flex flex-col overflow-y-auto bg-background relative"> {/* Added relative here */}
+          <main className="flex-grow p-4 md:p-6 relative"> {/* Added relative here */}
             {isAdminAuthenticated && (
-              <div className="mb-4 flex justify-start items-center gap-2">
-                <Button onClick={handleOpenAddBookmarkDialog} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                  <PlusCircle className="mr-2 h-4 w-4" /> 添加书签
+              <div className="fixed top-20 right-4 md:right-6 flex flex-col space-y-2 z-20">
+                <Button
+                  onClick={handleOpenAddBookmarkDialog}
+                  className="group bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg transition-all duration-200 ease-in-out 
+                             w-10 h-10 rounded-full p-0 flex items-center justify-center 
+                             hover:w-auto hover:rounded-md hover:px-3 hover:py-2 hover:justify-start"
+                  aria-label="添加书签"
+                  title="添加书签"
+                >
+                  <PlusCircle className="h-5 w-5 flex-shrink-0" />
+                  <span className="ml-2 hidden group-hover:inline whitespace-nowrap text-sm">添加书签</span>
                 </Button>
-                <Button variant="outline" onClick={handleLogoutAdmin}>
-                  <EyeOff className="mr-2 h-4 w-4" /> 退出管理模式
+                <Button
+                  variant="outline"
+                  onClick={handleLogoutAdmin}
+                  className="group bg-card hover:bg-muted text-foreground shadow-lg transition-all duration-200 ease-in-out 
+                             w-10 h-10 rounded-full p-0 flex items-center justify-center 
+                             hover:w-auto hover:rounded-md hover:px-3 hover:py-2 hover:justify-start"
+                  aria-label="退出管理模式"
+                  title="退出管理模式"
+                >
+                  <LogOut className="h-5 w-5 flex-shrink-0" />
+                  <span className="ml-2 hidden group-hover:inline whitespace-nowrap text-sm">退出管理模式</span>
                 </Button>
-                <Button variant="outline" onClick={handleCopyBookmarkletScript}>
-                  <Copy className="mr-2 h-4 w-4" /> 复制书签脚本
+                <Button
+                  variant="outline"
+                  onClick={handleCopyBookmarkletScript}
+                  className="group bg-card hover:bg-muted text-foreground shadow-lg transition-all duration-200 ease-in-out 
+                             w-10 h-10 rounded-full p-0 flex items-center justify-center 
+                             hover:w-auto hover:rounded-md hover:px-3 hover:py-2 hover:justify-start"
+                  aria-label="复制书签脚本"
+                  title="复制书签脚本"
+                >
+                  <Copy className="h-5 w-5 flex-shrink-0" />
+                  <span className="ml-2 hidden group-hover:inline whitespace-nowrap text-sm">复制书签脚本</span>
                 </Button>
               </div>
             )}
@@ -316,7 +337,6 @@ export default function HomePage() {
         onAddBookmark={handleAddBookmark}
         categories={visibleCategories.filter(c => c.id !== 'all')}
         activeCategoryId={activeCategory}
-        // initialData removed here as it was for direct page query params
       />
       {bookmarkToEdit && (
         <EditBookmarkDialog
@@ -343,5 +363,6 @@ export default function HomePage() {
     </div>
   );
 }
+    
 
     
