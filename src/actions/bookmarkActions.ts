@@ -32,11 +32,11 @@ export async function getBookmarksAction(): Promise<Bookmark[]> {
   noStore();
   console.log('Server Action: getBookmarksAction called (MySQL)');
   try {
-    const rows = await query<BookmarkRow[]>("SELECT * FROM bookmarks");
+    const rows = await query<BookmarkRow[]>("SELECT * FROM bookmarks ORDER BY created_at DESC");
     return rows.map(mapDbRowToBookmark);
   } catch (error) {
     console.error("Error fetching bookmarks from MySQL DB:", error);
-    return []; 
+    return [];
   }
 }
 
@@ -44,16 +44,24 @@ export async function addBookmarkAction(bookmarkData: Omit<Bookmark, 'id'>): Pro
   noStore();
   console.log('Server Action: addBookmarkAction called with (MySQL):', bookmarkData);
   const { name, url, categoryId, description, isPrivate } = bookmarkData;
+
+  // Check for duplicate URL
   try {
+    const existingBookmarks = await query<BookmarkRow[]>("SELECT id FROM bookmarks WHERE url = ?", [url]);
+    if (existingBookmarks.length > 0) {
+      console.warn(`Attempt to add duplicate bookmark URL (MySQL): ${url}`);
+      throw new Error('此书签网址已存在，请勿重复添加。');
+    }
+
     const result = await query<OkPacket>(
       "INSERT INTO bookmarks (name, url, category_id, description, is_private) VALUES (?, ?, ?, ?, ?)",
       [name, url, categoryId === 'default' ? null : Number(categoryId), description || null, isPrivate || false]
     );
-    
+
     if (!result.insertId) {
         throw new Error('Failed to insert bookmark into MySQL DB.');
     }
-    
+
     return {
       id: String(result.insertId),
       ...bookmarkData
@@ -61,7 +69,7 @@ export async function addBookmarkAction(bookmarkData: Omit<Bookmark, 'id'>): Pro
 
   } catch (error) {
     console.error("Error adding bookmark to MySQL DB:", error);
-    throw error; 
+    throw error;
   }
 }
 
@@ -70,11 +78,18 @@ export async function updateBookmarkAction(bookmarkToUpdate: Bookmark): Promise<
   console.log('Server Action: updateBookmarkAction called with (MySQL):', bookmarkToUpdate);
   const { id, name, url, categoryId, description, isPrivate } = bookmarkToUpdate;
   try {
+    // Check if URL is being changed to an existing one (excluding the current bookmark)
+    const existingBookmarks = await query<BookmarkRow[]>("SELECT id FROM bookmarks WHERE url = ? AND id != ?", [url, Number(id)]);
+    if (existingBookmarks.length > 0) {
+      console.warn(`Attempt to update bookmark to a duplicate URL (MySQL): ${url}`);
+      throw new Error('此书签网址已存在于其他书签，请勿重复。');
+    }
+
     await query(
       "UPDATE bookmarks SET name = ?, url = ?, category_id = ?, description = ?, is_private = ? WHERE id = ?",
       [name, url, categoryId === 'default' ? null : Number(categoryId), description || null, isPrivate || false, Number(id)]
     );
-    
+
     return bookmarkToUpdate; // Return the updated object as passed in, assuming success
   } catch (error) {
     console.error("Error updating bookmark in MySQL DB:", error);
@@ -102,9 +117,6 @@ export async function deleteBookmarksByCategoryIdAction(categoryId: string): Pro
   noStore();
   console.log('Server Action: deleteBookmarksByCategoryIdAction called for category ID (MySQL):', categoryId);
   try {
-    // If category_id is null (e.g. 'default' or after ON DELETE SET NULL), this action might not be suitable
-    // Or it should handle a special case for 'default' if bookmarks can be orphaned to it.
-    // For now, assuming categoryId is a valid numeric string from an existing category.
     if (categoryId === 'default' || categoryId === null || categoryId === undefined) {
         console.warn(`Attempted to delete bookmarks for a non-specific category ID (MySQL): ${categoryId}. No action taken.`);
         return { deletedCount: 0 };

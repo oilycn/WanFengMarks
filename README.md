@@ -1,5 +1,112 @@
-# Firebase Studio
 
-This is a NextJS starter in Firebase Studio.
+# 晚风Marks - 个性化书签导航
 
-To get started, take a look at src/app/page.tsx.
+晚风Marks 是一个使用 Next.js、Tailwind CSS 和 ShadCN UI 构建的现代化、可自托管的书签导航应用。它允许用户管理自己的书签，按分类组织，并提供了一个简洁美观的仪表盘界面。
+
+## 特性
+
+*   **书签管理**: 轻松添加、编辑、删除书签。
+*   **分类管理**: 创建和管理书签分类，支持自定义图标和私密性。
+*   **美观界面**: 基于 ShadCN UI 和 Tailwind CSS 的现代化、响应式设计。
+*   **搜索功能**: 快速搜索网页或筛选应用内书签。
+*   **时钟显示**: 首页集成美观的数字时钟。
+*   **管理模式**: 通过密码保护的管理模式进行书签和分类的增删改操作。
+*   **书签脚本 (Bookmarklet)**: 通过浏览器书签栏快速添加当前网页到晚风Marks。
+*   **MySQL 后端**: 数据持久化存储在 MySQL 数据库中。
+
+## 技术栈
+
+*   **框架**: Next.js (App Router)
+*   **UI 组件**: ShadCN UI
+*   **样式**: Tailwind CSS
+*   **数据库**: MySQL
+*   **语言**: TypeScript
+*   **(可选) AI 功能**: Genkit (如果集成)
+
+## 快速开始
+
+### 1. 环境准备
+
+*   Node.js (推荐 LTS 版本)
+*   MySQL 数据库服务
+
+### 2. 克隆仓库与安装依赖
+
+```bash
+git clone <your-repository-url>
+cd wanfeng-marks 
+npm install
+# 或者
+# yarn install
+```
+
+### 3. 配置环境变量
+
+在项目根目录下创建一个名为 `.env.local` 的文件，并填入您的 MySQL 连接字符串：
+
+```env
+MYSQL_CONNECTION_STRING="mysql://your_user:your_password@your_host:your_port/your_database"
+```
+
+替换 `your_user`, `your_password`, `your_host`, `your_port`, 和 `your_database` 为您的实际 MySQL 配置。
+
+例如，本地开发可能如下：
+`MYSQL_CONNECTION_STRING="mysql://root:password@localhost:3306/wanfeng_marks"`
+
+### 4. 首次运行与应用配置
+
+首次启动应用时，系统会引导您完成数据库的配置：
+
+```bash
+npm run dev
+# 或者
+# yarn dev
+```
+
+浏览器会自动打开 `http://localhost:9002` (或您配置的端口)。您将被重定向到 `/setup` 页面。
+
+*   **测试数据库连接**: 点击按钮测试应用是否能成功连接到您在 `.env.local` 中配置的 MySQL 数据库。
+*   **初始化数据库**: 连接成功后，点击按钮以在数据库中创建应用所需的表结构。
+*   **设置管理员密码**: 数据库初始化完成后，设置一个管理员密码，用于后续管理书签和分类。
+
+### 5. 使用应用
+
+配置完成后，您将被引导至主页。
+
+*   **浏览书签**: 按分类查看您的书签。
+*   **管理模式**: 点击侧边栏底部的 "进入管理模式" 按钮，输入您设置的管理员密码。
+    *   在管理模式下，您可以添加、编辑、删除书签和分类。
+    *   管理模式下，右下角会出现浮动按钮，用于快速添加书签、复制书签脚本和退出管理模式。
+
+### 6. 书签脚本 (Bookmarklet)
+
+为了方便快速添加当前浏览的网页为书签：
+
+1.  进入管理模式。
+2.  点击右下角的 "复制书签脚本" 按钮 (带有复制图标)。
+3.  在您的浏览器书签栏上右键，选择 "添加网页" 或 "添加书签"。
+    *   **名称**: 任意填写，例如 "添加到晚风Marks"。
+    *   **网址/URL**: 粘贴您刚刚复制的脚本 (它以 `javascript:` 开头)。
+4.  保存书签。
+5.  之后，在任何您想收藏的网页上，点击这个新创建的浏览器书签，就会弹出一个预填写了网页标题、网址和描述（如果能获取到）的添加窗口。
+
+## 项目结构 (概览)
+
+*   `src/app/`: Next.js App Router 页面和布局。
+    *   `page.tsx`: 主仪表盘页面。
+    *   `setup/page.tsx`: 首次配置页面。
+    *   `add-bookmark-popup/page.tsx`: 书签脚本使用的弹窗页面。
+*   `src/components/`: React UI 组件 (大部分基于 ShadCN)。
+*   `src/actions/`: Next.js Server Actions (用于后端逻辑，如数据库交互)。
+*   `src/lib/`: 工具函数和数据库连接逻辑 (如 `mysql.ts`)。
+*   `src/types/`: TypeScript 类型定义。
+*   `public/`: 静态资源。
+
+## 贡献
+
+欢迎提交 Pull Requests 或 Issues。
+
+## 许可证
+
+本项目采用 MIT 许可证。
+```
