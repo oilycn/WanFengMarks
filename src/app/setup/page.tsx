@@ -57,19 +57,38 @@ export default function SetupPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Only run this check if not currently submitting.
+    // The form's onSubmit handler will navigate upon successful submission.
+    if (isSubmitting) {
+      console.log("SetupPage: isSubmitting is true, skipping useEffect check.");
+      return;
+    }
+
+    let active = true;
     async function checkExistingSetup() {
+      console.log("SetupPage: checkExistingSetup running.");
       try {
         const setupComplete = await isSetupCompleteAction();
-        if (setupComplete) {
-          toast({ title: "配置已完成", description: "应用已配置，将跳转到主页。" });
+        console.log("SetupPage: setupComplete result from server:", setupComplete);
+        if (active && setupComplete) {
+          console.log("SetupPage: Setup already complete, redirecting to /");
+          // No toast here, as this is an automatic redirect on load
           router.push('/');
+        } else if (active) {
+          console.log("SetupPage: Setup not complete, staying on page.");
         }
       } catch (err) {
-        console.error("Error checking setup status on setup page:", err);
+        if (active) {
+          console.error("SetupPage: Error checking setup status on setup page:", err);
+        }
       }
     }
     checkExistingSetup();
-  }, [router, toast]);
+    return () => { 
+      active = false; 
+      console.log("SetupPage: useEffect cleanup.");
+    };
+  }, [router, isSubmitting]); // Added isSubmitting, removed toast from deps
 
   const handleDbConfigChange = (fieldName: string, value: string) => {
     setDbConfig(prev => ({ ...prev, [fieldName]: value }));
@@ -78,30 +97,30 @@ export default function SetupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    console.log("SetupPage: handleSubmit initiated.");
 
     if (!adminPassword || !confirmPassword) {
       setError("管理员密码和确认密码不能为空。");
+      console.log("SetupPage: Validation error - passwords empty.");
       return;
     }
     if (adminPassword !== confirmPassword) {
       setError("两次输入的密码不一致。");
+      console.log("SetupPage: Validation error - passwords do not match.");
       return;
     }
-    // Removed password length check
-    // if (adminPassword.length < 6) {
-    //   setError("管理员密码长度至少为6位。");
-    //   return;
-    // }
-
+    
     setIsSubmitting(true);
+    console.log("SetupPage: isSubmitting set to true.");
     try {
-      // Pass selectedDbType to the action
       const result = await setInitialAdminConfigAction(adminPassword, selectedDbType);
+      console.log("SetupPage: setInitialAdminConfigAction result:", result);
       if (result.success) {
         toast({
           title: "配置成功",
           description: "管理员密码已设置。正在跳转到主应用...",
         });
+        console.log("SetupPage: Setup successful, redirecting to /");
         router.push('/');
       } else {
         setError(result.error || "设置管理员密码失败，请重试。");
@@ -110,9 +129,10 @@ export default function SetupPage() {
           description: result.error || "无法保存管理员密码。",
           variant: "destructive",
         });
+        console.log("SetupPage: Setup failed:", result.error);
       }
     } catch (err) {
-      console.error("Setup error:", err);
+      console.error("SetupPage: handleSubmit error:", err);
       const errorMessage = err instanceof Error ? err.message : "发生未知错误。";
       setError(`配置过程中发生错误: ${errorMessage}`);
       toast({
@@ -122,6 +142,7 @@ export default function SetupPage() {
       });
     } finally {
       setIsSubmitting(false);
+      console.log("SetupPage: isSubmitting set to false.");
     }
   };
 

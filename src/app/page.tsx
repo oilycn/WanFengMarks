@@ -32,7 +32,7 @@ const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1'; // Client-side flag for UI el
 
 const APP_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:9002';
 
-const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);let desc='';const metaDesc=document.querySelector('meta[name="description"]');if(metaDesc){desc=encodeURIComponent(metaDesc.content);}else{const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc){desc=encodeURIComponent(ogDesc.content);}}const popupWidth=500;const popupHeight=650;const left=(screen.width/2)-(popupWidth/2);const top=(screen.height/2)-(popupHeight/2);const wanfengWindow=window.open(\`\${appUrl}/add-bookmark-popup?name=\${title}&url=\${pageUrl}&desc=\${desc}\`, 'wanfengMarksAddBookmarkPopup', \`toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=\${popupWidth}, height=\${popupHeight}, top=\${top}, left=\${left}\`);if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks书签添加窗口。请检查浏览器是否阻止了弹出窗口。');}})();`;
+const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);let desc='';const metaDesc=document.querySelector('meta[name="description"]');if(metaDesc){desc=encodeURIComponent(metaDesc.content);}}else{const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc){desc=encodeURIComponent(ogDesc.content);}}const popupWidth=500;const popupHeight=650;const left=(screen.width/2)-(popupWidth/2);const top=(screen.height/2)-(popupHeight/2);const wanfengWindow=window.open(\`\${appUrl}/add-bookmark-popup?name=\${title}&url=\${pageUrl}&desc=\${desc}\`, 'wanfengMarksAddBookmarkPopup', \`toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=\${popupWidth}, height=\${popupHeight}, top=\${top}, left=\${left}\`);if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks书签添加窗口。请检查浏览器是否阻止了弹出窗口。');}})();`;
 
 
 export default function HomePage() {
@@ -59,35 +59,59 @@ export default function HomePage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    setIsClient(true);
-    // Check if setup is complete
-    async function checkSetup() {
+    setIsClient(true); // Moved setIsClient to the beginning of the effect
+    let active = true; // Flag to prevent state updates if component unmounts
+
+    async function performSetupCheck() {
+      console.log("HomePage: performSetupCheck running, isClient:", isClient);
       try {
         const setupComplete = await isSetupCompleteAction();
+        console.log("HomePage: setupComplete result from server:", setupComplete);
+        if (!active) {
+          console.log("HomePage: performSetupCheck inactive, returning.");
+          return;
+        }
+
         if (!setupComplete) {
+          console.log("HomePage: Setup not complete, redirecting to /setup");
           router.push('/setup');
+          // setIsCheckingSetup will remain true or component will unmount
         } else {
-          // Check for existing client-side auth session
+          console.log("HomePage: Setup complete, proceeding with auth check.");
+          // Setup is complete, proceed to check auth and then fetch data
           const adminAuth = localStorage.getItem(LS_ADMIN_AUTH_KEY);
           if (adminAuth === 'true') {
-            // Optionally re-verify with server if session is critical
-            // For now, just trust localStorage for UI toggling after initial password entry
-             setIsAdminAuthenticated(true);
+            setIsAdminAuthenticated(true);
+            console.log("HomePage: Admin auth found in localStorage.");
           }
-          setIsCheckingSetup(false);
+          setIsCheckingSetup(false); // Allow main content to load
+          console.log("HomePage: isCheckingSetup set to false.");
         }
       } catch (error) {
-        console.error("Error checking setup status:", error);
+        if (!active) {
+          console.log("HomePage: performSetupCheck (catch) inactive, returning.");
+          return;
+        }
+        console.error("HomePage: Error checking setup status:", error);
         toast({ title: "错误", description: "无法检查应用配置状态，请刷新。", variant: "destructive" });
-        // Potentially redirect to an error page or setup page as a fallback
         router.push('/setup'); // Fallback to setup if check fails critically
       }
     }
-    checkSetup();
-  }, [router, toast]);
+
+    if (isClient) { // Only run the check if isClient is true
+        performSetupCheck();
+    }
+    
+
+    return () => {
+      active = false;
+      console.log("HomePage: useEffect for setup check cleanup.");
+    };
+  }, [isClient, router, toast]); // Added isClient to dependency array
 
 
   const fetchData = useCallback(async () => {
+    console.log("HomePage: fetchData called. isLoading set to true.");
     setIsLoading(true);
     try {
       const [fetchedBookmarks, fetchedCategories] = await Promise.all([
@@ -101,8 +125,9 @@ export default function HomePage() {
         const defaultCategory: Category = { id: 'default', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
         setCategories([defaultCategory]);
       }
+      console.log("HomePage: Data fetched successfully.");
     } catch (error) {
-      console.error("Failed to fetch data:", error);
+      console.error("HomePage: Failed to fetch data:", error);
       toast({ title: "错误", description: "加载数据失败，请稍后重试。", variant: "destructive" });
        if (categories.length === 0) {
            const defaultCategory = { id: 'default', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
@@ -110,12 +135,17 @@ export default function HomePage() {
        }
     } finally {
       setIsLoading(false);
+      console.log("HomePage: fetchData finished. isLoading set to false.");
     }
   }, [toast, categories.length]);
 
   useEffect(() => {
-    if (isClient && !isCheckingSetup) { // Only fetch data if setup is complete and client is ready
+    // Only fetch data if client is ready AND setup check is complete (isCheckingSetup is false)
+    if (isClient && !isCheckingSetup) {
+      console.log("HomePage: Conditions met for fetching data (isClient && !isCheckingSetup).");
       fetchData();
+    } else {
+      console.log("HomePage: Conditions NOT met for fetching data. isClient:", isClient, "isCheckingSetup:", isCheckingSetup);
     }
   }, [isClient, isCheckingSetup, fetchData]);
 
@@ -329,12 +359,14 @@ export default function HomePage() {
     : filteredBookmarksBySearch.filter(bm => bm.categoryId === activeCategory);
 
   if (!isClient || isCheckingSetup || isLoading) { 
+    console.log("HomePage: Render loading state. isClient:", isClient, "isCheckingSetup:", isCheckingSetup, "isLoading:", isLoading);
     return (
       <div className="flex flex-col min-h-screen items-center justify-center">
         <div className="animate-pulse text-2xl font-semibold text-primary">正在加载 晚风Marks...</div>
       </div>
     );
   }
+  console.log("HomePage: Render main content. isClient:", isClient, "isCheckingSetup:", isCheckingSetup, "isLoading:", isLoading);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -357,7 +389,7 @@ export default function HomePage() {
           <main className="flex-grow p-4 md:p-6 relative">
             {isAdminAuthenticated && (
               <div className="fixed bottom-16 right-6 flex flex-col space-y-2 z-20">
-                <Button
+                 <Button
                   onClick={handleOpenAddBookmarkDialog}
                   className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg 
                              h-10 w-10 rounded-full p-0 
