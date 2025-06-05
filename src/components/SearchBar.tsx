@@ -66,7 +66,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ currentQuery, onQueryChange }) =>
         placeholder="搜索网页 或 筛选下方书签..."
         value={currentQuery}
         onChange={(e) => onQueryChange(e.target.value)}
-        className="flex-grow bg-input dark:bg-input border-none text-foreground placeholder:text-muted-foreground dark:placeholder:text-neutral-400/70 focus:ring-0 text-sm h-9 px-3"
+        className="flex-grow bg-input dark:bg-input border-none text-foreground placeholder:text-muted-foreground dark:placeholder:text-neutral-400/70 focus-visible:ring-0 text-sm h-9 px-3"
         aria-label="搜索网页或筛选书签"
       />
       <Button
