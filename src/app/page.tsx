@@ -9,10 +9,11 @@ import AddBookmarkDialog from '@/components/AddBookmarkDialog';
 import PasswordDialog from '@/components/PasswordDialog';
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, EyeOff } from 'lucide-react';
+import { PlusCircle, EyeOff, Eye } from 'lucide-react';
 
-const LS_BOOKMARKS_KEY = 'wanfeng_bookmarks_v1_zh'; // Updated key
-const LS_CATEGORIES_KEY = 'wanfeng_categories_v1_zh'; // Updated key
+const LS_BOOKMARKS_KEY = 'wanfeng_bookmarks_v1_zh';
+const LS_CATEGORIES_KEY = 'wanfeng_categories_v1_zh';
+const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1'; 
 const ADMIN_PASSWORD = "7";
 
 export default function HomePage() {
@@ -27,6 +28,10 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsClient(true);
+    const adminAuth = localStorage.getItem(LS_ADMIN_AUTH_KEY);
+    if (adminAuth === 'true') {
+      setIsAdminAuthenticated(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -34,15 +39,24 @@ export default function HomePage() {
 
     const storedBookmarks = localStorage.getItem(LS_BOOKMARKS_KEY);
     if (storedBookmarks) {
-      const parsedBookmarks = JSON.parse(storedBookmarks).map((bm: Bookmark) => ({ ...bm, description: bm.description || '', icon: bm.icon }));
+      const parsedBookmarks = JSON.parse(storedBookmarks).map((bm: Bookmark) => ({ 
+        ...bm, 
+        description: bm.description || '', 
+        icon: bm.icon,
+        isPrivate: bm.isPrivate || false 
+      }));
       setBookmarks(parsedBookmarks);
     }
 
     const storedCategories = localStorage.getItem(LS_CATEGORIES_KEY);
     if (storedCategories) {
-      setCategories(JSON.parse(storedCategories));
+      const parsedCategories = JSON.parse(storedCategories).map((cat: Category) => ({
+        ...cat,
+        isPrivate: cat.isPrivate || false
+      }));
+      setCategories(parsedCategories);
     } else {
-      const defaultCategory = { id: 'default', name: '通用书签', isVisible: true, icon: 'Folder' };
+      const defaultCategory = { id: 'default', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
       setCategories([defaultCategory]);
       localStorage.setItem(LS_CATEGORIES_KEY, JSON.stringify([defaultCategory]));
     }
@@ -60,10 +74,10 @@ export default function HomePage() {
   
   useEffect(() => {
     if(categories.length > 0 && !activeCategory) {
-      const firstVisibleCategory = categories.find(c => c.isVisible);
+      const firstVisibleCategory = categories.find(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated));
       setActiveCategory(firstVisibleCategory?.id || 'all');
     }
-  }, [categories, activeCategory]);
+  }, [categories, activeCategory, isAdminAuthenticated]);
 
 
   const handleAddBookmark = (newBookmarkData: Omit<Bookmark, 'id'>) => {
@@ -77,13 +91,19 @@ export default function HomePage() {
     setBookmarks(prev => prev.filter(bm => bm.id !== bookmarkId));
   };
 
-  const handleAddCategory = (categoryName: string, icon?: string) => {
+  const handleAddCategory = (categoryName: string, icon?: string, isPrivate?: boolean) => {
     if (!isAdminAuthenticated) return;
     if (categories.some(cat => cat.name.toLowerCase() === categoryName.toLowerCase())) {
       console.warn("分类已存在");
       return;
     }
-    const newCategory = { id: Date.now().toString() + Math.random().toString(36).substring(2,7), name: categoryName, isVisible: true, icon: icon || 'Folder' };
+    const newCategory = { 
+      id: Date.now().toString() + Math.random().toString(36).substring(2,7), 
+      name: categoryName, 
+      isVisible: true, 
+      icon: icon || 'Folder',
+      isPrivate: isPrivate || false
+    };
     setCategories(prev => [...prev, newCategory]);
   };
   
@@ -92,7 +112,8 @@ export default function HomePage() {
     setBookmarks(prev => prev.filter(bm => bm.categoryId !== categoryId));
     setCategories(prev => prev.filter(cat => cat.id !== categoryId && cat.id !== 'default'));
      if (activeCategory === categoryId) {
-      const nextCategory = categories.find(c => c.id !== categoryId && c.isVisible) || categories.find(c => c.isVisible);
+      const nextVisibleCategories = categories.filter(c => c.id !== categoryId && c.isVisible && (!c.isPrivate || isAdminAuthenticated));
+      const nextCategory = nextVisibleCategories.length > 0 ? nextVisibleCategories[0] : categories.find(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated));
       setActiveCategory(nextCategory?.id || 'all');
     }
   };
@@ -100,6 +121,7 @@ export default function HomePage() {
   const handlePasswordSubmit = (password: string) => {
     if (password === ADMIN_PASSWORD) {
       setIsAdminAuthenticated(true);
+      localStorage.setItem(LS_ADMIN_AUTH_KEY, 'true');
       setShowPasswordDialog(false);
     } else {
       alert("密码错误！");
@@ -108,9 +130,22 @@ export default function HomePage() {
 
   const handleLogoutAdmin = () => {
     setIsAdminAuthenticated(false);
+    localStorage.removeItem(LS_ADMIN_AUTH_KEY);
+    // If current active category is private, switch to a public one or 'all'
+    const currentCat = categories.find(c => c.id === activeCategory);
+    if (currentCat && currentCat.isPrivate) {
+        const firstPublicCategory = categories.find(c => c.isVisible && !c.isPrivate);
+        setActiveCategory(firstPublicCategory?.id || 'all');
+    }
   };
   
+  const visibleCategories = categories.filter(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated));
+
   const filteredBookmarksBySearch = bookmarks.filter(bm => {
+    if (!isAdminAuthenticated && bm.isPrivate) return false; 
+    const categoryOfBookmark = categories.find(c => c.id === bm.categoryId);
+    if (!isAdminAuthenticated && categoryOfBookmark && categoryOfBookmark.isPrivate) return false;
+
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -135,7 +170,7 @@ export default function HomePage() {
   return (
     <div className="flex h-screen overflow-hidden">
       <AppSidebar
-        categories={categories}
+        categories={visibleCategories}
         onAddCategory={handleAddCategory}
         onDeleteCategory={handleDeleteCategory}
         isAdminAuthenticated={isAdminAuthenticated}
@@ -162,7 +197,7 @@ export default function HomePage() {
           
           <BookmarkGrid
             bookmarks={displayedBookmarks}
-            categories={categories.filter(c => c.isVisible && (activeCategory === 'all' || c.id === activeCategory))}
+            categories={categories} // Pass all categories for name/icon lookup, filtering done internally or by displayedBookmarks
             onDeleteBookmark={handleDeleteBookmark}
             isAdminAuthenticated={isAdminAuthenticated}
             currentCategoryName={activeCategory === 'all' ? '全部书签' : categories.find(c=>c.id === activeCategory)?.name || "未知分类"}
@@ -179,7 +214,7 @@ export default function HomePage() {
         isOpen={isAddBookmarkDialogOpen}
         onClose={() => setIsAddBookmarkDialogOpen(false)}
         onAddBookmark={handleAddBookmark}
-        categories={categories.filter(c => c.isVisible)}
+        categories={visibleCategories.filter(c => c.id !== 'all')}
       />
       <PasswordDialog
         isOpen={showPasswordDialog}

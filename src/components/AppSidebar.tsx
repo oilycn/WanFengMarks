@@ -6,7 +6,9 @@ import type { Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PlusCircle, Trash2, LogIn, Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, Save, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { PlusCircle, Trash2, LogIn, Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, Save, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2, Eye, EyeOff } from 'lucide-react';
 import AegisLogo from './AegisLogo';
 import {
   AlertDialog,
@@ -69,6 +71,8 @@ const availableIcons: { name: string; value: string; IconComponent: React.Elemen
   { name: '设置', value: 'Settings', IconComponent: Settings },
   { name: '拖动点', value: 'GripVertical', IconComponent: GripVertical },
   { name: '齿轮', value: 'Settings2', IconComponent: Settings2 },
+  { name: '眼睛', value: 'Eye', IconComponent: Eye },
+  { name: '闭眼', value: 'EyeOff', IconComponent: EyeOff },
 ];
 
 const iconMap: { [key: string]: React.ElementType } = Object.fromEntries(
@@ -79,7 +83,7 @@ iconMap['Default'] = Folder;
 
 interface AppSidebarProps {
   categories: Category[];
-  onAddCategory: (name: string, icon?: string) => void;
+  onAddCategory: (name: string, icon?: string, isPrivate?: boolean) => void;
   onDeleteCategory: (id: string) => void;
   isAdminAuthenticated: boolean;
   activeCategory: string | null;
@@ -98,6 +102,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
 }) => {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIcon, setNewCategoryIcon] = useState<string>(availableIcons[0].value);
+  const [newCategoryIsPrivate, setNewCategoryIsPrivate] = useState(false);
   const { toast } = useToast();
 
   const handleAddCategorySubmit = (e: React.FormEvent) => {
@@ -106,9 +111,10 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
       toast({ title: "错误", description: "分类名称不能为空。", variant: "destructive" });
       return;
     }
-    onAddCategory(newCategoryName.trim(), newCategoryIcon);
+    onAddCategory(newCategoryName.trim(), newCategoryIcon, newCategoryIsPrivate);
     setNewCategoryName('');
-    setNewCategoryIcon(availableIcons[0].value); // Reset icon
+    setNewCategoryIcon(availableIcons[0].value); 
+    setNewCategoryIsPrivate(false);
     toast({ title: "分类已添加", description: `"${newCategoryName.trim()}" 已成功添加。` });
   };
 
@@ -132,7 +138,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
             <List className="mr-2 h-4 w-4" />
             全部书签
           </Button>
-          {categories.filter(c => c.isVisible).map((category) => {
+          {categories.map((category) => {
             const IconComponent = iconMap[category.icon || 'Default'] || iconMap['Default'];
             return (
               <div key={category.id} className="group relative">
@@ -144,6 +150,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                 >
                   <IconComponent className="mr-2 h-4 w-4 flex-shrink-0" /> 
                   <span className="truncate">{category.name}</span>
+                  {category.isPrivate && <EyeOff className="ml-auto h-3.5 w-3.5 text-muted-foreground flex-shrink-0" title="私密分类" />}
                 </Button>
                 {isAdminAuthenticated && category.id !== 'default' && (
                   <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -206,6 +213,14 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                 </ScrollArea>
               </SelectContent>
             </Select>
+            <div className="flex items-center space-x-2">
+                <Checkbox 
+                    id="newCategoryPrivate" 
+                    checked={newCategoryIsPrivate} 
+                    onCheckedChange={(checked) => setNewCategoryIsPrivate(checked as boolean)}
+                />
+                <Label htmlFor="newCategoryPrivate" className="text-sm font-normal cursor-pointer">设为私密分类</Label>
+            </div>
             <Button type="submit" className="w-full h-9 text-sm bg-primary hover:bg-primary/90">
               <PlusCircle className="mr-2 h-4 w-4" /> 添加分类
             </Button>

@@ -4,10 +4,10 @@
 import React from 'react';
 import type { Bookmark, Category } from '@/types';
 import BookmarkItem from './BookmarkItem';
-import { FolderOpen, SearchX } from 'lucide-react';
-import { Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, Save, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2 } from 'lucide-react';
+import { FolderOpen, SearchX, EyeOff } from 'lucide-react';
+import { Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, Save, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2, Eye } from 'lucide-react';
 
-// 从 AppSidebar 复制过来的图标列表和映射
+
 const availableIcons: { name: string; value: string; IconComponent: React.ElementType }[] = [
   { name: '文件夹', value: 'Folder', IconComponent: Folder },
   { name: '公文包', value: 'Briefcase', IconComponent: Briefcase },
@@ -49,6 +49,8 @@ const availableIcons: { name: string; value: string; IconComponent: React.Elemen
   { name: '设置', value: 'Settings', IconComponent: Settings },
   { name: '拖动点', value: 'GripVertical', IconComponent: GripVertical },
   { name: '齿轮', value: 'Settings2', IconComponent: Settings2 },
+  { name: '眼睛', value: 'Eye', IconComponent: Eye },
+  { name: '闭眼', value: 'EyeOff', IconComponent: EyeOff },
 ];
 
 const iconMap: { [key: string]: React.ElementType } = Object.fromEntries(
@@ -77,11 +79,11 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
     searchQuery
 }) => {
 
-  const shouldGroup = activeCategoryId === 'all' || !activeCategoryId;
-  
-  const categoriesToDisplay = shouldGroup 
-    ? categories.filter(c => c.isVisible && bookmarks.some(b => b.categoryId === c.id)) 
-    : categories.filter(c => c.id === activeCategoryId && c.isVisible);
+  const getCategoryById = (id: string) => categories.find(c => c.id === id);
+
+  const categoriesToDisplay = (activeCategoryId === 'all' || !activeCategoryId)
+    ? categories.filter(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated) && bookmarks.some(b => b.categoryId === c.id))
+    : categories.filter(c => c.id === activeCategoryId && c.isVisible && (!c.isPrivate || isAdminAuthenticated));
 
 
   if (bookmarks.length === 0) {
@@ -91,6 +93,16 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
             <SearchX className="mx-auto h-16 w-16 text-muted-foreground/50 mb-4" />
             <h2 className="text-2xl font-semibold mb-2 text-foreground/80">未找到与 "{searchQuery}" 相关的书签</h2>
             <p className="text-md text-muted-foreground">请尝试修改您的搜索词，或清除搜索框以显示所有书签。</p>
+          </div>
+        );
+     }
+     const activeCat = activeCategoryId ? getCategoryById(activeCategoryId) : null;
+     if (activeCat && activeCat.isPrivate && !isAdminAuthenticated) {
+        return (
+          <div className="text-center py-12">
+            <EyeOff className="mx-auto h-16 w-16 text-muted-foreground/50 mb-4" />
+            <h2 className="text-2xl font-semibold mb-2 text-foreground/80">此分类为私密分类</h2>
+            <p className="text-md text-muted-foreground">请输入管理员密码以查看内容。</p>
           </div>
         );
      }
@@ -109,10 +121,10 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
   
   return (
     <div className="space-y-8">
-      {shouldGroup ? (
+      {(activeCategoryId === 'all' || !activeCategoryId) ? ( // Group by category if 'all' or no specific category is active
         categoriesToDisplay.map((category) => {
           const categoryBookmarks = bookmarks.filter(
-            (bookmark) => bookmark.categoryId === category.id
+            (bookmark) => bookmark.categoryId === category.id // Bookmarks are already pre-filtered for privacy by page.tsx
           );
           if (categoryBookmarks.length === 0) return null;
 
@@ -126,6 +138,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
               >
                 <IconComponent className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
                 {category.name}
+                {category.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
                 {categoryBookmarks.map((bookmark) => (
@@ -140,7 +153,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
             </section>
           );
         })
-      ) : (
+      ) : ( // Display bookmarks for a single active category
         <section aria-labelledby={`category-title-main`}>
             {currentCategoryName && (
                  <h2 
@@ -149,10 +162,11 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
                   >
                     {categoriesToDisplay[0]?.icon && React.createElement(iconMap[categoriesToDisplay[0].icon || 'Default'] || iconMap['Default'], {className: "mr-2 h-5 w-5 text-primary flex-shrink-0"})}
                     {currentCategoryName}
+                    {categoriesToDisplay[0]?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
                 </h2>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-            {bookmarks.map((bookmark) => (
+            {bookmarks.map((bookmark) => ( // Bookmarks are already pre-filtered by page.tsx
                 <BookmarkItem
                 key={bookmark.id}
                 bookmark={bookmark}

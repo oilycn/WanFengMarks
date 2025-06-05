@@ -6,7 +6,8 @@ import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea'; // For description
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox'; // Import Checkbox
 import {
   Dialog,
   DialogContent,
@@ -39,21 +40,20 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
 }) => {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
-  const [description, setDescription] = useState(''); // New state for description
+  const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState<string>('');
+  const [isPrivate, setIsPrivate] = useState(false); // New state for privacy
   const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen) {
-      // Reset form fields when dialog opens
       setName('');
       setUrl('');
       setDescription('');
-      // Set default category if categories exist and none is selected
+      setIsPrivate(false); 
       if (categories.length > 0 && !categoryId) {
         setCategoryId(categories.find(c => c.id === 'default')?.id || categories[0]?.id || '');
       } else if (categories.length > 0 && categoryId) {
-        // Ensure selected category is still valid
         if (!categories.some(c => c.id === categoryId)) {
            setCategoryId(categories.find(c => c.id === 'default')?.id || categories[0]?.id || '');
         }
@@ -75,9 +75,9 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
       return;
     }
 
-    onAddBookmark({ name, url: url.startsWith('http') ? url : `https://${url}`, categoryId, description });
+    onAddBookmark({ name, url: url.startsWith('http') ? url : `https://${url}`, categoryId, description, isPrivate });
     toast({ title: "书签已添加", description: `"${name}" 已成功添加。` });
-    onClose(); // Close dialog after successful submission
+    onClose(); 
   };
   
   return (
@@ -118,8 +118,8 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
                 required
               />
             </div>
-             <div className="grid grid-cols-4 items-start gap-4"> {/* Changed items-center to items-start for textarea */}
-              <Label htmlFor="description" className="text-right pt-2"> {/* Added pt-2 for alignment */}
+             <div className="grid grid-cols-4 items-start gap-4"> 
+              <Label htmlFor="description" className="text-right pt-2"> 
                 描述
               </Label>
               <Textarea
@@ -147,6 +147,19 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="isPrivate" className="text-right">
+                私密
+              </Label>
+              <div className="col-span-3 flex items-center space-x-2">
+                <Checkbox
+                  id="isPrivate"
+                  checked={isPrivate}
+                  onCheckedChange={(checked) => setIsPrivate(checked as boolean)}
+                />
+                <Label htmlFor="isPrivate" className="text-sm font-normal cursor-pointer">设为私密书签（仅管理员可见）</Label>
+              </div>
             </div>
           </div>
           <DialogFooter>

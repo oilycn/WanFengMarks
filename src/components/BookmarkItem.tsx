@@ -3,9 +3,9 @@
 
 import React from 'react';
 import type { Bookmark } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // CardHeader, CardTitle not used currently
+import { Card } from '@/components/ui/card'; 
 import { Button } from '@/components/ui/button';
-import { Link2, Trash2, ArrowUpRightSquare } from 'lucide-react';
+import { Link2, Trash2, ArrowUpRightSquare, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import {
   AlertDialog,
@@ -32,7 +32,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark,
   const getFaviconUrl = (url: string) => {
     try {
       const domain = new URL(url).hostname;
-      return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`; // Increased size for better quality
+      return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`; 
     } catch (error) {
       console.error("Invalid URL for favicon:", url, error);
       return ''; 
@@ -44,6 +44,10 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark,
     onDeleteBookmark(bookmark.id);
     toast({ title: "书签已删除", description: `"${bookmark.name}" 已被删除。`, variant: "destructive" });
   };
+
+  if (!isAdminAuthenticated && bookmark.isPrivate) {
+    return null; // Don't render private bookmarks if not authenticated
+  }
 
   return (
     <Card className="group relative shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out overflow-hidden bg-card/70 backdrop-blur-sm border border-border/60 hover:border-primary/70 rounded-lg flex flex-col">
@@ -58,7 +62,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark,
           {favicon ? (
             <Image 
               src={favicon} 
-              alt="" // Alt text handled by link
+              alt="" 
               width={32} 
               height={32}
               className="mt-0.5 rounded-md object-contain group-hover:scale-110 transition-transform flex-shrink-0"
@@ -73,8 +77,9 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark,
           <Link2 className={`h-8 w-8 text-muted-foreground fallback-icon ${favicon ? 'hidden' : ''} flex-shrink-0`} />
           
           <div className="flex-grow min-w-0">
-            <h3 className="text-sm font-semibold truncate group-hover:underline" title={bookmark.name}>
+            <h3 className="text-sm font-semibold truncate group-hover:underline flex items-center" title={bookmark.name}>
               {bookmark.name}
+              {bookmark.isPrivate && <EyeOff className="ml-1.5 h-3 w-3 text-muted-foreground/70 flex-shrink-0" title="私密书签"/>}
             </h3>
             {bookmark.description && (
               <p className="text-xs text-muted-foreground mt-0.5 truncate" title={bookmark.description}>
