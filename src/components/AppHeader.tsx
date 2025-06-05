@@ -23,14 +23,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({ searchQuery, setSearchQuery }) =>
         <AegisLogo />
       </div>
 
-      {/* Clock - Centered in the available space */}
-      <div className="flex-1 flex justify-center items-center px-2 md:px-4"> {/* Reduced horizontal padding for clock container */}
-        <Clock />
-      </div>
-
-      {/* SearchBar - Takes more space on the right */}
-      <div className="flex-1 flex justify-end items-center">
+      {/* SearchBar - Centered in the available space */}
+      <div className="flex-1 flex justify-center items-center px-2 md:px-4">
         <SearchBar currentQuery={searchQuery} onQueryChange={setSearchQuery} />
+      </div>
+      
+      {/* Clock - On the right */}
+      <div className="flex-shrink-0">
+        <Clock />
       </div>
     </header>
   );
