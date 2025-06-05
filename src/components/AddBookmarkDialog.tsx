@@ -23,12 +23,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-// Removed: import { useToast } from "@/hooks/use-toast";
 
 interface AddBookmarkDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddBookmark: (bookmark: Omit<Bookmark, 'id'>) => void;
+  onAddBookmark: (bookmark: Omit<Bookmark, 'id'>) => Promise<void>; // Changed to Promise<void>
   categories: Category[];
   activeCategoryId?: string | null;
   initialData?: { name?: string; url?: string; description?: string } | null;
@@ -48,7 +47,7 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
   const [categoryId, setCategoryId] = useState<string>('');
   const [isPrivate, setIsPrivate] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
-  // Removed: const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -56,17 +55,19 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
       setUrl(initialData?.url || '');
       setDescription(initialData?.description || '');
       setIsPrivate(false);
-      setValidationError(null); // Reset validation error when dialog opens
+      setValidationError(null); 
+      setIsSubmitting(false);
 
       let newDefaultCategoryId = '';
       if (activeCategoryId && activeCategoryId !== 'all' && categories.some(cat => cat.id === activeCategoryId)) {
         newDefaultCategoryId = activeCategoryId;
       } else if (categories.length > 0) {
-        const defaultCat = categories.find(c => c.id === 'default');
-        if (defaultCat && categories.some(c => c.id === 'default')) {
-          newDefaultCategoryId = defaultCat.id;
+        // Prefer 'default' category if it exists and is provided, otherwise first category
+        const defaultCategory = categories.find(c => c.name === '通用书签'); // Assuming '通用书签' is the default
+        if (defaultCategory) {
+            newDefaultCategoryId = defaultCategory.id;
         } else {
-          newDefaultCategoryId = categories[0].id;
+            newDefaultCategoryId = categories[0].id;
         }
       }
       setCategoryId(newDefaultCategoryId);
@@ -74,9 +75,9 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
   }, [isOpen, categories, activeCategoryId, initialData]);
 
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setValidationError(null); // Clear previous errors
+    setValidationError(null); 
 
     if (!name.trim() || !url.trim() || !categoryId) {
       setValidationError("名称、网址和分类为必填项。");
@@ -89,21 +90,39 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
       return;
     }
 
-    onAddBookmark({ name, url: url.startsWith('http') ? url : `https://${url}`, categoryId, description, isPrivate });
-    onClose();
+    setIsSubmitting(true);
+    try {
+      await onAddBookmark({ 
+        name: name.trim(), 
+        url: url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`, 
+        categoryId, 
+        description: description.trim(), 
+        isPrivate 
+      });
+      onClose(); // Close dialog only on successful submission
+    } catch (error: any) {
+      console.error("AddBookmarkDialog: Error during onAddBookmark:", error);
+      const errorMessage = error.message || "保存书签失败，请重试。";
+      setValidationError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) {
-        setValidationError(null); // Clear error when closing via X or Esc
+        setValidationError(null); 
+        setIsSubmitting(false);
       }
       onClose();
     }}>
       <DialogContent
         className="sm:max-w-[480px]"
         onInteractOutside={(event) => {
-          event.preventDefault();
+          if (isSubmitting) { // Prevent closing while submitting
+            event.preventDefault();
+          }
         }}
       >
         <DialogHeader>
@@ -125,6 +144,7 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
                 className="col-span-3"
                 placeholder="例如：谷歌新闻"
                 required
+                disabled={isSubmitting}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -139,6 +159,7 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
                 placeholder="例如：https://news.google.com"
                 type="url"
                 required
+                disabled={isSubmitting}
               />
             </div>
              <div className="grid grid-cols-4 items-start gap-4">
@@ -152,13 +173,14 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
                 className="col-span-3"
                 placeholder="可选的网站描述或副标题"
                 rows={2}
+                disabled={isSubmitting}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="category" className="text-right">
                 分类*
               </Label>
-              <Select value={categoryId} onValueChange={setCategoryId} required>
+              <Select value={categoryId} onValueChange={setCategoryId} required disabled={isSubmitting}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="选择一个分类" />
                 </SelectTrigger>
@@ -183,6 +205,7 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
                   onClick={() => setIsPrivate(!isPrivate)}
                   className="flex items-center w-full justify-start text-sm"
                   aria-label={isPrivate ? '设为公开书签' : '设为私密书签'}
+                  disabled={isSubmitting}
                 >
                   {isPrivate ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
                   {isPrivate ? '私密 (仅管理员可见)' : '公开 (所有人可见)'}
@@ -197,10 +220,12 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => {
-              setValidationError(null); // Clear error on cancel
+              setValidationError(null); 
               onClose();
-            }}>取消</Button>
-            <Button type="submit">保存书签</Button>
+            }} disabled={isSubmitting}>取消</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? '正在保存...' : '保存书签'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

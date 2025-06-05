@@ -28,7 +28,7 @@ const AddBookmarkPopupPage = () => {
       if (fetchedCategories && fetchedCategories.length > 0) {
         setCategories(fetchedCategories);
       } else {
-        // Fallback if no categories found or error during fetch
+        
         console.warn("Popup: No categories fetched or an error occurred, using fallback default.");
         const defaultCategory = { id: 'default-fallback-popup', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false };
         setCategories([defaultCategory]);
@@ -63,22 +63,27 @@ const AddBookmarkPopupPage = () => {
   }, [isClient, fetchCategoriesForPopup]);
 
   const handleAddBookmark = async (newBookmarkData: Omit<Bookmark, 'id'>) => {
-    if (!isClient) return;
+    if (!isClient) return; // Should not happen if dialog is open
     try {
       await addBookmarkAction(newBookmarkData);
-      // Let the dialog's onClose handle window.close() after successful submission
+      // Success: AddBookmarkDialog's handleSubmit will call its onClose, which calls handleDialogClose here.
     } catch (error) {
-      console.error("Popup: Failed to add bookmark:", error);
-      // Display error within the dialog or use alert for critical feedback
-      // This will be handled by AddBookmarkDialog's internal validation display now
-      // alert("无法保存书签，请查看控制台获取更多信息。");
-      throw error; // Re-throw to allow AddBookmarkDialog to catch and display validation
+      console.error("Popup: Failed to add bookmark via action:", error);
+      // Re-throw the error so AddBookmarkDialog can catch it and display it
+      throw error; 
     }
   };
 
   const handleDialogClose = () => {
-    // This is called by AddBookmarkDialog on any close action (submit, cancel, X, Esc)
-    window.close();
+    // This is called by AddBookmarkDialog on any close action (successful submit, cancel, X, Esc)
+    // Only close the window if it's truly a popup context
+    if (window.opener && window.opener !== window) {
+        window.close();
+    } else {
+        // Fallback for cases where it might not be a true popup (e.g., direct navigation for testing)
+        // Or handle differently if needed. For now, just log.
+        console.log("Dialog closed, but not in a typical popup context (no window.opener or self-opener).");
+    }
   };
 
 
@@ -86,12 +91,9 @@ const AddBookmarkPopupPage = () => {
     return <div className="flex h-screen w-screen items-center justify-center bg-background"><p className="text-foreground">正在加载...</p></div>;
   }
 
-  // Filter out 'all' pseudo-category and ensure categories are visible
-  // For popup, we don't need to consider admin auth for category visibility
-  // as this is a direct "add to" action. If a category is private, it should still be listable if fetched.
   const selectableCategories = categories.filter(c => c.id !== 'all' && c.id !== 'default-fallback-popup' && c.id !== 'default-fallback-popup-error');
   
-  // Ensure at least one category is available for selection, use default if necessary
+  
   const finalCategories = selectableCategories.length > 0 
     ? selectableCategories 
     : [{ id: 'default', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false }];
@@ -101,9 +103,9 @@ const AddBookmarkPopupPage = () => {
     <div className="flex h-screen w-screen items-center justify-center bg-background/80 backdrop-blur-sm p-4">
       <AddBookmarkDialog
         isOpen={isDialogOpen}
-        onClose={handleDialogClose} // This will now also trigger window.close
+        onClose={handleDialogClose} 
         onAddBookmark={handleAddBookmark}
-        categories={finalCategories} // Pass the potentially refined list
+        categories={finalCategories} 
         initialData={initialData}
       />
     </div>
