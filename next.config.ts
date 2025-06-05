@@ -2,7 +2,6 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -22,12 +21,12 @@ const nextConfig: NextConfig = {
     ],
   },
   serverActions: {
-    // Ensure this matches the 'Origin' header from the browser, including scheme and port.
-    // Example: https://your-proxied-domain.com:port
+    // This MUST match the 'Origin' header from the browser, including scheme and port.
+    // For your setup: https://bm.oily.cn:7443
     allowedOrigins: ['https://bm.oily.cn:7443'],
 
-    // Ensure this matches the 'X-Forwarded-Host' header value sent by your proxy.
-    // Example: your-proxied-domain.com (usually without port)
+    // This MUST match the 'X-Forwarded-Host' header value sent by your proxy.
+    // For your setup: bm.oily.cn
     allowedForwardedHosts: ['bm.oily.cn'],
   },
   // This is for the development server HMR and other dev-time communications.
@@ -37,21 +36,32 @@ const nextConfig: NextConfig = {
   // the proxy server itself (e.g., Nginx, Caddy, Nginx Proxy Manager) must be configured
   // to properly upgrade WebSocket connections for the `/_next/webpack-hmr` path.
   // This typically involves setting headers like `Upgrade` and `Connection "upgrade"`.
-  // Example Nginx config for HMR path:
+  // Example Nginx config for HMR path (for Nginx Proxy Manager, use the Advanced tab):
   // location /_next/webpack-hmr {
-  //     proxy_pass http://localhost:9003; # Your Next.js dev server
+  //     proxy_pass http://10.10.10.253:9003; # Your Next.js dev server IP:PORT
   //     proxy_http_version 1.1;
   //     proxy_set_header Upgrade $http_upgrade;
   //     proxy_set_header Connection "upgrade";
   //     proxy_set_header Host $host;
   //     proxy_set_header X-Forwarded-Proto https;
+  //     proxy_set_header X-Forwarded-Port 7443; // Crucial for correct port detection
   // }
-  // Additionally, if Server Actions are still failing with a 500 error and
-  // "Invalid Server Actions request" (often due to host/origin mismatch),
-  // ensure your proxy is also sending the correct X-Forwarded-Port header.
-  // For Nginx Proxy Manager, in the "Advanced" tab for the proxy host, you might add:
-  // proxy_set_header X-Forwarded-Port 7443;
-  // (replace 7443 with the actual external port if different)
+  //
+  // CRITICAL FOR SERVER ACTIONS:
+  // If Server Actions are still failing with "Invalid Server Actions request"
+  // (often due to host/origin/port mismatch), ensure your proxy is sending:
+  // 1. X-Forwarded-Proto: https
+  // 2. X-Forwarded-Host: bm.oily.cn
+  // 3. X-Forwarded-Port: 7443
+  //
+  // For Nginx Proxy Manager, in the "Advanced" tab for the proxy host (bm.oily.cn),
+  // you would add:
+  //   proxy_set_header X-Forwarded-Proto https;
+  //   proxy_set_header X-Forwarded-Host $host; // Or "bm.oily.cn" if $host is problematic
+  //   proxy_set_header X-Forwarded-Port 7443;
+  //
+  // The $host variable in Nginx usually contains the original host requested by the client.
+  // If your NPM setup has `forward_scheme: "http"`, it might not be sending `X-Forwarded-Proto https` by default unless you add it.
 };
 
 export default nextConfig;
