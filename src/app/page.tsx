@@ -11,7 +11,7 @@ import EditCategoryDialog from '@/components/EditCategoryDialog';
 import PasswordDialog from '@/components/PasswordDialog';
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, LogOut, Copy } from 'lucide-react'; // Changed EyeOff to LogOut
+import { PlusCircle, LogOut, Copy } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
 const LS_BOOKMARKS_KEY = 'wanfeng_bookmarks_v1_zh';
@@ -37,6 +37,9 @@ export default function HomePage() {
   const [bookmarkToEdit, setBookmarkToEdit] = useState<Bookmark | null>(null);
   const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
+  
+  const [initialDataForAddDialog, setInitialDataForAddDialog] = useState<{ name?: string; url?: string; description?: string } | null>(null);
+
 
   const { toast } = useToast();
 
@@ -122,6 +125,7 @@ export default function HomePage() {
     const bookmarkWithId = { ...newBookmarkData, id: Date.now().toString() + Math.random().toString(36).substring(2,7) };
     setBookmarks(prev => [...prev, bookmarkWithId]);
     setIsAddBookmarkDialogOpen(false);
+    setInitialDataForAddDialog(null); // Clear prefill data
   };
 
   const handleDeleteBookmark = (bookmarkId: string) => {
@@ -211,11 +215,13 @@ export default function HomePage() {
   };
   
   const handleOpenAddBookmarkDialog = () => {
+    setInitialDataForAddDialog(null); // Clear any old prefill data
     setIsAddBookmarkDialogOpen(true);
   };
 
   const handleCloseAddBookmarkDialog = () => {
     setIsAddBookmarkDialogOpen(false);
+    setInitialDataForAddDialog(null); // Clear prefill data on close
   };
 
   const handleCopyBookmarkletScript = async () => {
@@ -272,10 +278,10 @@ export default function HomePage() {
           setActiveCategory={setActiveCategory}
           onShowPasswordDialog={() => setShowPasswordDialog(true)}
         />
-        <div className="flex-1 flex flex-col overflow-y-auto bg-background relative"> {/* Added relative here */}
-          <main className="flex-grow p-4 md:p-6 relative"> {/* Added relative here */}
+        <div className="flex-1 flex flex-col overflow-y-auto bg-background relative">
+          <main className="flex-grow p-4 md:p-6 relative">
             {isAdminAuthenticated && (
-              <div className="fixed top-20 right-4 md:right-6 flex flex-col space-y-2 z-20">
+              <div className="fixed bottom-6 right-6 flex flex-col space-y-2 z-20">
                 <Button
                   onClick={handleOpenAddBookmarkDialog}
                   className="group bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg transition-all duration-200 ease-in-out 
@@ -288,21 +294,8 @@ export default function HomePage() {
                   <span className="ml-2 hidden group-hover:inline whitespace-nowrap text-sm">添加书签</span>
                 </Button>
                 <Button
-                  variant="outline"
-                  onClick={handleLogoutAdmin}
-                  className="group bg-card hover:bg-muted text-foreground shadow-lg transition-all duration-200 ease-in-out 
-                             w-10 h-10 rounded-full p-0 flex items-center justify-center 
-                             hover:w-auto hover:rounded-md hover:px-3 hover:py-2 hover:justify-start"
-                  aria-label="退出管理模式"
-                  title="退出管理模式"
-                >
-                  <LogOut className="h-5 w-5 flex-shrink-0" />
-                  <span className="ml-2 hidden group-hover:inline whitespace-nowrap text-sm">退出管理模式</span>
-                </Button>
-                <Button
-                  variant="outline"
                   onClick={handleCopyBookmarkletScript}
-                  className="group bg-card hover:bg-muted text-foreground shadow-lg transition-all duration-200 ease-in-out 
+                  className="group bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg transition-all duration-200 ease-in-out 
                              w-10 h-10 rounded-full p-0 flex items-center justify-center 
                              hover:w-auto hover:rounded-md hover:px-3 hover:py-2 hover:justify-start"
                   aria-label="复制书签脚本"
@@ -310,6 +303,17 @@ export default function HomePage() {
                 >
                   <Copy className="h-5 w-5 flex-shrink-0" />
                   <span className="ml-2 hidden group-hover:inline whitespace-nowrap text-sm">复制书签脚本</span>
+                </Button>
+                 <Button
+                  onClick={handleLogoutAdmin}
+                  className="group bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg transition-all duration-200 ease-in-out 
+                             w-10 h-10 rounded-full p-0 flex items-center justify-center 
+                             hover:w-auto hover:rounded-md hover:px-3 hover:py-2 hover:justify-start"
+                  aria-label="退出管理模式"
+                  title="退出管理模式"
+                >
+                  <LogOut className="h-5 w-5 flex-shrink-0" />
+                  <span className="ml-2 hidden group-hover:inline whitespace-nowrap text-sm">退出管理模式</span>
                 </Button>
               </div>
             )}
@@ -337,6 +341,7 @@ export default function HomePage() {
         onAddBookmark={handleAddBookmark}
         categories={visibleCategories.filter(c => c.id !== 'all')}
         activeCategoryId={activeCategory}
+        initialData={initialDataForAddDialog}
       />
       {bookmarkToEdit && (
         <EditBookmarkDialog
@@ -363,6 +368,8 @@ export default function HomePage() {
     </div>
   );
 }
+    
+
     
 
     
