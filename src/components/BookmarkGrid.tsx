@@ -5,6 +5,57 @@ import React from 'react';
 import type { Bookmark, Category } from '@/types';
 import BookmarkItem from './BookmarkItem';
 import { FolderOpen, SearchX } from 'lucide-react';
+import { Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, Save, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2 } from 'lucide-react';
+
+// 从 AppSidebar 复制过来的图标列表和映射
+const availableIcons: { name: string; value: string; IconComponent: React.ElementType }[] = [
+  { name: '文件夹', value: 'Folder', IconComponent: Folder },
+  { name: '公文包', value: 'Briefcase', IconComponent: Briefcase },
+  { name: '书本', value: 'BookOpen', IconComponent: BookOpen },
+  { name: '电影', value: 'Film', IconComponent: Film },
+  { name: '游戏', value: 'Gamepad2', IconComponent: Gamepad2 },
+  { name: '毕业帽', value: 'GraduationCap', IconComponent: GraduationCap },
+  { name: '耳机', value: 'Headphones', IconComponent: Headphones },
+  { name: '爱心', value: 'Heart', IconComponent: Heart },
+  { name: '主页', value: 'Home', IconComponent: Home },
+  { name: '图片', value: 'Image', IconComponent: Image },
+  { name: '灯泡', value: 'Lightbulb', IconComponent: Lightbulb },
+  { name: '列表', value: 'List', IconComponent: List },
+  { name: '锁', value: 'Lock', IconComponent: Lock },
+  { name: '地图钉', value: 'MapPin', IconComponent: MapPin },
+  { name: '消息', value: 'MessageSquare', IconComponent: MessageSquare },
+  { name: '音乐', value: 'Music', IconComponent: Music },
+  { name: '报纸', value: 'Newspaper', IconComponent: Newspaper },
+  { name: '包裹', value: 'Package', IconComponent: Package },
+  { name: '调色板', value: 'Palette', IconComponent: Palette },
+  { name: '飞机', value: 'Plane', IconComponent: Plane },
+  { name: '播放', value: 'PlayCircle', IconComponent: PlayCircle },
+  { name: '保存', value: 'Save', IconComponent: Save },
+  { name: '购物袋', value: 'ShoppingBag', IconComponent: ShoppingBag },
+  { name: '购物车', value: 'ShoppingCart', IconComponent: ShoppingCart },
+  { name: '手机', value: 'Smartphone', IconComponent: Smartphone },
+  { name: '闪光', value: 'Sparkles', IconComponent: Sparkles },
+  { name: '星星', value: 'Star', IconComponent: Star },
+  { name: '点赞', value: 'ThumbsUp', IconComponent: ThumbsUp },
+  { name: '钢笔工具', value: 'PenTool', IconComponent: PenTool },
+  { name: '趋势', value: 'TrendingUp', IconComponent: TrendingUp },
+  { name: '电视', value: 'Tv2', IconComponent: Tv2 },
+  { name: '用户', value: 'User', IconComponent: User },
+  { name: '视频', value: 'Video', IconComponent: Video },
+  { name: '钱包', value: 'Wallet', IconComponent: Wallet },
+  { name: '扳手', value: 'Wrench', IconComponent: Wrench },
+  { name: 'YouTube', value: 'Youtube', IconComponent: Youtube },
+  { name: '闪电', value: 'Zap', IconComponent: Zap },
+  { name: '设置', value: 'Settings', IconComponent: Settings },
+  { name: '拖动点', value: 'GripVertical', IconComponent: GripVertical },
+  { name: '齿轮', value: 'Settings2', IconComponent: Settings2 },
+];
+
+const iconMap: { [key: string]: React.ElementType } = Object.fromEntries(
+  availableIcons.map(icon => [icon.value, icon.IconComponent])
+);
+iconMap['Default'] = Folder;
+
 
 interface BookmarkGridProps {
   bookmarks: Bookmark[];
@@ -65,9 +116,15 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
           );
           if (categoryBookmarks.length === 0) return null;
 
+          const IconComponent = iconMap[category.icon || 'Default'] || iconMap['Default'];
+
           return (
             <section key={category.id} aria-labelledby={`category-title-${category.id}`}>
-              <h2 id={`category-title-${category.id}`} className="text-2xl font-semibold mb-4 text-primary font-headline border-b pb-2">
+              <h2 
+                id={`category-title-${category.id}`} 
+                className="text-xl font-semibold mb-4 text-foreground border-b pb-2 flex items-center"
+              >
+                <IconComponent className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
                 {category.name}
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
@@ -86,7 +143,11 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
       ) : (
         <section aria-labelledby={`category-title-main`}>
             {currentCategoryName && (
-                 <h2 id={`category-title-main`} className="text-2xl font-semibold mb-4 text-primary font-headline border-b pb-2">
+                 <h2 
+                    id={`category-title-main`} 
+                    className="text-xl font-semibold mb-4 text-foreground border-b pb-2 flex items-center"
+                  >
+                    {categoriesToDisplay[0]?.icon && React.createElement(iconMap[categoriesToDisplay[0].icon || 'Default'] || iconMap['Default'], {className: "mr-2 h-5 w-5 text-primary flex-shrink-0"})}
                     {currentCategoryName}
                 </h2>
             )}
