@@ -65,7 +65,7 @@ export default function SetupPage() {
       setFeedbackMessage({ type: 'success', message: result.message || '数据库连接成功！' });
       setCurrentStep('connectionSuccess');
     } else {
-      setFeedbackMessage({ type: 'error', message: result.error || '数据库连接测试失败。' });
+      setFeedbackMessage({ type: 'error', message: result.error || '数据库连接测试失败。请检查您的 .env.local 文件中的 MYSQL_CONNECTION_STRING 是否正确，并且数据库服务正在运行。' });
       setCurrentStep('connectionFailed');
     }
     setIsLoading(false);
@@ -80,7 +80,7 @@ export default function SetupPage() {
       setFeedbackMessage({ type: 'success', message: result.message || '数据库初始化成功！现在可以设置管理员密码。' });
       setCurrentStep('dbInitSuccess'); // Transition to password setup phase
     } else {
-      setFeedbackMessage({ type: 'error', message: result.error || '数据库初始化失败。' });
+      setFeedbackMessage({ type: 'error', message: result.error || '数据库初始化失败。请检查数据库用户权限。' });
       setCurrentStep('dbInitFailed');
     }
     setIsLoading(false);
@@ -166,17 +166,13 @@ export default function SetupPage() {
             </h3>
             <Card className="bg-muted/50 p-4">
               <CardContent className="p-0 space-y-3 text-xs">
-                <p>MySQL 连接参数 (主机, 端口, 用户名, 密码, 数据库名) 必须在项目根目录的 <code className="font-mono bg-gray-200 dark:bg-gray-700 p-0.5 rounded text-xs">.env.local</code> 文件中预先配置好。</p>
+                <p>MySQL 连接参数必须在项目根目录的 <code className="font-mono bg-gray-200 dark:bg-gray-700 p-0.5 rounded text-xs">.env.local</code> 文件中通过 <code className="font-mono bg-gray-200 dark:bg-gray-700 p-0.5 rounded text-xs">MYSQL_CONNECTION_STRING</code> 环境变量预先配置好。</p>
                 <p>例如: <br />
                   <code className="block whitespace-pre-wrap font-mono bg-gray-200 dark:bg-gray-700 p-1 rounded text-[0.7rem] leading-tight">
-                    MYSQL_HOST=localhost<br/>
-                    MYSQL_PORT=3306<br/>
-                    MYSQL_USER=your_user<br/>
-                    MYSQL_PASSWORD=your_password<br/>
-                    MYSQL_DATABASE=wanfeng_marks
+                    MYSQL_CONNECTION_STRING="mysql://your_user:your_password@your_host:your_port/your_database"
                   </code>
                 </p>
-                <p className="font-semibold mt-2">请确保您的 MySQL 服务器正在运行并且 <code className="font-mono bg-gray-200 dark:bg-gray-700 p-0.5 rounded text-xs">.env.local</code> 文件已正确配置。</p>
+                <p className="font-semibold mt-2">请确保您的 MySQL 服务器正在运行并且 <code className="font-mono bg-gray-200 dark:bg-gray-700 p-0.5 rounded text-xs">.env.local</code> 文件已正确配置 <code className="font-mono bg-gray-200 dark:bg-gray-700 p-0.5 rounded text-xs">MYSQL_CONNECTION_STRING</code>。</p>
               </CardContent>
             </Card>
             <Button 
@@ -259,3 +255,4 @@ export default function SetupPage() {
     </div>
   );
 }
+
