@@ -18,8 +18,8 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({ bookmarks, categories, onDe
   if (bookmarks.length === 0 && visibleCategories.some(cat => cat.id === 'default')) {
      return (
       <div className="text-center py-10">
-        <h2 className="text-2xl font-semibold mb-2">No Bookmarks Yet!</h2>
-        <p className="text-muted-foreground">Click "Add Bookmark" to get started.</p>
+        <h2 className="text-2xl font-semibold mb-2">还没有书签！</h2>
+        <p className="text-muted-foreground">点击“添加书签”开始使用。</p>
       </div>
     );
   }
@@ -27,8 +27,8 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({ bookmarks, categories, onDe
   if (visibleCategories.length === 0) {
     return (
       <div className="text-center py-10">
-        <h2 className="text-2xl font-semibold mb-2">No Visible Categories</h2>
-        <p className="text-muted-foreground">Toggle category visibility or add new bookmarks.</p>
+        <h2 className="text-2xl font-semibold mb-2">没有可见的分类</h2>
+        <p className="text-muted-foreground">切换分类可见性或添加新书签。</p>
       </div>
     );
   }
@@ -45,7 +45,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({ bookmarks, categories, onDe
           return (
             <div key={category.id}>
               <h2 className="text-2xl font-semibold mb-3 text-primary font-headline">{category.name}</h2>
-              <p className="text-muted-foreground pl-1">No bookmarks in this category yet.</p>
+              <p className="text-muted-foreground pl-1">此分类下暂无书签。</p>
               {visibleCategories.length > 1 && <Separator className="my-6" />}
             </div>
           );

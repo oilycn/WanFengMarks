@@ -8,8 +8,8 @@ import AddBookmarkDialog from '@/components/AddBookmarkDialog';
 import BookmarkGrid from '@/components/BookmarkGrid';
 import type { Bookmark, Category } from '@/types';
 
-const LS_BOOKMARKS_KEY = 'aegisMarks_bookmarks_v1';
-const LS_CATEGORIES_KEY = 'aegisMarks_categories_v1';
+const LS_BOOKMARKS_KEY = 'aegisMarks_bookmarks_v1_zh'; // Changed key for Chinese version
+const LS_CATEGORIES_KEY = 'aegisMarks_categories_v1_zh'; // Changed key for Chinese version
 
 export default function HomePage() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -34,7 +34,7 @@ export default function HomePage() {
     if (storedCategories) {
       setCategories(JSON.parse(storedCategories));
     } else {
-      const defaultCategory = { id: 'default', name: 'General Bookmarks', isVisible: true };
+      const defaultCategory = { id: 'default', name: '通用书签', isVisible: true };
       setCategories([defaultCategory]);
       localStorage.setItem(LS_CATEGORIES_KEY, JSON.stringify([defaultCategory]));
     }
@@ -72,7 +72,7 @@ export default function HomePage() {
   const handleAddCategory = (categoryName: string) => {
     if (categories.some(cat => cat.name.toLowerCase() === categoryName.toLowerCase())) {
       // Potentially show a toast message for duplicate category name
-      console.warn("Category already exists");
+      console.warn("分类已存在");
       return;
     }
     const newCategory = { id: Date.now().toString() + Math.random().toString(36).substring(2,7), name: categoryName, isVisible: true };
@@ -88,7 +88,7 @@ export default function HomePage() {
     // Render a loading state or null during SSR/SSG to avoid hydration mismatch with localStorage
     return (
       <div className="flex flex-col min-h-screen bg-background text-foreground items-center justify-center">
-        <div className="animate-pulse text-2xl font-semibold text-primary">Loading AegisMarks...</div>
+        <div className="animate-pulse text-2xl font-semibold text-primary">正在加载 AegisMarks...</div>
       </div>
     );
   }
@@ -114,7 +114,7 @@ export default function HomePage() {
         categories={categories}
       />
       <footer className="text-center py-6 mt-auto border-t border-border">
-        <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} AegisMarks. All rights reserved.</p>
+        <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} AegisMarks. 版权所有.</p>
       </footer>
     </div>
   );

@@ -39,7 +39,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark 
 
   const handleDelete = () => {
     onDeleteBookmark(bookmark.id);
-    toast({ title: "Bookmark Deleted", description: `"${bookmark.name}" has been deleted.`, variant: "destructive" });
+    toast({ title: "书签已删除", description: `"${bookmark.name}" 已被删除。`, variant: "destructive" });
   };
 
   return (
@@ -50,12 +50,12 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark 
           target="_blank"
           rel="noopener noreferrer"
           className="flex flex-col items-center justify-center w-full h-full text-card-foreground hover:text-primary transition-colors"
-          aria-label={`Open ${bookmark.name}`}
+          aria-label={`打开 ${bookmark.name}`}
         >
           {favicon ? (
             <Image 
               src={favicon} 
-              alt={`${bookmark.name} favicon`} 
+              alt={`${bookmark.name} 图标`} 
               width={32} 
               height={32} 
               className="mb-2 rounded object-contain"
@@ -75,22 +75,22 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({ bookmark, onDeleteBookmark 
             variant="ghost"
             size="icon"
             className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:bg-destructive/10"
-            aria-label={`Delete ${bookmark.name}`}
+            aria-label={`删除 ${bookmark.name}`}
           >
             <Trash2 className="h-3 w-3" />
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>确定吗？</AlertDialogTitle>
             <AlertDialogDescription>
-              This action will delete the bookmark "{bookmark.name}". This cannot be undone.
+              此操作将删除书签 "{bookmark.name}"。此操作无法撤销。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-              Delete
+              删除
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

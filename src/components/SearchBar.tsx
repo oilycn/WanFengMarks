@@ -19,13 +19,13 @@ const SearchBar: React.FC = () => {
     <form onSubmit={handleSearch} className="flex w-full max-w-xl items-center space-x-2">
       <Input
         type="search"
-        placeholder="Search the web..."
+        placeholder="搜索网页..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="flex-grow bg-card border-border focus:ring-primary"
-        aria-label="Search the web"
+        aria-label="搜索网页"
       />
-      <Button type="submit" variant="default" size="icon" aria-label="Search">
+      <Button type="submit" variant="default" size="icon" aria-label="搜索">
         <Search className="h-5 w-5" />
       </Button>
     </form>

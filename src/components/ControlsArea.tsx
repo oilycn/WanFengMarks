@@ -30,7 +30,7 @@ const ControlsArea: React.FC<ControlsAreaProps> = ({
         onDeleteCategory={onDeleteCategory}
       />
       <Button onClick={onOpenAddBookmarkDialog} variant="default" size="lg" className="shadow-md self-start md:self-auto md:mt-[52px]"> {/* Approx CardHeader height + padding */}
-        <PlusCircle className="mr-2 h-5 w-5" /> Add New Bookmark
+        <PlusCircle className="mr-2 h-5 w-5" /> 添加新书签
       </Button>
     </section>
   );

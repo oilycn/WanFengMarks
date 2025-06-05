@@ -18,7 +18,7 @@ const Weather: React.FC = () => {
       // For now, using mock data after a delay.
       setTimeout(() => {
         // This is placeholder data.
-        setWeatherData({ temp: '24°C', description: 'Sunny', icon: Sun });
+        setWeatherData({ temp: '24°C', description: '晴朗', icon: Sun }); // Translated "Sunny"
         setLoading(false);
       }, 1500);
     };
@@ -31,14 +31,14 @@ const Weather: React.FC = () => {
       <CardHeader className="pb-2">
         <CardTitle className="text-xl flex items-center gap-2">
           <Zap className="h-5 w-5 text-accent" />
-          <span>Local Weather</span>
+          <span>本地天气</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="text-center">
         {loading ? (
           <div className="animate-pulse">
-            <div className="h-8 w-16 bg-muted rounded-md mx-auto mb-2"></div>
-            <div className="h-6 w-24 bg-muted rounded-md mx-auto"></div>
+            <div className="h-8 w-16 bg-muted rounded-md mx-auto mb-2"></div> {/* Placeholder for temp */}
+            <div className="h-6 w-24 bg-muted rounded-md mx-auto"></div> {/* Placeholder for description */}
           </div>
         ) : weatherData ? (
           <>
@@ -49,8 +49,8 @@ const Weather: React.FC = () => {
         ) : (
            <div className="text-muted-foreground flex flex-col items-center gap-2 p-4">
             <Info className="h-8 w-8"/>
-            <span>Weather data unavailable.</span>
-            <small className="text-xs">Real weather requires an API integration.</small>
+            <span>天气数据不可用。</span>
+            <small className="text-xs">真实天气需要API集成。</small>
           </div>
         )}
       </CardContent>

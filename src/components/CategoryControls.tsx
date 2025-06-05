@@ -42,19 +42,19 @@ const CategoryControls: React.FC<CategoryControlsProps> = ({
     if (newCategoryName.trim()) {
       onAddCategory(newCategoryName.trim());
       setNewCategoryName('');
-      toast({ title: "Category Added", description: `"${newCategoryName.trim()}" has been added.` });
+      toast({ title: "分类已添加", description: `"${newCategoryName.trim()}" 已成功添加。` });
     }
   };
 
   const handleDelete = (categoryId: string, categoryName: string) => {
     onDeleteCategory(categoryId);
-    toast({ title: "Category Deleted", description: `"${categoryName}" and its bookmarks have been deleted.`, variant: "destructive" });
+    toast({ title: "分类已删除", description: `"${categoryName}" 及其所有书签已被删除。`, variant: "destructive" });
   };
 
   return (
     <Card className="shadow-md w-full md:max-w-md">
       <CardHeader>
-        <CardTitle className="text-xl">Manage Categories</CardTitle>
+        <CardTitle className="text-xl">管理分类</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleAddCategory} className="flex items-center gap-2 mb-4">
@@ -62,15 +62,15 @@ const CategoryControls: React.FC<CategoryControlsProps> = ({
             type="text"
             value={newCategoryName}
             onChange={(e) => setNewCategoryName(e.target.value)}
-            placeholder="New category name"
+            placeholder="新分类名称"
             className="flex-grow"
           />
-          <Button type="submit" size="icon" aria-label="Add category">
+          <Button type="submit" size="icon" aria-label="添加分类">
             <PlusCircle className="h-5 w-5" />
           </Button>
         </form>
         <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-          {categories.length === 0 && <p className="text-sm text-muted-foreground">No categories yet. Add one above!</p>}
+          {categories.length === 0 && <p className="text-sm text-muted-foreground">还没有分类。在上方添加一个吧！</p>}
           {categories.map((category) => (
             <div key={category.id} className="flex items-center justify-between p-2 rounded-md border bg-card hover:bg-muted/50 transition-colors">
               <span className="font-medium text-card-foreground">{category.name}</span>
@@ -79,7 +79,7 @@ const CategoryControls: React.FC<CategoryControlsProps> = ({
                   id={`vis-${category.id}`}
                   checked={category.isVisible}
                   onCheckedChange={() => onToggleVisibility(category.id)}
-                  aria-label={`Toggle visibility for ${category.name}`}
+                  aria-label={`切换 ${category.name} 的可见性`}
                 />
                 <Label htmlFor={`vis-${category.id}`} className="cursor-pointer">
                   {category.isVisible ? <Eye className="h-5 w-5 text-green-500"/> : <EyeOff className="h-5 w-5 text-muted-foreground"/>}
@@ -87,21 +87,21 @@ const CategoryControls: React.FC<CategoryControlsProps> = ({
                 {category.id !== 'default' && ( // Prevent deleting default category
                    <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" aria-label={`删除分类 ${category.name}`}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogTitle>确定吗？</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This action will delete the category "{category.name}" and all its bookmarks. This cannot be undone.
+                          此操作将删除分类 "{category.name}" 及其所有书签。此操作无法撤销。
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
                         <AlertDialogAction onClick={() => handleDelete(category.id, category.name)} className="bg-destructive hover:bg-destructive/90">
-                          Delete
+                          删除
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

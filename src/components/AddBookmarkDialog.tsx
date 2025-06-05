@@ -43,19 +43,19 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !url.trim() || !categoryId) {
-      toast({ title: "Error", description: "Please fill in all fields.", variant: "destructive" });
+      toast({ title: "错误", description: "请填写所有字段。", variant: "destructive" });
       return;
     }
     // Basic URL validation
     try {
       new URL(url.startsWith('http') ? url : `https://${url}`);
     } catch (_) {
-      toast({ title: "Invalid URL", description: "Please enter a valid URL.", variant: "destructive" });
+      toast({ title: "无效的URL", description: "请输入有效的URL。", variant: "destructive" });
       return;
     }
 
     onAddBookmark({ name, url: url.startsWith('http') ? url : `https://${url}`, categoryId });
-    toast({ title: "Bookmark Added", description: `"${name}" has been added.` });
+    toast({ title: "书签已添加", description: `"${name}" 已成功添加。` });
     setName('');
     setUrl('');
     // setCategoryId(categories[0]?.id || ''); // Reset to first category or default
@@ -73,47 +73,47 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Bookmark</DialogTitle>
+          <DialogTitle>添加新书签</DialogTitle>
           <DialogDescription>
-            Enter the details for your new bookmark. Click save when you're done.
+            输入新书签的详细信息。完成后点击保存。
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
-                Name
+                名称
               </Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="col-span-3"
-                placeholder="e.g., Google News"
+                placeholder="例如：谷歌新闻"
                 required
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="url" className="text-right">
-                URL
+                网址
               </Label>
               <Input
                 id="url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 className="col-span-3"
-                placeholder="e.g., https://news.google.com"
+                placeholder="例如：https://news.google.com"
                 type="url"
                 required
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="category" className="text-right">
-                Category
+                分类
               </Label>
               <Select value={categoryId} onValueChange={setCategoryId} required>
                 <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select a category" />
+                  <SelectValue placeholder="选择一个分类" />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
@@ -126,8 +126,8 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit">Save Bookmark</Button>
+            <Button type="button" variant="outline" onClick={onClose}>取消</Button>
+            <Button type="submit">保存书签</Button>
           </DialogFooter>
         </form>
       </DialogContent>
