@@ -153,6 +153,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
         type="BOOKMARK" 
         isDropDisabled={!canDrag}
         isCombineEnabled={false}
+        ignoreContainerClipping={false}
       >
         {(provided) => (
           <div {...provided.droppableProps} ref={provided.innerRef}>
