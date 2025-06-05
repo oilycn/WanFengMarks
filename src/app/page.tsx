@@ -13,7 +13,7 @@ import PasswordDialog from '@/components/PasswordDialog';
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { PlusCircle, LogOut, Copy, Menu } from 'lucide-react';
+import { PlusCircle, LogOut, Copy } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import {
   DragDropContext,
@@ -77,8 +77,6 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    // This effect specifically handles setting isClientReadyForDnd
-    // to ensure DragDropContext is rendered only after client is fully ready.
     if (isClient) {
         setIsClientReadyForDnd(true); 
     }
@@ -156,7 +154,6 @@ export default function HomePage() {
     } catch (error) {
       console.error("HomePage: Failed to fetch data:", error);
       toast({ title: "错误", description: "加载数据失败，请稍后重试。", variant: "destructive" });
-       // Check categories specific length inside this block if needed, but it was removed from deps
        if (categories.length === 0) { 
            const defaultCategory = { id: 'default-fallback-ui-error', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false, priority: 0 };
            setCategories([defaultCategory]);
@@ -165,7 +162,7 @@ export default function HomePage() {
       setIsLoading(false);
       console.log("HomePage: fetchData finished. isLoading set to false.");
     }
-  }, [toast, categories.length]); // categories.length was re-added based on previous error, check if it's truly needed or if the issue lies elsewhere
+  }, [toast]); 
 
   useEffect(() => {
     if (isClient && !isCheckingSetup) {
@@ -402,7 +399,6 @@ export default function HomePage() {
       return;
     }
     
-    // Get only the bookmarks belonging to the currently active category
     const itemsInActiveCategory = bookmarks.filter(bm => bm.categoryId === activeCategory);
     
     if (sourceIndex < 0 || sourceIndex >= itemsInActiveCategory.length || destinationIndex < 0 || destinationIndex >= itemsInActiveCategory.length) {
@@ -410,21 +406,12 @@ export default function HomePage() {
         return;
     }
     
-    // Reorder only the items within the active category
     const reorderedItemsInActiveCategory = Array.from(itemsInActiveCategory);
     const [movedItem] = reorderedItemsInActiveCategory.splice(sourceIndex, 1);
     reorderedItemsInActiveCategory.splice(destinationIndex, 0, movedItem);
 
-    // Optimistic UI Update:
-    // Reconstruct the global bookmarks list. Place the reordered items for the active category
-    // first, then all other bookmarks. The server will handle the actual priority values
-    // based on the full ordered list of IDs sent by handleSaveBookmarksOrder.
     setBookmarks(prevGlobalBookmarks => {
       const otherGlobalBookmarks = prevGlobalBookmarks.filter(bm => bm.categoryId !== activeCategory);
-      // The reorderedItemsInActiveCategory already have their internal order correct.
-      // When saving, the `handleSaveBookmarksOrder` will map the *entire* `bookmarks` array
-      // to IDs, ensuring the reordered category's items (now at the 'top' conceptually for this update)
-      // effectively get higher global priority.
       return [...reorderedItemsInActiveCategory, ...otherGlobalBookmarks];
     });
 
@@ -437,9 +424,6 @@ export default function HomePage() {
       return;
     }
 
-    // The `bookmarks` state already reflects the optimistic reordering,
-    // with the reordered category's items placed to effectively have higher priority.
-    // Send the IDs of all bookmarks in their current client-side order.
     const globallyOrderedIdsForServer = bookmarks.map(bm => bm.id);
 
     try {
@@ -530,7 +514,7 @@ export default function HomePage() {
                   onEditCategory={handleOpenEditCategoryDialog}
                   isAdminAuthenticated={isAdminAuthenticated}
                   activeCategory={activeCategory}
-                  setActiveCategory={handleSetActiveCategory} // Updated to handle sidebar close
+                  setActiveCategory={handleSetActiveCategory} 
                   onShowPasswordDialog={() => {
                     setShowPasswordDialog(true);
                     setIsMobileSidebarOpen(false); 
@@ -554,35 +538,6 @@ export default function HomePage() {
           )}
           <div className="flex-1 flex flex-col overflow-y-auto bg-background relative">
             <main className="flex-grow p-4 md:p-6 relative">
-              {isAdminAuthenticated && (
-                <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 flex flex-col space-y-2 z-20">
-                  <Button
-                    onClick={handleOpenAddBookmarkDialog}
-                    className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
-                    aria-label="添加书签"
-                    title="添加书签"
-                  >
-                    <PlusCircle className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    onClick={handleCopyBookmarkletScript}
-                    className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
-                    aria-label="复制书签脚本"
-                    title="复制书签脚本"
-                  >
-                    <Copy className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    onClick={handleLogoutAdmin}
-                    className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
-                    aria-label="退出管理模式"
-                    title="退出管理模式"
-                  >
-                    <LogOut className="h-5 w-5" />
-                  </Button>
-                </div>
-              )}
-
               <BookmarkGrid
                 bookmarks={displayedBookmarks}
                 categories={categories} 
@@ -601,6 +556,35 @@ export default function HomePage() {
             </footer>
           </div>
         </div>
+
+        {isAdminAuthenticated && (
+          <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 flex flex-col space-y-2 z-20">
+            <Button
+              onClick={handleOpenAddBookmarkDialog}
+              className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
+              aria-label="添加书签"
+              title="添加书签"
+            >
+              <PlusCircle className="h-5 w-5" />
+            </Button>
+            <Button
+              onClick={handleCopyBookmarkletScript}
+              className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
+              aria-label="复制书签脚本"
+              title="复制书签脚本"
+            >
+              <Copy className="h-5 w-5" />
+            </Button>
+            <Button
+              onClick={handleLogoutAdmin}
+              className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
+              aria-label="退出管理模式"
+              title="退出管理模式"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
 
         <AddBookmarkDialog
           isOpen={isAddBookmarkDialogOpen}
@@ -641,4 +625,6 @@ export default function HomePage() {
     </DragDropContext>
   ) : mainContent;
 }
+    
+
     
