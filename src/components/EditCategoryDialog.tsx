@@ -6,7 +6,7 @@ import type { Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, Save, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2 } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react'; // Removed unused icon imports
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
-import { iconMap as globalIconMap, availableIcons as globalAvailableIcons } from './AppSidebar'; // Re-use from AppSidebar
+import { iconMap as globalIconMap, availableIcons as globalAvailableIcons } from './AppSidebar'; 
 
 interface EditCategoryDialogProps {
   isOpen: boolean;
@@ -42,6 +42,7 @@ const EditCategoryDialog: React.FC<EditCategoryDialogProps> = ({
   const [name, setName] = useState('');
   const [icon, setIcon] = useState<string>(globalAvailableIcons[0].value);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [priority, setPriority] = useState<number>(0); // Added priority state
   const { toast } = useToast();
 
   useEffect(() => {
@@ -49,6 +50,7 @@ const EditCategoryDialog: React.FC<EditCategoryDialogProps> = ({
       setName(categoryToEdit.name);
       setIcon(categoryToEdit.icon || globalAvailableIcons[0].value);
       setIsPrivate(categoryToEdit.isPrivate || false);
+      setPriority(categoryToEdit.priority || 0); // Initialize priority
     }
   }, [isOpen, categoryToEdit]);
 
@@ -63,7 +65,8 @@ const EditCategoryDialog: React.FC<EditCategoryDialogProps> = ({
         ...categoryToEdit, 
         name: name.trim(), 
         icon, 
-        isPrivate 
+        isPrivate,
+        priority: Number(priority) || 0 // Ensure priority is a number
     });
     onClose();
   };
@@ -90,7 +93,7 @@ const EditCategoryDialog: React.FC<EditCategoryDialogProps> = ({
                 className="col-span-3"
                 placeholder="分类名称"
                 required
-                disabled={categoryToEdit?.id === 'default'} // Default category name cannot be changed
+                disabled={categoryToEdit?.name === '通用书签' && categoryToEdit?.icon === 'Folder'} 
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -119,6 +122,19 @@ const EditCategoryDialog: React.FC<EditCategoryDialogProps> = ({
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-cat-priority" className="text-right">
+                权重
+              </Label>
+              <Input
+                id="edit-cat-priority"
+                type="number"
+                value={priority}
+                onChange={(e) => setPriority(parseInt(e.target.value, 10))}
+                className="col-span-3"
+                placeholder="数字越大越靠前"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="edit-cat-privacyButton" className="text-right">
                 可见性
               </Label>
@@ -130,7 +146,7 @@ const EditCategoryDialog: React.FC<EditCategoryDialogProps> = ({
                   onClick={() => setIsPrivate(!isPrivate)}
                   className="flex items-center w-full justify-start text-sm h-9"
                   aria-label={isPrivate ? '设为公开分类' : '设为私密分类'}
-                  disabled={categoryToEdit?.id === 'default'} // Default category cannot be private
+                  disabled={categoryToEdit?.name === '通用书签' && categoryToEdit?.icon === 'Folder'}
                 >
                   {isPrivate ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
                   {isPrivate ? '私密 (仅管理员可见)' : '公开 (所有人可见)'}
@@ -149,3 +165,4 @@ const EditCategoryDialog: React.FC<EditCategoryDialogProps> = ({
 };
 
 export default EditCategoryDialog;
+

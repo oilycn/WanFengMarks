@@ -12,8 +12,8 @@ import EditCategoryDialog from '@/components/EditCategoryDialog';
 import PasswordDialog from '@/components/PasswordDialog';
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'; // Added SheetHeader, SheetTitle
-import { PlusCircle, LogOut, Copy, Save, Menu } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { PlusCircle, LogOut, Copy, Menu } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import {
   DragDropContext,
@@ -79,7 +79,6 @@ export default function HomePage() {
   useEffect(() => {
     // This effect specifically handles setting isClientReadyForDnd
     // to ensure DragDropContext is rendered only after client is fully ready.
-    // It needs to be separate to avoid re-triggering when other dependencies of the main fetchData effect change.
     if (isClient) {
         setIsClientReadyForDnd(true); 
     }
@@ -157,6 +156,7 @@ export default function HomePage() {
     } catch (error) {
       console.error("HomePage: Failed to fetch data:", error);
       toast({ title: "错误", description: "加载数据失败，请稍后重试。", variant: "destructive" });
+       // Check categories specific length inside this block if needed, but it was removed from deps
        if (categories.length === 0) { 
            const defaultCategory = { id: 'default-fallback-ui-error', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false, priority: 0 };
            setCategories([defaultCategory]);
@@ -165,7 +165,7 @@ export default function HomePage() {
       setIsLoading(false);
       console.log("HomePage: fetchData finished. isLoading set to false.");
     }
-  }, [toast]); // Removed categories.length from dependencies
+  }, [toast, categories.length]); // categories.length was re-added based on previous error, check if it's truly needed or if the issue lies elsewhere
 
   useEffect(() => {
     if (isClient && !isCheckingSetup) {
@@ -194,18 +194,17 @@ export default function HomePage() {
     setHasPendingBookmarkOrderChanges(false);
     setActiveCategory(catId);
     if (isMobile) {
-      setIsMobileSidebarOpen(false); // Close mobile sidebar on category selection
+      setIsMobileSidebarOpen(false);
     }
   };
 
   const handleAddBookmark = async (newBookmarkData: Omit<Bookmark, 'id' | 'priority'>) => {
     try {
       const newBookmark = await addBookmarkAction(newBookmarkData);
-      // No direct setBookmarks here, rely on fetchData to get the new correct order from server
       setIsAddBookmarkDialogOpen(false);
       setInitialDataForAddDialog(null); 
-      toast({ title: "书签已添加", description: `"${newBookmark.name}" 已成功添加。` });
-      fetchData(hasPendingBookmarkOrderChanges); // Refetch data to get the new bookmark with server-assigned priority
+      toast({ title: "书签已添加", description: `"${newBookmark.name}" 已成功添加。`, duration: 2000 });
+      fetchData(hasPendingBookmarkOrderChanges);
     } catch (error) {
       console.error("Failed to add bookmark:", error);
       const errorMessage = error instanceof Error ? error.message : "添加书签失败。";
@@ -213,32 +212,31 @@ export default function HomePage() {
     }
   };
 
-  const handleDeleteBookmark = async (bookmarkId: string) => {
+  const handleDeleteBookmark = useCallback(async (bookmarkId: string) => {
     if (!isAdminAuthenticated) {
         toast({ title: "未授权", description: "请先进入管理模式。", variant: "destructive" });
         return;
     }
     try {
       await deleteBookmarkAction(bookmarkId);
-      // Optimistically remove, then refetch to ensure consistency with server ordering
       setBookmarks(prev => prev.filter(bm => bm.id !== bookmarkId));
-      toast({ title: "书签已删除", description: "书签已从服务器删除。", variant: "destructive" });
-      fetchData(hasPendingBookmarkOrderChanges); // Refetch to update priorities if needed
+      toast({ title: "书签已删除", description: "书签已从服务器删除。", variant: "destructive", duration: 2000 });
+      fetchData(hasPendingBookmarkOrderChanges); 
     } catch (error) {
       console.error("Failed to delete bookmark:", error);
       const errorMessage = error instanceof Error ? error.message : "删除书签失败。";
       toast({ title: "错误", description: errorMessage, variant: "destructive" });
     }
-  };
+  }, [isAdminAuthenticated, toast, fetchData, hasPendingBookmarkOrderChanges]);
 
-  const handleOpenEditBookmarkDialog = (bookmark: Bookmark) => {
+  const handleOpenEditBookmarkDialog = useCallback((bookmark: Bookmark) => {
     if (!isAdminAuthenticated) {
       toast({ title: "未授权", description: "请先进入管理模式。", variant: "destructive" });
       return;
     }
     setBookmarkToEdit(bookmark);
     setIsEditBookmarkDialogOpen(true);
-  };
+  }, [isAdminAuthenticated, toast]);
 
   const handleUpdateBookmark = async (updatedBookmark: Bookmark) => {
      if (!isAdminAuthenticated) {
@@ -247,12 +245,11 @@ export default function HomePage() {
     }
     try {
       const newUpdatedBookmark = await updateBookmarkAction(updatedBookmark);
-      // Optimistic update, then refetch for order consistency
       setBookmarks(prev => prev.map(bm => bm.id === newUpdatedBookmark.id ? newUpdatedBookmark : bm));
       setIsEditBookmarkDialogOpen(false);
       setBookmarkToEdit(null);
-      toast({ title: "书签已更新", description: `"${newUpdatedBookmark.name}" 已成功更新。` });
-      fetchData(hasPendingBookmarkOrderChanges); // Refetch to update priorities if needed
+      toast({ title: "书签已更新", description: `"${newUpdatedBookmark.name}" 已成功更新。`, duration: 2000 });
+      fetchData(hasPendingBookmarkOrderChanges);
     } catch (error) {
       console.error("Failed to update bookmark:", error);
       const errorMessage = error instanceof Error ? error.message : "更新书签失败。";
@@ -271,8 +268,8 @@ export default function HomePage() {
     }
     try {
       const newCategory = await addCategoryAction(categoryName, icon, isPrivate);
-      setCategories(prev => [...prev, newCategory].sort((a,b) => b.priority - a.priority));
-      toast({ title: "分类已添加", description: `"${newCategory.name}" 已成功添加。` });
+      setCategories(prev => [...prev, newCategory].sort((a,b) => b.priority - a.priority)); // Sort by priority
+      toast({ title: "分类已添加", description: `"${newCategory.name}" 已成功添加。`, duration: 2000 });
     } catch (error) {
       console.error("Failed to add category:", error);
       const errorMessage = error instanceof Error ? error.message : "添加分类失败。";
@@ -286,9 +283,7 @@ export default function HomePage() {
         return;
     }
     try {
-      const { deletedCount } = await deleteBookmarksByCategoryIdAction(categoryId);
-      console.log(`Deleted ${deletedCount} bookmarks when deleting category ${categoryId}`);
-      
+      await deleteBookmarksByCategoryIdAction(categoryId);
       await deleteCategoryAction(categoryId);
       
       const oldCategoryName = categories.find(c => c.id === categoryId)?.name || '该分类';
@@ -299,7 +294,7 @@ export default function HomePage() {
         const nextCategory = defaultCat || (nextVisibleCategories.length > 0 ? nextVisibleCategories[0] : categories.find(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated) && c.id !== categoryId));
         handleSetActiveCategory(nextCategory?.id || 'all');
       }
-      toast({ title: "分类已删除", description: `"${oldCategoryName}" 及其所有书签已被删除。`, variant: "destructive" });
+      toast({ title: "分类已删除", description: `"${oldCategoryName}" 及其所有书签已被删除。`, variant: "destructive", duration: 2000 });
       setHasPendingBookmarkOrderChanges(false); 
       fetchData(); 
     } catch (error) {
@@ -329,10 +324,10 @@ export default function HomePage() {
     }
     try {
       const newUpdatedCategory = await updateCategoryAction(updatedCategory);
-      setCategories(prev => prev.map(cat => cat.id === newUpdatedCategory.id ? newUpdatedCategory : cat).sort((a,b) => b.priority - a.priority));
+      setCategories(prev => prev.map(cat => cat.id === newUpdatedCategory.id ? newUpdatedCategory : cat).sort((a,b) => b.priority - a.priority)); // Sort by priority
       setIsEditCategoryDialogOpen(false);
       setCategoryToEdit(null);
-      toast({ title: "分类已更新", description: `"${newUpdatedCategory.name}" 已成功更新。` });
+      toast({ title: "分类已更新", description: `"${newUpdatedCategory.name}" 已成功更新。`, duration: 2000 });
     } catch (error)
     {
       console.error("Failed to update category:", error);
@@ -348,7 +343,7 @@ export default function HomePage() {
         setIsAdminAuthenticated(true);
         localStorage.setItem(LS_ADMIN_AUTH_KEY, 'true');
         setShowPasswordDialog(false);
-        toast({ title: "授权成功", description: "已进入管理模式。" });
+        toast({ title: "授权成功", description: "已进入管理模式。", duration: 2000 });
         fetchData(); 
       } else {
         toast({ title: "密码错误", description: "请输入正确的管理员密码。", variant: "destructive" });
@@ -367,7 +362,7 @@ export default function HomePage() {
         const firstPublicCategory = categories.find(c => c.isVisible && !c.isPrivate);
         handleSetActiveCategory(firstPublicCategory?.id || 'all');
     }
-    toast({ title: "已退出", description: "已退出管理模式。" });
+    toast({ title: "已退出", description: "已退出管理模式。", duration: 2000 });
     setHasPendingBookmarkOrderChanges(false); 
     fetchData();
   };
@@ -385,7 +380,7 @@ export default function HomePage() {
   const handleCopyBookmarkletScript = async () => {
     try {
       await navigator.clipboard.writeText(BOOKMARKLET_SCRIPT);
-      toast({ title: "脚本已复制", description: "书签脚本已复制到剪贴板。" });
+      toast({ title: "脚本已复制", description: "书签脚本已复制到剪贴板。", duration: 2000 });
     } catch (err) {
       toast({ title: "复制失败", description: "无法复制脚本，请手动复制或检查浏览器权限。", variant: "destructive" });
       console.error('Failed to copy bookmarklet script: ', err);
@@ -407,6 +402,7 @@ export default function HomePage() {
       return;
     }
     
+    // Get only the bookmarks belonging to the currently active category
     const itemsInActiveCategory = bookmarks.filter(bm => bm.categoryId === activeCategory);
     
     if (sourceIndex < 0 || sourceIndex >= itemsInActiveCategory.length || destinationIndex < 0 || destinationIndex >= itemsInActiveCategory.length) {
@@ -414,14 +410,21 @@ export default function HomePage() {
         return;
     }
     
+    // Reorder only the items within the active category
     const reorderedItemsInActiveCategory = Array.from(itemsInActiveCategory);
     const [movedItem] = reorderedItemsInActiveCategory.splice(sourceIndex, 1);
     reorderedItemsInActiveCategory.splice(destinationIndex, 0, movedItem);
 
-    // Optimistic UI Update
+    // Optimistic UI Update:
+    // Reconstruct the global bookmarks list. Place the reordered items for the active category
+    // first, then all other bookmarks. The server will handle the actual priority values
+    // based on the full ordered list of IDs sent by handleSaveBookmarksOrder.
     setBookmarks(prevGlobalBookmarks => {
       const otherGlobalBookmarks = prevGlobalBookmarks.filter(bm => bm.categoryId !== activeCategory);
-      // Place reordered items first, then others. Server will handle actual priority values.
+      // The reorderedItemsInActiveCategory already have their internal order correct.
+      // When saving, the `handleSaveBookmarksOrder` will map the *entire* `bookmarks` array
+      // to IDs, ensuring the reordered category's items (now at the 'top' conceptually for this update)
+      // effectively get higher global priority.
       return [...reorderedItemsInActiveCategory, ...otherGlobalBookmarks];
     });
 
@@ -430,28 +433,29 @@ export default function HomePage() {
 
   const handleSaveBookmarksOrder = async () => {
     if (!isAdminAuthenticated || !hasPendingBookmarkOrderChanges || !activeCategory || activeCategory === 'all') {
-      toast({ title: "无需保存", description: "书签顺序未更改、未授权或未选择特定分类。", variant: "default" });
+      toast({ title: "无需保存", description: "书签顺序未更改、未授权或未选择特定分类。" });
       return;
     }
 
-    // Construct the list of IDs based on the current *global* bookmark state,
-    // which already reflects the optimistic reordering (reordered category items are at the top).
+    // The `bookmarks` state already reflects the optimistic reordering,
+    // with the reordered category's items placed to effectively have higher priority.
+    // Send the IDs of all bookmarks in their current client-side order.
     const globallyOrderedIdsForServer = bookmarks.map(bm => bm.id);
 
     try {
       const res = await updateBookmarksOrderAction(globallyOrderedIdsForServer);
       if (res.success) {
-        toast({ title: "书签顺序已保存" });
+        toast({ title: "书签顺序已保存", duration: 2000 });
         setHasPendingBookmarkOrderChanges(false);
-        fetchData(true); // Refetch, preserving other pending changes (if any)
+        fetchData(true); 
       } else {
         toast({ title: "保存书签顺序失败", description: "服务器未能保存顺序。", variant: "destructive" });
-        fetchData(); // Revert to server state on failure
+        fetchData(); 
       }
     } catch (error) {
       console.error("Error saving bookmark order:", error);
       toast({ title: "保存书签顺序失败", description: "发生网络错误。", variant: "destructive" });
-      fetchData(); // Revert to server state on failure
+      fetchData(); 
     }
   };
 
@@ -526,10 +530,10 @@ export default function HomePage() {
                   onEditCategory={handleOpenEditCategoryDialog}
                   isAdminAuthenticated={isAdminAuthenticated}
                   activeCategory={activeCategory}
-                  setActiveCategory={handleSetActiveCategory}
+                  setActiveCategory={handleSetActiveCategory} // Updated to handle sidebar close
                   onShowPasswordDialog={() => {
                     setShowPasswordDialog(true);
-                    setIsMobileSidebarOpen(false); // Close sidebar when opening password dialog
+                    setIsMobileSidebarOpen(false); 
                   }}
                   className="flex-grow border-r-0 shadow-none"
                 />
