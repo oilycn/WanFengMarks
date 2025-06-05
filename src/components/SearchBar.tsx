@@ -41,11 +41,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ currentQuery, onQueryChange }) =>
   return (
     <form 
       onSubmit={handleSearchSubmit} 
-      className="flex w-full max-w-lg items-center space-x-0 bg-white/80 dark:bg-neutral-800/70 backdrop-blur-sm p-1 rounded-lg shadow-md"
+      className="flex w-full max-w-lg items-center space-x-0 bg-background dark:bg-neutral-700/80 p-1 rounded-lg shadow-md"
     >
       <Select value={selectedEngine} onValueChange={setSelectedEngine}>
         <SelectTrigger 
-          className="w-auto min-w-[90px] bg-slate-50 hover:bg-slate-100 dark:bg-slate-700 dark:hover:bg-slate-600 border-r border-slate-300/60 dark:border-slate-500/60 text-slate-700 dark:text-slate-300 focus:ring-primary h-9 text-xs px-2.5 rounded-l-md rounded-r-none shadow-sm"
+          className="w-auto min-w-[90px] bg-transparent hover:bg-muted/50 dark:bg-transparent dark:hover:bg-neutral-600/50 border-r border-border dark:border-neutral-500/60 text-foreground/80 dark:text-neutral-300 focus:ring-primary h-9 text-xs px-2.5 rounded-l-md rounded-r-none shadow-none"
           aria-label="选择搜索引擎"
         >
           <div className="flex items-center gap-1 truncate">
@@ -66,7 +66,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ currentQuery, onQueryChange }) =>
         placeholder="搜索网页 或 筛选下方书签..."
         value={currentQuery}
         onChange={(e) => onQueryChange(e.target.value)}
-        className="flex-grow bg-slate-100/50 dark:bg-slate-700/50 border-none text-neutral-700 dark:text-neutral-200 placeholder:text-neutral-500 dark:placeholder:text-neutral-400 focus:ring-0 text-sm h-9 px-3"
+        className="flex-grow bg-transparent dark:bg-transparent border-none text-foreground placeholder:text-muted-foreground dark:placeholder:text-neutral-400/70 focus:ring-0 text-sm h-9 px-3"
         aria-label="搜索网页或筛选书签"
       />
       <Button 

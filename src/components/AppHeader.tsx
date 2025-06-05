@@ -14,9 +14,9 @@ interface AppHeaderProps {
 const AppHeader: React.FC<AppHeaderProps> = ({ searchQuery, setSearchQuery }) => {
   return (
     <header
-      className="p-4 flex items-center justify-between relative border-b shadow-sm backdrop-blur-sm"
-      style={{ backgroundImage: 'var(--header-bg-gradient)' }}
-      data-ai-hint="abstract gradient"
+      className="p-4 flex items-center justify-between relative border-b shadow-sm"
+      style={{ backgroundColor: 'hsl(var(--header-solid-bg))' }}
+      data-ai-hint="light muted background"
     >
       {/* Logo on the left */}
       <div className="flex-shrink-0">
