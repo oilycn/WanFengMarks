@@ -7,20 +7,11 @@ import dynamic from 'next/dynamic';
 import AppSidebar from '@/components/AppSidebar';
 import AppHeader from '@/components/AppHeader';
 import BookmarkGrid from '@/components/BookmarkGrid';
-// import AddBookmarkDialog from '@/components/AddBookmarkDialog'; // Static import removed
-// import EditBookmarkDialog from '@/components/EditBookmarkDialog'; // Static import removed
-// import EditCategoryDialog from '@/components/EditCategoryDialog'; // Static import removed
-// import PasswordDialog from '@/components/PasswordDialog'; // Static import removed
-// import SettingsDialog from '@/components/SettingsDialog'; // Static import removed
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { PlusCircle, LogOut, Copy, Settings as SettingsIcon } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-// import {
-//   DragDropContext, // Statically imported DragDropContext removed
-//   type DropResult,
-// } from 'react-beautiful-dnd';
 import type { DropResult } from 'react-beautiful-dnd';
 import {
   getBookmarksAction,
@@ -119,9 +110,15 @@ export default function HomePage() {
         if (settings.logoIcon) setLogoIconName(settings.logoIcon);
         setAdminPasswordExists(settings.adminPasswordSet);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("HomePage: Error fetching app settings:", error);
-      toast({ title: "错误", description: "无法加载应用设置。", variant: "destructive" });
+      const errorMsg = error instanceof Error ? error.message : "操作失败";
+      if (errorMsg.includes("Invalid Server Actions request")) {
+        toast({ title: "服务器操作错误", description: "加载应用设置时请求无效。请检查代理和服务器配置。", variant: "destructive", duration: 10000 });
+      } else {
+        toast({ title: "错误", description: `无法加载应用设置: ${errorMsg}`, variant: "destructive" });
+      }
+      // Rethrow or handle as appropriate if other components depend on this finishing
     }
   }, [toast]);
 
@@ -133,11 +130,15 @@ export default function HomePage() {
 
     async function performSetupCheck() {
       console.log("HomePage: performSetupCheck running, isClient:", isClient);
+      setIsCheckingSetup(true);
       try {
+        console.log("[HomePage] Attempting to call isSetupCompleteAction Server Action.");
         const setupComplete = await isSetupCompleteAction();
-        console.log("HomePage: setupComplete result from server:", setupComplete);
+        console.log("[HomePage] isSetupCompleteAction Server Action returned:", setupComplete);
+
         if (!active) {
           console.log("HomePage: performSetupCheck inactive, returning.");
+          setIsCheckingSetup(false);
           return;
         }
 
@@ -146,7 +147,7 @@ export default function HomePage() {
           router.push('/setup');
         } else {
           console.log("HomePage: Setup complete, proceeding with auth check and app settings fetch.");
-          await fetchAppSettings(); // Fetch settings after setup is confirmed
+          await fetchAppSettings(); 
           const adminAuth = localStorage.getItem(LS_ADMIN_AUTH_KEY);
           if (adminAuth === 'true') {
             setIsAdminAuthenticated(true);
@@ -155,14 +156,20 @@ export default function HomePage() {
           setIsCheckingSetup(false);
           console.log("HomePage: isCheckingSetup set to false.");
         }
-      } catch (error) {
+      } catch (error: any) {
         if (!active) {
           console.log("HomePage: performSetupCheck (catch) inactive, returning.");
+          setIsCheckingSetup(false);
           return;
         }
-        console.error("HomePage: Error checking setup status:", error);
-        toast({ title: "错误", description: "无法检查应用配置状态，请刷新。", variant: "destructive" });
-        // router.push('/setup'); // Comment out to avoid redirect loops on minor settings fetch errors
+        console.error("HomePage: Error during initial setup check or app settings fetch:", error);
+        const errorMsg = error instanceof Error ? error.message : "未知错误";
+        if (errorMsg.includes("Invalid Server Actions request")) {
+             toast({ title: "配置错误", description: "服务器操作请求无效。请检查您的代理服务器配置是否正确转发了所有必要的头部信息 (Host, X-Forwarded-For, X-Forwarded-Proto, X-Forwarded-Host, X-Forwarded-Port)，并且与 Next.js 服务器期望的一致。当前无法检查应用配置。", variant: "destructive", duration: 15000 });
+        } else {
+            toast({ title: "错误", description: `无法检查应用配置状态: ${errorMsg}`, variant: "destructive" });
+        }
+        setIsCheckingSetup(false); 
       }
     }
     performSetupCheck();
@@ -195,9 +202,14 @@ export default function HomePage() {
         setHasPendingBookmarkOrderChanges(false); 
       }
       console.log("HomePage: Data fetched successfully.");
-    } catch (error) {
+    } catch (error: any) {
       console.error("HomePage: Failed to fetch data:", error);
-      toast({ title: "错误", description: "加载数据失败，请稍后重试。", variant: "destructive" });
+      const errorMsg = error instanceof Error ? error.message : "操作失败";
+       if (errorMsg.includes("Invalid Server Actions request")) {
+        toast({ title: "服务器操作错误", description: "加载数据时请求无效。请检查代理配置。", variant: "destructive", duration: 10000 });
+      } else {
+        toast({ title: "错误", description: `加载数据失败: ${errorMsg}`, variant: "destructive" });
+      }
        if (categories.length === 0) { 
            const defaultCategory = { id: 'default-fallback-ui-error', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false, priority: 0 };
            setCategories([defaultCategory]);
@@ -216,9 +228,6 @@ export default function HomePage() {
       console.log("HomePage: Conditions NOT met for fetching data. isClient:", isClient, "isCheckingSetup:", isCheckingSetup);
     }
   }, [isClient, isCheckingSetup, fetchData]);
-
-  // Removed useEffect that previously set a default active category,
-  // as activeCategory is now initialized to 'all'.
 
   const handleSetActiveCategory = (catId: string | null) => {
     if (hasPendingBookmarkOrderChanges) {
@@ -382,9 +391,14 @@ export default function HomePage() {
       } else {
         toast({ title: "密码错误", description: "请输入正确的管理员密码。", variant: "destructive" });
       }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Password verification error:", error);
-        toast({ title: "验证错误", description: "无法验证密码，请稍后再试。", variant: "destructive" });
+        const errorMsg = error instanceof Error ? error.message : "操作失败";
+        if (errorMsg.includes("Invalid Server Actions request")) {
+          toast({ title: "服务器操作错误", description: "密码验证时请求无效。请检查代理配置。", variant: "destructive", duration: 10000 });
+        } else {
+          toast({ title: "验证错误", description: `无法验证密码: ${errorMsg}`, variant: "destructive" });
+        }
     }
   };
 
@@ -506,7 +520,12 @@ export default function HomePage() {
           return; 
         }
       } catch (error: any) {
-        toast({ title: "密码更新错误", description: error.message || "操作失败。", variant: "destructive" });
+        const errorMsg = error instanceof Error ? error.message : "操作失败";
+        if (errorMsg.includes("Invalid Server Actions request")) {
+          toast({ title: "服务器操作错误", description: "密码更新时请求无效。请检查代理配置。", variant: "destructive", duration: 10000 });
+        } else {
+          toast({ title: "密码更新错误", description: errorMsg, variant: "destructive" });
+        }
         return;
       }
     }
@@ -526,7 +545,12 @@ export default function HomePage() {
           toast({ title: "Logo 更新失败", description: result.error, variant: "destructive" });
         }
       } catch (error: any) {
-        toast({ title: "Logo 更新错误", description: error.message || "操作失败。", variant: "destructive" });
+        const errorMsg = error instanceof Error ? error.message : "操作失败";
+         if (errorMsg.includes("Invalid Server Actions request")) {
+          toast({ title: "服务器操作错误", description: "Logo 更新时请求无效。请检查代理配置。", variant: "destructive", duration: 10000 });
+        } else {
+          toast({ title: "Logo 更新错误", description: errorMsg, variant: "destructive" });
+        }
       }
     }
     
@@ -756,3 +780,4 @@ export default function HomePage() {
     
 
     
+
