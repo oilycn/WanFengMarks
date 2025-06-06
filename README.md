@@ -3,6 +3,8 @@
 
 晚风Marks 是一个使用 Next.js、Tailwind CSS 和 ShadCN UI 构建的现代化、可自托管的书签导航应用。它允许用户管理自己的书签，按分类组织，并提供了一个简洁美观、响应式的仪表盘界面。
 
+![](https://raw.githubusercontent.com/oilycn/MyPic/master/IMG/wanfeng-marks.png)
+
 ## 特性
 
 *   **书签管理**: 轻松添加、编辑、删除书签。
