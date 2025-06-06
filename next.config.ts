@@ -36,7 +36,7 @@ const nextConfig: NextConfig = {
       //   X-Forwarded-Port: 7443
       // Next.js uses these X-Forwarded-* headers to reconstruct what it believes its public origin is.
       // If that reconstructed origin matches an entry in allowedOrigins, the request is permitted.
-      allowedOrigins: ["bm.oily.cn:7443", "ip.oily.cn:7443"],
+      allowedOrigins: ["bm.oily.cn:7443"],
     },
   },
 };
