@@ -101,6 +101,10 @@ npm run dev
     *   `wanfeng-marks`: 您构建的镜像名称。
 
     容器启动后，如果这是首次运行，请访问 `http://<your-docker-host-ip>:9003/setup` (例如 `http://localhost:9003/setup`) 来完成数据库初始化和管理员密码设置。
+    `镜像已制作上传dockerhub,只需要配置mysql即可`
+    ```bash
+    docker run -d -p 9003:3000 -e MYSQL_CONNECTION_STRING="<your_mysql_connection_string>" --name wanfeng-marks-app oilycn/wanfeng-marks```
+
 
 ### 6. 使用应用
 
