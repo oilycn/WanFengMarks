@@ -25,14 +25,7 @@ const nextConfig: NextConfig = {
         hostname: '**',
       },
     ],
-  },
-  experimental: {
-    serverActions: {
-      allowedOrigins: ['https://bm.oily.cn:7443'],
-      allowedForwardedHosts: ['bm.oily.cn'],
-    },
-  },
-  allowedDevOrigins: ['https://bm.oily.cn:7443'],
+  }
 };
 
 export default withBundleAnalyzer(nextConfig);
