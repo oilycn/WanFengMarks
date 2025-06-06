@@ -16,6 +16,7 @@
 *   **书签脚本 (Bookmarklet)**: 通过浏览器书签栏快速添加当前网页到晚风Marks。
 *   **MySQL 后端**: 数据持久化存储在 MySQL 数据库中。
 *   **性能优化**: 核心组件和库（如对话框、拖拽功能）采用动态导入，减少初始加载体积，提升用户体验。
+*   **Docker 支持**: 提供 Dockerfile 以方便容器化部署。
 
 ## 技术栈
 
@@ -25,6 +26,7 @@
 *   **拖拽**: React Beautiful DnD
 *   **数据库**: MySQL
 *   **语言**: TypeScript
+*   **容器化**: Docker
 *   **(可选) AI 功能**: Genkit (如果集成)
 
 ## 快速开始
@@ -33,6 +35,7 @@
 
 *   Node.js (推荐 LTS 版本)
 *   MySQL 数据库服务
+*   (可选) Docker
 
 ### 2. 克隆仓库与安装依赖
 
@@ -57,9 +60,9 @@ MYSQL_CONNECTION_STRING="mysql://your_user:your_password@your_host:your_port/you
 例如，本地开发可能如下：
 `MYSQL_CONNECTION_STRING="mysql://root:password@localhost:3306/wanfeng_marks"`
 
-### 4. 首次运行与应用配置
+### 4. 首次运行与应用配置 (非 Docker 方式)
 
-首次启动应用时，系统会引导您完成数据库的配置：
+如果您不使用 Docker，请按以下步骤运行：
 
 ```bash
 npm run dev
@@ -73,7 +76,33 @@ npm run dev
 *   **初始化数据库**: 连接成功后，点击按钮以在数据库中创建应用所需的表结构。
 *   **设置管理员密码**: 数据库初始化完成后，设置一个管理员密码，用于后续管理书签和分类。
 
-### 5. 使用应用
+### 5. 使用 Docker 运行 (推荐)
+
+项目包含 `Dockerfile`，使用 Next.js 的 `standalone` 输出模式进行优化构建。
+
+1.  **构建 Docker 镜像**:
+    在项目根目录下，运行以下命令构建镜像：
+    ```bash
+    docker build -t wanfeng-marks .
+    ```
+
+2.  **运行 Docker 容器**:
+    使用以下命令运行容器。请确保替换 `<your_mysql_connection_string>` 为您的实际 MySQL 连接字符串。
+    ```bash
+    docker run -d -p 9003:3000 \
+      -e MYSQL_CONNECTION_STRING="<your_mysql_connection_string>" \
+      --name wanfeng-marks-app \
+      wanfeng-marks
+    ```
+    *   `-d`: 后台运行容器。
+    *   `-p 9003:3000`: 将宿主机的 9003 端口映射到容器的 3000 端口。
+    *   `-e MYSQL_CONNECTION_STRING="..."`: **必需！** 设置 MySQL 连接字符串。
+    *   `--name wanfeng-marks-app`: 为容器指定一个名称。
+    *   `wanfeng-marks`: 您构建的镜像名称。
+
+    容器启动后，如果这是首次运行，请访问 `http://<your-docker-host-ip>:9003/setup` (例如 `http://localhost:9003/setup`) 来完成数据库初始化和管理员密码设置。
+
+### 6. 使用应用
 
 配置完成后，您将被引导至主页。
 
@@ -87,7 +116,7 @@ npm run dev
     *   **密码安全**: 在此标签页下，您可以更改管理员密码。如果系统已设置密码，您需要输入当前密码。
     *   **站点外观**: 在此标签页下，您可以自定义站点左上角显示的 Logo 文本和选择一个 Logo 图标。更改会实时保存在数据库并更新界面。
 
-### 6. 书签脚本 (Bookmarklet)
+### 7. 书签脚本 (Bookmarklet)
 
 为了方便快速添加当前浏览的网页为书签：
 
@@ -112,6 +141,8 @@ npm run dev
 *   `src/hooks/`: 自定义 React Hooks (如 `use-toast`, `use-mobile`)。
 *   `src/types/`: TypeScript 类型定义。
 *   `public/`: 静态资源。
+*   `Dockerfile`: 用于构建 Docker 镜像的配置文件。
+*   `.dockerignore`: 指定 Docker 构建时忽略的文件。
 
 ## 贡献
 
