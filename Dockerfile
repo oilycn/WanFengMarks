@@ -1,54 +1,49 @@
+# Use the "builder" stage based on the Node.js 20 Alpine image
+FROM docker.io/library/node:20-alpine AS builder
 
-# Stage 1: Builder
-FROM node:20-alpine AS builder
-
-# Set working directory
+# Set the working directory in the container
 WORKDIR /app
 
-# Environment variables for the builder stage
-ENV NODE_ENV=production
+# Copy package.json and package-lock.json/yarn.lock
+COPY package*.json ./
 
 # Install dependencies
-# Copy package.json and package-lock.json (or yarn.lock)
-COPY package*.json ./
-RUN npm install --production=false # Install all dependencies including devDependencies for build
+RUN npm install --frozen-lockfile
 
 # Copy the rest of the application code
 COPY . .
+
+# Set the NEXT_TS_CONFIG_PATH environment variable to tell Next.js where to find the tsconfig.json
+ENV NEXT_TS_CONFIG_PATH=/app/tsconfig.json
 
 # Build the Next.js application
 # The `standalone` output mode will create a .next/standalone directory
 RUN npm run build
 
+# Use a smaller image for the runner stage
+FROM docker.io/library/node:20-alpine AS runner
 
-# Stage 2: Runner
-FROM node:20-alpine AS runner
+# Set environment variables for production
+ENV NODE_ENV=production
+ENV PORT=3000
 
+# Set the working directory
 WORKDIR /app
 
-# Environment variables for the runner stage
-ENV NODE_ENV=production
-# Set the port the app will run on (Next.js default, adjust if your app uses a different one internally)
-ENV PORT=3000
-# Set HOSTNAME to localhost, so it listens on all interfaces inside the container
-ENV HOSTNAME=0.0.0.0
-
-# Create a non-root user and group for security
-# The nodejs group should exist. If not, create it first.
-# Alpine's node images usually provide a 'node' user/group. Let's create our own for clarity.
-RUN addgroup -S nodejs && adduser -S --uid 1001 -G nodejs nextjs
-
-# Copy the standalone output from the builder stage.
-# This includes server.js, node_modules, .next/server, .next/static,
-# and the public directory (if one was part of the build output).
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-
-# Set user
+# Create a non-root user
+RUN addgroup -S --gid 1001 nodejs
+RUN adduser -S --uid 1001 nextjs
 USER nextjs
+
+# Copy the built Next.js application from the builder stage
+# Including the standalone output and node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
 
 # Expose the port the application runs on
 EXPOSE 3000
 
-# Command to run the application
-# server.js is the entry point for standalone Next.js apps
+# Start the application
 CMD ["node", "server.js"]
+
