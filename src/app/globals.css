@@ -46,7 +46,7 @@ body {
     --chart-5: 27 87% 67%;
     
     --header-solid-bg: 220 60% 97%; 
-    --header-bg-image: url('https://placehold.co/1920x300/edf2f7/edf2f7.png') data-ai-hint="light solid texture";
+    /* --header-bg-image removed */
   }
 
   .dark {
@@ -79,7 +79,7 @@ body {
     --ring: 205 65% 55%;
     
     --header-solid-bg: 220 15% 20%; 
-    --header-bg-image: url('https://placehold.co/1920x300/2c313a/2c313a.png') data-ai-hint="dark solid texture";
+    /* --header-bg-image removed */
   }
 }
 

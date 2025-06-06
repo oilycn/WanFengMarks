@@ -17,10 +17,11 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { PlusCircle, LogOut, Copy, Settings as SettingsIcon } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import {
-  DragDropContext,
-  type DropResult,
-} from 'react-beautiful-dnd';
+// import {
+//   DragDropContext, // Statically imported DragDropContext removed
+//   type DropResult,
+// } from 'react-beautiful-dnd';
+import type { DropResult } from 'react-beautiful-dnd';
 import {
   getBookmarksAction,
   addBookmarkAction,
@@ -50,6 +51,11 @@ const EditBookmarkDialog = dynamic(() => import('@/components/EditBookmarkDialog
 const EditCategoryDialog = dynamic(() => import('@/components/EditCategoryDialog'));
 const PasswordDialog = dynamic(() => import('@/components/PasswordDialog'));
 const SettingsDialog = dynamic(() => import('@/components/SettingsDialog'));
+
+// Dynamically import DragDropContext for react-beautiful-dnd
+const DragDropContext = dynamic(() =>
+  import('react-beautiful-dnd').then(mod => mod.DragDropContext), { ssr: false }
+);
 
 
 const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1';
@@ -648,7 +654,7 @@ export default function HomePage() {
 
   return (
     <>
-      {isClientReadyForDnd ? (
+      {isClientReadyForDnd && isAdminAuthenticated && DragDropContext ? (
         <DragDropContext onDragEnd={handleDragEndBookmarks}>
           {mainContent}
         </DragDropContext>

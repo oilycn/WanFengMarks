@@ -6,8 +6,19 @@ import type { Bookmark, Category } from '@/types';
 import BookmarkItem from './BookmarkItem';
 import { Button } from '@/components/ui/button';
 import { FolderOpen, SearchX, EyeOff, Save } from 'lucide-react';
-import { Droppable, Draggable } from 'react-beautiful-dnd';
+// import { Droppable, Draggable } from 'react-beautiful-dnd'; // Statically imported Droppable, Draggable removed
+import type { DraggableProvidedDraggableProps, DraggableProvidedDragHandleProps } from 'react-beautiful-dnd';
+import dynamic from 'next/dynamic';
 import { Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2, Eye } from 'lucide-react';
+
+
+// Dynamically import Droppable and Draggable for react-beautiful-dnd
+const Droppable = dynamic(() =>
+  import('react-beautiful-dnd').then(mod => mod.Droppable), { ssr: false }
+);
+const Draggable = dynamic(() =>
+  import('react-beautiful-dnd').then(mod => mod.Draggable), { ssr: false }
+);
 
 
 const availableIcons: { name: string; value: string; IconComponent: React.ElementType }[] = [
@@ -93,12 +104,12 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
   const renderBookmarksList = (bookmarksToRender: Bookmark[], isDraggableContext: boolean) => (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
       {bookmarksToRender.map((bookmark, index) => 
-        isDraggableContext ? (
+        isDraggableContext && Draggable ? ( // Check if Draggable is loaded
           <Draggable 
             key={bookmark.id} 
             draggableId={bookmark.id} 
             index={index}
-            isDragDisabled={!canDrag} // Redundant if isDraggableContext implies canDrag, but safe
+            isDragDisabled={!canDrag} 
           >
             {(provided, snapshot) => (
               <BookmarkItem
@@ -160,7 +171,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
     );
   }
   
-  if (canDrag && activeCategoryId) {
+  if (canDrag && activeCategoryId && Droppable && Draggable) { // Ensure Droppable and Draggable are loaded
     return (
       <>
         <div className="flex justify-between items-center mb-4 border-b pb-2">
@@ -202,7 +213,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
     );
   }
 
-  // Default rendering (no D&D or "all" categories view)
+  // Default rendering (no D&D or "all" categories view, or DND components not yet loaded)
   return (
     <div className="space-y-8">
       {(activeCategoryId === 'all' || !activeCategoryId) ? (
@@ -252,3 +263,4 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
 };
 
 export default BookmarkGrid;
+
