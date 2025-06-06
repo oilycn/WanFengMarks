@@ -7,6 +7,7 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 });
 
 const nextConfig: NextConfig = {
+  output: 'standalone', // Enable standalone output mode for Docker
   typescript: {
     ignoreBuildErrors: true,
   },
