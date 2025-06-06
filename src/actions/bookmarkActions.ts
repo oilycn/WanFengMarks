@@ -4,7 +4,7 @@
 import type { Bookmark } from '@/types';
 import { connectToDatabase, query } from '@/lib/mysql';
 import type { RowDataPacket, OkPacket, PoolConnection } from 'mysql2/promise';
-import { unstable_noStore as noStore } from 'next/cache';
+// import { unstable_noStore as noStore } from 'next/cache'; // Removed
 
 interface BookmarkRow extends RowDataPacket {
   id: number;
@@ -33,7 +33,7 @@ function mapDbRowToBookmark(row: BookmarkRow): Bookmark {
 }
 
 export async function getBookmarksAction(): Promise<Bookmark[]> {
-  noStore();
+  // noStore(); // Removed
   console.log('Server Action: getBookmarksAction called (MySQL)');
   try {
     const rows = await query<BookmarkRow[]>("SELECT * FROM bookmarks ORDER BY priority DESC, created_at DESC");
@@ -45,7 +45,7 @@ export async function getBookmarksAction(): Promise<Bookmark[]> {
 }
 
 export async function addBookmarkAction(bookmarkData: Omit<Bookmark, 'id' | 'priority'>): Promise<Bookmark> {
-  noStore();
+  // noStore(); // Removed
   console.log('Server Action: addBookmarkAction called with (MySQL):', bookmarkData);
   const { name, url, categoryId, description, isPrivate } = bookmarkData;
 
@@ -87,7 +87,7 @@ export async function addBookmarkAction(bookmarkData: Omit<Bookmark, 'id' | 'pri
 }
 
 export async function updateBookmarkAction(bookmarkToUpdate: Bookmark): Promise<Bookmark> {
-  noStore();
+  // noStore(); // Removed
   console.log('Server Action: updateBookmarkAction called with (MySQL):', bookmarkToUpdate);
   const { id, name, url, categoryId, description, isPrivate, priority } = bookmarkToUpdate;
   try {
@@ -109,7 +109,7 @@ export async function updateBookmarkAction(bookmarkToUpdate: Bookmark): Promise<
 }
 
 export async function deleteBookmarkAction(bookmarkId: string): Promise<{ id: string }> {
-  noStore();
+  // noStore(); // Removed
   console.log('Server Action: deleteBookmarkAction called for ID (MySQL):', bookmarkId);
   try {
     const result = await query<OkPacket>("DELETE FROM bookmarks WHERE id = ?", [Number(bookmarkId)]);
@@ -125,7 +125,7 @@ export async function deleteBookmarkAction(bookmarkId: string): Promise<{ id: st
 }
 
 export async function deleteBookmarksByCategoryIdAction(categoryId: string): Promise<{ deletedCount: number }> {
-  noStore();
+  // noStore(); // Removed
   console.log('Server Action: deleteBookmarksByCategoryIdAction called for category ID (MySQL):', categoryId);
   try {
     if (categoryId === 'default' || categoryId === null || categoryId === undefined) {
@@ -142,7 +142,7 @@ export async function deleteBookmarksByCategoryIdAction(categoryId: string): Pro
 }
 
 export async function updateBookmarksOrderAction(orderedBookmarkIds: string[]): Promise<{ success: boolean }> {
-  noStore();
+  // noStore(); // Removed
   console.log('Server Action: updateBookmarksOrderAction called with (MySQL):', orderedBookmarkIds);
   if (!orderedBookmarkIds || orderedBookmarkIds.length === 0) {
     return { success: true }; // No order to update
@@ -172,3 +172,5 @@ export async function updateBookmarksOrderAction(orderedBookmarkIds: string[]): 
     if (connection) connection.release();
   }
 }
+
+    

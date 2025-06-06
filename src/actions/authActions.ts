@@ -1,7 +1,7 @@
 
 'use server';
 
-import { unstable_noStore as noStore } from 'next/cache';
+// import { unstable_noStore as noStore } from 'next/cache'; // Removed
 import { connectToDatabase, query } from '@/lib/mysql';
 import bcrypt from 'bcryptjs';
 import type { RowDataPacket, OkPacket, PoolConnection } from 'mysql2/promise';
@@ -34,7 +34,7 @@ export interface AppSettingsResult {
 
 
 async function getConfigValue(key: string, connection?: PoolConnection): Promise<string | null> {
-  noStore();
+  // noStore(); // Removed
   console.log(`[AuthAction] getConfigValue: Fetching config key "${key}"`);
   try {
     let actualRows: ConfigRow[];
@@ -70,7 +70,7 @@ async function setConfigValue(key: string, value: string, connection?: PoolConne
 }
 
 export async function testMySQLConnectionAction(): Promise<ActionResult> {
-  noStore();
+  // noStore(); // Removed
   let connection: PoolConnection | null = null;
   console.log('[AuthAction] testMySQLConnectionAction: Attempting to test MySQL connection...');
   try {
@@ -102,7 +102,7 @@ export async function testMySQLConnectionAction(): Promise<ActionResult> {
 }
 
 export async function initializeMySQLDatabaseAction(): Promise<ActionResult> {
-  noStore();
+  // noStore(); // Removed
   console.log('[AuthAction] initializeMySQLDatabaseAction: Attempting to initialize MySQL database tables...');
   let connection: PoolConnection | null = null;
   try {
@@ -195,7 +195,7 @@ export async function initializeMySQLDatabaseAction(): Promise<ActionResult> {
 }
 
 export async function setInitialAdminConfigAction(password: string): Promise<ActionResult> {
-  noStore();
+  // noStore(); // Removed
   console.log('[AuthAction] setInitialAdminConfigAction: Attempting to set initial admin config.');
 
   if (!password) {
@@ -229,7 +229,7 @@ export async function setInitialAdminConfigAction(password: string): Promise<Act
 }
 
 export async function verifyAdminPasswordAction(password: string): Promise<boolean> {
-  noStore();
+  // noStore(); // Removed
   console.log('[AuthAction] verifyAdminPasswordAction: Verifying admin password attempt.');
   try {
     const setupCompleted = await isSetupCompleteAction(); // This now has more logging
@@ -253,7 +253,7 @@ export async function verifyAdminPasswordAction(password: string): Promise<boole
 }
 
 export async function isSetupCompleteAction(): Promise<boolean> {
-  noStore();
+  // noStore(); // Removed
   console.log('[AuthAction] isSetupCompleteAction: Checking if setup is complete...');
   let connection: PoolConnection | null = null;
   try {
@@ -290,7 +290,7 @@ export async function isSetupCompleteAction(): Promise<boolean> {
 
 
 export async function getSelectedDatabaseTypeAction(): Promise<string> {
-    noStore();
+    // noStore(); // Removed
     console.log('[AuthAction] getSelectedDatabaseTypeAction: Determining selected database type.');
     try {
       const isSetupDone = await isSetupCompleteAction();
@@ -307,7 +307,7 @@ export async function getSelectedDatabaseTypeAction(): Promise<string> {
 }
 
 export async function resetSetupStateAction(): Promise<ActionResult> {
-    noStore();
+    // noStore(); // Removed
     console.log('[AuthAction] resetSetupStateAction: Attempting to reset setup state.');
     let connection: PoolConnection | null = null;
     try {
@@ -345,7 +345,7 @@ export async function resetSetupStateAction(): Promise<ActionResult> {
 }
 
 export async function changeAdminPasswordAction(currentPasswordInput: string, newPasswordInput: string): Promise<ActionResult> {
-  noStore();
+  // noStore(); // Removed
   console.log('[AuthAction] changeAdminPasswordAction: Attempting to change admin password.');
 
   if (!newPasswordInput) {
@@ -404,7 +404,7 @@ export async function changeAdminPasswordAction(currentPasswordInput: string, ne
 }
 
 export async function getAppSettingsAction(): Promise<AppSettingsResult> {
-  noStore();
+  // noStore(); // Removed
   console.log('[AuthAction] getAppSettingsAction: Fetching app settings.');
   let connection: PoolConnection | null = null;
   try {
@@ -438,7 +438,7 @@ export async function getAppSettingsAction(): Promise<AppSettingsResult> {
 }
 
 export async function updateLogoSettingsAction(logoText: string, logoIcon: string): Promise<ActionResult> {
-  noStore();
+  // noStore(); // Removed
   console.log(`[AuthAction] updateLogoSettingsAction: Updating logoText to "${logoText}", logoIcon to "${logoIcon}".`);
   if (!logoText || !logoIcon) {
     return { success: false, error: 'Logo 文本和图标不能为空。' };
@@ -466,6 +466,8 @@ export async function updateLogoSettingsAction(logoText: string, logoIcon: strin
     }
   }
 }
+    
+
     
 
     

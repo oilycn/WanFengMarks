@@ -4,7 +4,7 @@
 import type { Category } from '@/types';
 import { connectToDatabase, query } from '@/lib/mysql';
 import type { RowDataPacket, OkPacket, PoolConnection } from 'mysql2/promise';
-import { unstable_noStore as noStore } from 'next/cache';
+// import { unstable_noStore as noStore } from 'next/cache'; // Removed
 
 interface CategoryRow extends RowDataPacket {
   id: number;
@@ -31,7 +31,7 @@ function mapDbRowToCategory(row: CategoryRow): Category {
 }
 
 async function ensureDefaultCategory(connection?: PoolConnection) {
-  noStore();
+  // noStore(); // Removed
   const defaultCategoryName = '通用书签';
   const execQuery = connection ? connection.query.bind(connection) : query;
   try {
@@ -49,7 +49,7 @@ async function ensureDefaultCategory(connection?: PoolConnection) {
 }
 
 export async function getCategoriesAction(): Promise<Category[]> {
-  noStore();
+  // noStore(); // Removed
   console.log('Server Action: getCategoriesAction called (MySQL)');
   try {
     await ensureDefaultCategory();
@@ -62,7 +62,7 @@ export async function getCategoriesAction(): Promise<Category[]> {
 }
 
 export async function addCategoryAction(name: string, icon?: string, isPrivate?: boolean): Promise<Category> {
-  noStore();
+  // noStore(); // Removed
   console.log('Server Action: addCategoryAction called with (MySQL):', { name, icon, isPrivate });
   let connection: PoolConnection | null = null;
   try {
@@ -104,7 +104,7 @@ export async function addCategoryAction(name: string, icon?: string, isPrivate?:
 }
 
 export async function updateCategoryAction(categoryToUpdate: Category): Promise<Category> {
-  noStore();
+  // noStore(); // Removed
   console.log('Server Action: updateCategoryAction called with (MySQL):', categoryToUpdate);
   const { id, name, icon, isVisible, isPrivate, priority } = categoryToUpdate; // priority included
   try {
@@ -144,7 +144,7 @@ export async function updateCategoryAction(categoryToUpdate: Category): Promise<
 }
 
 export async function deleteCategoryAction(categoryId: string): Promise<{ id: string }> {
-  noStore();
+  // noStore(); // Removed
   console.log('Server Action: deleteCategoryAction called for ID (MySQL):', categoryId);
   try {
     const categoryToDeleteResult = await query<CategoryRow[]>("SELECT name, icon FROM categories WHERE id = ?", [categoryId]);
@@ -170,7 +170,7 @@ export async function deleteCategoryAction(categoryId: string): Promise<{ id: st
 }
 
 export async function updateCategoriesOrderAction(orderedCategoryIds: string[]): Promise<{ success: boolean }> {
-  noStore();
+  // noStore(); // Removed
   console.log('Server Action: updateCategoriesOrderAction called with (MySQL):', orderedCategoryIds);
   if (!orderedCategoryIds || orderedCategoryIds.length === 0) {
     return { success: true }; // No order to update
@@ -200,3 +200,5 @@ export async function updateCategoriesOrderAction(orderedCategoryIds: string[]):
     if (connection) connection.release();
   }
 }
+
+    
