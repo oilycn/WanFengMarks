@@ -20,13 +20,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 
-// Import dnd-kit hooks and utilities (commented out due to module resolution issues)
-/*
+// Import dnd-kit hooks and utilities
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-*/
 
 interface BookmarkItemProps {
+  id: string; // Required for useSortable
   bookmark: Bookmark;
   onDeleteBookmark: (id: string) => void;
   onEditBookmark: (bookmark: Bookmark) => void;
@@ -34,28 +33,29 @@ interface BookmarkItemProps {
   isDraggable: boolean;
 }
 
-// Use forwardRef to pass ref, though DND is currently disabled
-const BookmarkItem = forwardRef<HTMLDivElement, BookmarkItemProps>(({
+const BookmarkItem: React.FC<BookmarkItemProps> = ({
+  id,
   bookmark,
   onDeleteBookmark,
   onEditBookmark,
   isAdminAuthenticated,
   isDraggable,
-}, ref) => {
+}) => {
   const [faviconError, setFaviconError] = useState(false);
 
   useEffect(() => {
-    setFaviconError(false);
+    setFaviconError(false); // Reset error state if URL changes
   }, [bookmark.url]);
 
   const getFaviconUrl = (url: string) => {
     try {
       const domain = new URL(url).hostname;
+      // Using a proxy for Google Favicon service to avoid potential CORS issues or direct client exposure
       const googleFaviconServiceUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
       return `https://proxy.oily.cn/proxy/${googleFaviconServiceUrl}`;
     } catch (error) {
       console.error("Invalid URL for favicon:", url, error);
-      return '';
+      return ''; // Return empty string if URL is invalid
     }
   };
   const favicon = getFaviconUrl(bookmark.url);
@@ -64,12 +64,6 @@ const BookmarkItem = forwardRef<HTMLDivElement, BookmarkItemProps>(({
     onDeleteBookmark(bookmark.id);
   };
 
-  if (!isAdminAuthenticated && bookmark.isPrivate) {
-    return null;
-  }
-
-  // dnd-kit useSortable hook (commented out)
-  /*
   const {
     attributes,
     listeners,
@@ -77,29 +71,26 @@ const BookmarkItem = forwardRef<HTMLDivElement, BookmarkItemProps>(({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: bookmark.id });
+  } = useSortable({ id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 50 : undefined, // Ensure dragging item is on top
+    zIndex: isDragging ? 50 : undefined,
   };
-  */
-  const isDragging = false; // DND disabled
-  const style = {}; // DND disabled
-  const attributes = {}; // DND disabled
-  const listeners = {}; // DND disabled
-  const setNodeRef = ref; // Pass original ref if DND disabled
+
+  if (!isAdminAuthenticated && bookmark.isPrivate) {
+    return null; // Don't render private bookmarks if not admin
+  }
 
   return (
     <div
-      ref={setNodeRef as React.Ref<HTMLDivElement>} // Use the ref for the main div
+      ref={setNodeRef}
       style={style}
-      {...attributes}
+      {...attributes} // Only spread attributes if not using a separate drag handle
       className={cn(
         "group relative rounded-lg flex flex-col transition-shadow",
         isDragging ? 'shadow-2xl scale-105 bg-card z-50' : 'shadow-lg hover:shadow-xl bg-card/70',
-        // isDraggable ? 'cursor-default' : '' // DND specific cursor change removed
       )}
     >
       <Card className={cn(
@@ -110,7 +101,7 @@ const BookmarkItem = forwardRef<HTMLDivElement, BookmarkItemProps>(({
         <div className="flex items-center p-3">
           {isAdminAuthenticated && isDraggable && (
             <div
-              {...listeners}
+              {...listeners} // Apply listeners to the drag handle
               className="cursor-grab p-1 mr-1 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-50 transition-opacity"
               aria-label="拖动排序"
             >
@@ -133,6 +124,7 @@ const BookmarkItem = forwardRef<HTMLDivElement, BookmarkItemProps>(({
                   height={32}
                   className="object-contain w-full h-full"
                   onError={() => {
+                    console.log(`Favicon error for ${bookmark.name} at ${favicon}`);
                     setFaviconError(true);
                   }}
                 />
@@ -162,7 +154,7 @@ const BookmarkItem = forwardRef<HTMLDivElement, BookmarkItemProps>(({
         {isAdminAuthenticated && (
           <div className={cn(
             "absolute top-1 right-1 flex items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity space-x-0.5",
-            isDragging && "opacity-100"
+            isDragging && "opacity-100" // Keep controls visible if dragging this item
           )}>
             <Button
               variant="ghost"
@@ -204,8 +196,8 @@ const BookmarkItem = forwardRef<HTMLDivElement, BookmarkItemProps>(({
       </Card>
     </div>
   );
-});
-
-BookmarkItem.displayName = 'BookmarkItem';
+};
 
 export default BookmarkItem;
+
+    

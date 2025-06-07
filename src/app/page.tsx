@@ -36,10 +36,8 @@ import {
 } from '@/actions/authActions';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-// Import dnd-kit components and types (commented out due to module resolution issues)
-// import { DndContext, DragEndEvent, closestCorners } from '@dnd-kit/core';
-// Temp type for DragEndEvent
-type DragEndEvent = any;
+// Import dnd-kit components and types
+import type { DragEndEvent } from '@dnd-kit/core';
 
 
 // Dynamically import dialogs
@@ -56,7 +54,7 @@ const APP_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'h
 
 const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);let desc='';const metaDesc=document.querySelector('meta[name="description"]');if(metaDesc&&metaDesc.content){desc=encodeURIComponent(metaDesc.content);}else{const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc&&ogDesc.content){desc=encodeURIComponent(ogDesc.content);}}const popupWidth=500;const popupHeight=650;const left=(screen.width/2)-(popupWidth/2);const top=(screen.height/2)-(popupHeight/2);const wanfengWindow=window.open(\`\${appUrl}/add-bookmark-popup?name=\${title}&url=\${pageUrl}&desc=\${desc}\`, 'wanfengMarksAddBookmarkPopup', \`toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=\${popupWidth}, height=\${popupHeight}, top=\${top}, left=\${left}\`);if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks书签添加窗口。请检查浏览器是否阻止了弹出窗口。');}})();`;
 
-// Helper function to move an item within an array (inlined)
+// Helper function to move an item within an array (local implementation)
 function localArrayMove<T>(array: T[], from: number, to: number): T[] {
   const newArray = [...array];
   const [item] = newArray.splice(from, 1);
@@ -85,7 +83,6 @@ export default function HomePage() {
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
 
   const [initialDataForAddDialog, setInitialDataForAddDialog] = useState<{ name?: string; url?: string; description?: string } | null>(null);
-  // const [isClientReadyForDnd, setIsClientReadyForDnd] = useState(false); // DND related state
   const [hasPendingBookmarkOrderChanges, setHasPendingBookmarkOrderChanges] = useState(false);
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -102,12 +99,6 @@ export default function HomePage() {
   useEffect(() => {
     setIsClient(true);
   }, []);
-
-  // useEffect(() => { // DND related effect
-  //   if (isClient) {
-  //     setIsClientReadyForDnd(true);
-  //   }
-  // }, [isClient]);
 
 
   const fetchAppSettings = useCallback(async () => {
@@ -444,9 +435,6 @@ export default function HomePage() {
   };
 
   const handleDragEndBookmarks = (event: DragEndEvent) => {
-    // DND functionality is currently disabled due to module resolution issues.
-    // This function body can be restored if @dnd-kit is fixed.
-    /*
     console.log("Drag ended:", event);
     const { active, over } = event;
 
@@ -476,36 +464,72 @@ export default function HomePage() {
       }
 
       const reorderedItemsInActiveCategory = localArrayMove(itemsInActiveCategory, oldIndex, newIndex);
+      
+      // This is a simplified re-combination. For a globally consistent order across all categories after drag,
+      // this would need to be more sophisticated, likely involving updating priorities based on the new global order.
+      // For now, we just update the order within the active category and place these items first, which might
+      // not be ideal if bookmarks are ever shown mixed from different categories without re-filtering by category.
+      // However, since display is usually per-category or 'all' (which re-sorts by category sections), this is often okay.
+      const newGlobalBookmarks = [...reorderedItemsInActiveCategory, ...otherGlobalBookmarks];
+      
+      // Update: instead of just concatenating, we should map new priorities to the reorderedItemsInActiveCategory
+      // and then merge back into the full list, ensuring other categories retain their relative order/priorities.
+      // For now, to keep the example focused on @dnd-kit basics for in-category sort:
+      // We assume updateBookmarksOrderAction will handle persisting the order based on the active category context.
+      // The local reorder is mainly for immediate visual feedback.
+      // The below line will just reorder the "itemsInActiveCategory" and put them back with the rest.
+      // This assumes the UI for "all bookmarks" would re-filter and re-sort from scratch if priorities are not globally updated.
+      // A more robust approach might be to update the entire `bookmarks` array based on new global `priority` values.
 
-      return [...reorderedItemsInActiveCategory, ...otherGlobalBookmarks];
+      // For in-category visual update:
+      const updatedGlobalBookmarks = prevGlobalBookmarks.map(bm => {
+        const reorderedItem = reorderedItemsInActiveCategory.find(ribm => ribm.id === bm.id);
+        if (reorderedItem && bm.categoryId === activeCategory) {
+          // Find the new index in reorderedItemsInActiveCategory to assign a relative priority for visual sorting
+          // This visual priority might differ from the persisted one until save.
+          // For this client-side sort, we primarily just want the new array order.
+          return reorderedItem;
+        }
+        return bm;
+      });
+      // This re-combination is tricky. The safest is to have reorderedItemsInActiveCategory,
+      // then filter out these items from prevGlobalBookmarks, and then concat.
+      
+      const filteredPrevGlobalBookmarks = prevGlobalBookmarks.filter(
+        bm => bm.categoryId !== activeCategory || !itemsInActiveCategory.find(iic => iic.id === bm.id)
+      );
+
+      return [...reorderedItemsInActiveCategory, ...filteredPrevGlobalBookmarks];
+
     });
-
     setHasPendingBookmarkOrderChanges(true);
-    */
   };
 
   const handleSaveBookmarksOrder = async () => {
-    if (!isAdminAuthenticated || !hasPendingBookmarkOrderChanges) {
-      toast({ title: "无需保存", description: "书签顺序未更改或未授权。" });
+    if (!isAdminAuthenticated || !hasPendingBookmarkOrderChanges || !activeCategory || activeCategory === 'all') {
+      toast({ title: "无需保存", description: "书签顺序未更改、未授权或未选择特定分类。" });
       return;
     }
 
-    const globallyOrderedIdsForServer = bookmarks.map(bm => bm.id);
+    // Only get IDs of bookmarks in the current active category for saving their order
+    const orderedIdsInActiveCategory = bookmarks
+        .filter(bm => bm.categoryId === activeCategory)
+        .map(bm => bm.id);
 
     try {
-      const res = await updateBookmarksOrderAction(globallyOrderedIdsForServer);
+      const res = await updateBookmarksOrderAction(orderedIdsInActiveCategory);
       if (res.success) {
         toast({ title: "书签顺序已保存", duration: 2000 });
         setHasPendingBookmarkOrderChanges(false);
-        fetchData(true);
+        fetchData(true); // Fetch data, preserving any pending order changes in other categories (if applicable)
       } else {
         toast({ title: "保存书签顺序失败", description: "服务器未能保存顺序。", variant: "destructive" });
-        fetchData();
+        fetchData(); // Fetch to revert to server state
       }
     } catch (error) {
       console.error("Error saving bookmark order:", error);
       toast({ title: "保存书签顺序失败", description: "发生网络错误。", variant: "destructive" });
-      fetchData();
+      fetchData(); // Fetch to revert to server state
     }
   };
 
@@ -622,7 +646,6 @@ export default function HomePage() {
 
   const categoriesForSidebar = visibleCategories.length > 0 ? visibleCategories : categories.filter(c => c.isVisible);
 
-
   const mainContent = (
       <div className="flex flex-col h-screen overflow-hidden">
         <AppHeader
@@ -681,7 +704,7 @@ export default function HomePage() {
                 searchQuery={searchQuery}
                 hasPendingOrderChanges={hasPendingBookmarkOrderChanges}
                 onSaveOrder={handleSaveBookmarksOrder}
-                onDragEnd={handleDragEndBookmarks}
+                onDragEnd={handleDragEndBookmarks} 
               />
             </main>
             <footer className="text-center py-3 border-t bg-background/50 text-xs text-muted-foreground">
@@ -783,3 +806,5 @@ export default function HomePage() {
     </>
   );
 }
+
+    
