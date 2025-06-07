@@ -51,9 +51,8 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
   const [showFallbackIcon, setShowFallbackIcon] = useState(false);
 
   useEffect(() => {
-    let isActive = true; // To prevent state updates on unmounted component
+    let isActive = true; 
 
-    // Reset states for the new bookmark URL
     setShowFallbackIcon(false);
     setCurrentIconSrc(null);
 
@@ -62,55 +61,49 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     try {
       domain = new URL(fullBookmarkUrl).hostname;
     } catch (e) {
-      // Invalid URL, show fallback immediately
       if (isActive) setShowFallbackIcon(true);
       return;
     }
 
-    const cacheKey = `favicon-cache-${domain}`;
+    const cacheKey = `favicon-cache-v2-${domain}`; // Changed cache key version
     const PROXY_BASE_URL = 'https://proxy.oily.cn/proxy/';
-    const FAVICON_SERVICE_BASE_URL = 'https://favicon.splitbee.io/?url=';
 
     const CACHE_DURATION_SUCCESS = 24 * 60 * 60 * 1000; // 24 hours
     const CACHE_DURATION_ERROR = 1 * 60 * 60 * 1000;    // 1 hour
 
-    // Try to load from localStorage
     try {
       const cachedItemString = localStorage.getItem(cacheKey);
       if (cachedItemString) {
         const cachedItem = JSON.parse(cachedItemString);
         const now = Date.now();
 
-        // Check for cached success
         if (cachedItem.src && cachedItem.timestamp && (now - cachedItem.timestamp < CACHE_DURATION_SUCCESS)) {
           if (isActive) {
             setCurrentIconSrc(cachedItem.src);
           }
-          return; // Valid cache hit
+          return; 
         }
 
-        // Check for cached error
         if (cachedItem.errorTimestamp && (now - cachedItem.errorTimestamp < CACHE_DURATION_ERROR)) {
           if (isActive) {
             setShowFallbackIcon(true);
           }
-          return; // Recent error cached
+          return; 
         }
       }
     } catch (e) {
-      // Error reading or parsing cache, clear it
       try {
         localStorage.removeItem(cacheKey);
       } catch (removeError) {
-        // Silently ignore if localStorage is unavailable for removal
+        // Silently ignore
       }
     }
 
-    // If no valid cache, construct the new URL to fetch via proxy
-    // The URL of the favicon service we want to proxy
-    const targetServiceUrl = `${FAVICON_SERVICE_BASE_URL}${encodeURIComponent(fullBookmarkUrl)}`;
-    // The final URL using the user's proxy. The proxy receives the encoded targetServiceUrl as part of its path.
-    const proxiedIconUrl = `${PROXY_BASE_URL}${encodeURIComponent(targetServiceUrl)}`;
+    // Construct the target URL: attempt to fetch domain/favicon.ico
+    const targetFaviconUrl = `https://${domain}/favicon.ico`;
+    
+    // The final URL using the user's proxy. The proxy receives the encoded targetFaviconUrl.
+    const proxiedIconUrl = `${PROXY_BASE_URL}${encodeURIComponent(targetFaviconUrl)}`;
     
     if (isActive) {
       setCurrentIconSrc(proxiedIconUrl);
@@ -123,30 +116,28 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
 
   const handleImageError = () => {
     setShowFallbackIcon(true);
-    // Cache the error
     try {
       const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
       const domain = new URL(fullBookmarkUrl).hostname;
-      const cacheKey = `favicon-cache-${domain}`;
+      const cacheKey = `favicon-cache-v2-${domain}`;
       localStorage.setItem(cacheKey, JSON.stringify({ errorTimestamp: Date.now() }));
     } catch (e) {
-      // Could be an invalid URL if bookmark.url is malformed
+       // Silently ignore
     }
   };
 
   const handleImageLoad = () => {
-    // Image loaded successfully, cache its src
-    if (currentIconSrc && !showFallbackIcon) { // Ensure we have a src and no error occurred
+    if (currentIconSrc && !showFallbackIcon) { 
       try {
         const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
         const domain = new URL(fullBookmarkUrl).hostname;
-        const cacheKey = `favicon-cache-${domain}`;
+        const cacheKey = `favicon-cache-v2-${domain}`;
         localStorage.setItem(cacheKey, JSON.stringify({
           src: currentIconSrc,
           timestamp: Date.now(),
         }));
       } catch (e) {
-        // Could be an invalid URL
+        // Silently ignore
       }
     }
   };
@@ -196,7 +187,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
             </div>
           )}
           <a
-            href={bookmark.url}
+            href={getFullUrlWithScheme(bookmark.url)} // Ensure the link also has a scheme
             target="_blank"
             rel="noopener noreferrer"
             className="flex-grow flex items-center text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline min-w-0"
@@ -207,9 +198,9 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
                 <Globe2 className="w-5 h-5 text-muted-foreground" />
               ) : (
                 <img
-                  key={currentIconSrc} // Re-trigger load if src changes (e.g. after cache clear)
+                  key={currentIconSrc} 
                   src={currentIconSrc}
-                  alt="" // Decorative
+                  alt="" 
                   width={20}
                   height={20}
                   className="w-5 h-5 object-contain"
@@ -286,4 +277,3 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
 };
 
 export default BookmarkItem;
-
