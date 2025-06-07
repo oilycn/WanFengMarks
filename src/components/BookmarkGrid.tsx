@@ -73,23 +73,23 @@ iconMap['Default'] = Folder;
 
 
 interface BookmarkGridProps {
-  bookmarks: Bookmark[]; 
-  categories: Category[]; 
+  bookmarks: Bookmark[];
+  categories: Category[];
   onDeleteBookmark: (id: string) => void;
-  onEditBookmark: (bookmark: Bookmark) => void; 
+  onEditBookmark: (bookmark: Bookmark) => void;
   isAdminAuthenticated: boolean;
-  currentCategoryName?: string; 
+  currentCategoryName?: string;
   activeCategoryId: string | null;
   searchQuery?: string;
   hasPendingOrderChanges: boolean;
   onSaveOrder: () => void;
 }
 
-const BookmarkGrid: React.FC<BookmarkGridProps> = ({ 
-    bookmarks, 
-    categories, 
+const BookmarkGrid: React.FC<BookmarkGridProps> = ({
+    bookmarks,
+    categories,
     onDeleteBookmark,
-    onEditBookmark, 
+    onEditBookmark,
     isAdminAuthenticated,
     currentCategoryName,
     activeCategoryId,
@@ -103,13 +103,13 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
 
   const renderBookmarksList = (bookmarksToRender: Bookmark[], isDraggableContext: boolean) => (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-      {bookmarksToRender.map((bookmark, index) => 
+      {bookmarksToRender.map((bookmark, index) =>
         isDraggableContext && Draggable ? ( // Check if Draggable is loaded
-          <Draggable 
-            key={bookmark.id} 
-            draggableId={bookmark.id} 
+          <Draggable
+            key={bookmark.id}
+            draggableId={bookmark.id}
             index={index}
-            isDragDisabled={!canDrag} 
+            isDragDisabled={!canDrag}
           >
             {(provided, snapshot) => (
               <BookmarkItem
@@ -170,13 +170,13 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
       </div>
     );
   }
-  
+
   if (canDrag && activeCategoryId && Droppable && Draggable) { // Ensure Droppable and Draggable are loaded
     return (
       <>
         <div className="flex justify-between items-center mb-4 border-b pb-2">
-            <h2 
-                id={`category-title-main`} 
+            <h2
+                id={`category-title-main`}
                 className="text-xl font-semibold text-foreground flex items-center"
             >
                 {categories.find(c => c.id === activeCategoryId)?.icon && React.createElement(iconMap[categories.find(c => c.id === activeCategoryId)?.icon || 'Default'] || iconMap['Default'], {className: "mr-2 h-5 w-5 text-primary flex-shrink-0"})}
@@ -190,19 +190,19 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
                 </Button>
             )}
         </div>
-        <Droppable 
-            key={activeCategoryId} 
-            droppableId={activeCategoryId} 
-            type="BOOKMARK" 
+        <Droppable
+            key={activeCategoryId}
+            droppableId={activeCategoryId}
+            type="BOOKMARK"
             isDropDisabled={!canDrag}
-            isCombineEnabled={false} 
-            ignoreContainerClipping={false}
+            isCombineEnabled={false}
+            ignoreContainerClipping={true}
         >
             {(provided, snapshot) => (
-            <div 
-                {...provided.droppableProps} 
+            <div
+                {...provided.droppableProps}
                 ref={provided.innerRef}
-                className={`min-h-[100px] rounded-md ${snapshot.isDraggingOver ? 'bg-accent/10' : ''}`}
+                className={`rounded-md ${snapshot.isDraggingOver ? 'bg-accent/10' : ''}`}
             >
                 {renderBookmarksList(bookmarks, true)}
                 {provided.placeholder}
@@ -230,8 +230,8 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
             return (
               <section key={category.id} aria-labelledby={`category-title-${category.id}`}>
                  <div className="flex justify-between items-center mb-4 border-b pb-2">
-                    <h2 
-                        id={`category-title-${category.id}`} 
+                    <h2
+                        id={`category-title-${category.id}`}
                         className="text-xl font-semibold text-foreground flex items-center"
                     >
                         <IconComponent className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
@@ -243,11 +243,11 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
               </section>
             );
           })
-      ) : ( 
+      ) : (
         <>
             <div className="flex justify-between items-center mb-4 border-b pb-2">
-                <h2 
-                    id={`category-title-main`} 
+                <h2
+                    id={`category-title-main`}
                     className="text-xl font-semibold text-foreground flex items-center"
                 >
                     {categories.find(c => c.id === activeCategoryId)?.icon && React.createElement(iconMap[categories.find(c => c.id === activeCategoryId)?.icon || 'Default'] || iconMap['Default'], {className: "mr-2 h-5 w-5 text-primary flex-shrink-0"})}
