@@ -51,10 +51,9 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
   const getFaviconUrl = (url: string) => {
     try {
       const domain = new URL(url).hostname;
-      // Using a domestic favicon service: api.iowen.cn
-      // It typically returns a suitably sized icon if available.
-      const iowenFaviconServiceUrl = `https://api.iowen.cn/favicon/${domain}.png`;
-      return iowenFaviconServiceUrl;
+      // Using icon.horse service
+      const iconHorseServiceUrl = `https://icon.horse/icon/${domain}`;
+      return iconHorseServiceUrl;
     } catch (error) {
       console.error("Invalid URL for favicon:", url, error);
       return ''; // Return empty string or a path to a default icon if URL is invalid
