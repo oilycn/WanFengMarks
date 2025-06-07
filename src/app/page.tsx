@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { PlusCircle, LogOut, Copy, Settings as SettingsIcon } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import type { DropResult } from 'react-beautiful-dnd';
+// Removed react-beautiful-dnd type import
 import {
   getBookmarksAction,
   addBookmarkAction,
@@ -27,14 +27,18 @@ import {
   updateCategoryAction,
   deleteCategoryAction,
 } from '@/actions/categoryActions';
-import { 
-  isSetupCompleteAction, 
-  verifyAdminPasswordAction, 
-  changeAdminPasswordAction, 
+import {
+  isSetupCompleteAction,
+  verifyAdminPasswordAction,
+  changeAdminPasswordAction,
   getAppSettingsAction,
   updateLogoSettingsAction,
 } from '@/actions/authActions';
 import { useIsMobile } from '@/hooks/use-mobile';
+
+// Import dnd-kit components and types
+import { DndContext, DragEndEvent, closestCorners } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable'; // Import arrayMove
 
 // Dynamically import dialogs
 const AddBookmarkDialog = dynamic(() => import('@/components/AddBookmarkDialog'));
@@ -43,10 +47,7 @@ const EditCategoryDialog = dynamic(() => import('@/components/EditCategoryDialog
 const PasswordDialog = dynamic(() => import('@/components/PasswordDialog'));
 const SettingsDialog = dynamic(() => import('@/components/SettingsDialog'));
 
-// Dynamically import DragDropContext for react-beautiful-dnd
-const DragDropContext = dynamic(() =>
-  import('react-beautiful-dnd').then(mod => mod.DragDropContext), { ssr: false }
-);
+// Removed dynamic import for DragDropContext
 
 
 const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1';
@@ -73,17 +74,17 @@ export default function HomePage() {
   const [bookmarkToEdit, setBookmarkToEdit] = useState<Bookmark | null>(null);
   const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
-  
+
   const [initialDataForAddDialog, setInitialDataForAddDialog] = useState<{ name?: string; url?: string; description?: string } | null>(null);
   const [isClientReadyForDnd, setIsClientReadyForDnd] = useState(false);
   const [hasPendingBookmarkOrderChanges, setHasPendingBookmarkOrderChanges] = useState(false);
-  
+
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
 
   // Settings Dialog State
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
-  const [logoText, setLogoText] = useState<string>("晚风Marks"); 
+  const [logoText, setLogoText] = useState<string>("晚风Marks");
   const [logoIconName, setLogoIconName] = useState<string>("ShieldCheck");
   const [adminPasswordExists, setAdminPasswordExists] = useState(false);
 
@@ -93,7 +94,7 @@ export default function HomePage() {
   useEffect(() => {
     setIsClient(true);
   }, []);
-  
+
   useEffect(() => {
     if (isClient) {
       setIsClientReadyForDnd(true);
@@ -124,7 +125,7 @@ export default function HomePage() {
 
 
   useEffect(() => {
-    if (!isClient) return; 
+    if (!isClient) return;
 
     let active = true;
 
@@ -147,7 +148,7 @@ export default function HomePage() {
           router.push('/setup');
         } else {
           console.log("HomePage: Setup complete, proceeding with auth check and app settings fetch.");
-          await fetchAppSettings(); 
+          await fetchAppSettings();
           const adminAuth = localStorage.getItem(LS_ADMIN_AUTH_KEY);
           if (adminAuth === 'true') {
             setIsAdminAuthenticated(true);
@@ -169,11 +170,11 @@ export default function HomePage() {
         } else {
             toast({ title: "错误", description: `无法检查应用配置状态: ${errorMsg}`, variant: "destructive" });
         }
-        setIsCheckingSetup(false); 
+        setIsCheckingSetup(false);
       }
     }
     performSetupCheck();
-    
+
     return () => {
       active = false;
       console.log("HomePage: useEffect for setup check cleanup.");
@@ -190,7 +191,7 @@ export default function HomePage() {
         getCategoriesAction(),
       ]);
       setBookmarks(fetchedBookmarks);
-      
+
       if (fetchedCategories && fetchedCategories.length > 0) {
         setCategories(fetchedCategories);
       } else {
@@ -199,7 +200,7 @@ export default function HomePage() {
         console.warn("HomePage: Fetched categories was empty or undefined, using UI fallback.");
       }
       if (!preservePendingOrderChanges) {
-        setHasPendingBookmarkOrderChanges(false); 
+        setHasPendingBookmarkOrderChanges(false);
       }
       console.log("HomePage: Data fetched successfully.");
     } catch (error: any) {
@@ -210,7 +211,7 @@ export default function HomePage() {
       } else {
         toast({ title: "错误", description: `加载数据失败: ${errorMsg}`, variant: "destructive" });
       }
-       if (categories.length === 0) { 
+       if (categories.length === 0) {
            const defaultCategory = { id: 'default-fallback-ui-error', name: '通用书签', isVisible: true, icon: 'Folder', isPrivate: false, priority: 0 };
            setCategories([defaultCategory]);
        }
@@ -218,7 +219,7 @@ export default function HomePage() {
       setIsLoading(false);
       console.log("HomePage: fetchData finished. isLoading set to false.");
     }
-  }, [toast, categories.length]); 
+  }, [toast, categories.length]);
 
   useEffect(() => {
     if (isClient && !isCheckingSetup) {
@@ -246,7 +247,7 @@ export default function HomePage() {
     try {
       const newBookmark = await addBookmarkAction(newBookmarkData);
       setIsAddBookmarkDialogOpen(false);
-      setInitialDataForAddDialog(null); 
+      setInitialDataForAddDialog(null);
       toast({ title: "书签已添加", description: `"${newBookmark.name}" 已成功添加。`, duration: 2000 });
       fetchData(hasPendingBookmarkOrderChanges);
     } catch (error) {
@@ -264,7 +265,7 @@ export default function HomePage() {
     try {
       await deleteBookmarkAction(bookmarkId);
       toast({ title: "书签已删除", description: "书签已从服务器删除。", variant: "destructive", duration: 2000 });
-      fetchData(hasPendingBookmarkOrderChanges); 
+      fetchData(hasPendingBookmarkOrderChanges);
     } catch (error) {
       console.error("Failed to delete bookmark:", error);
       const errorMessage = error instanceof Error ? error.message : "删除书签失败。";
@@ -311,7 +312,7 @@ export default function HomePage() {
     try {
       const newCategory = await addCategoryAction(categoryName, icon, isPrivate);
       toast({ title: "分类已添加", description: `"${newCategory.name}" 已成功添加。`, duration: 2000 });
-      fetchData(); 
+      fetchData();
     } catch (error) {
       console.error("Failed to add category:", error);
       const errorMessage = error instanceof Error ? error.message : "添加分类失败。";
@@ -327,9 +328,9 @@ export default function HomePage() {
     try {
       await deleteBookmarksByCategoryIdAction(categoryId);
       await deleteCategoryAction(categoryId);
-      
+
       const oldCategoryName = categories.find(c => c.id === categoryId)?.name || '该分类';
-      
+
       if (activeCategory === categoryId) {
         const nextVisibleCategories = categories.filter(c => c.id !== categoryId && c.isVisible && (!c.isPrivate || isAdminAuthenticated));
         const defaultCat = categories.find(c => c.name === '通用书签' && c.isVisible && (!c.isPrivate || isAdminAuthenticated) && c.id !== categoryId);
@@ -337,8 +338,8 @@ export default function HomePage() {
         handleSetActiveCategory(nextCategory?.id || 'all');
       }
       toast({ title: "分类已删除", description: `"${oldCategoryName}" 及其所有书签已被删除。`, variant: "destructive", duration: 2000 });
-      setHasPendingBookmarkOrderChanges(false); 
-      fetchData(); 
+      setHasPendingBookmarkOrderChanges(false);
+      fetchData();
     } catch (error) {
       console.error("Failed to delete category or its bookmarks:", error);
       const errorMessage = error instanceof Error ? error.message : "删除分类失败。";
@@ -369,7 +370,7 @@ export default function HomePage() {
       setIsEditCategoryDialogOpen(false);
       setCategoryToEdit(null);
       toast({ title: "分类已更新", description: `"${newUpdatedCategory.name}" 已成功更新。`, duration: 2000 });
-      fetchData(); 
+      fetchData();
     } catch (error)
     {
       console.error("Failed to update category:", error);
@@ -386,8 +387,8 @@ export default function HomePage() {
         localStorage.setItem(LS_ADMIN_AUTH_KEY, 'true');
         setShowPasswordDialog(false);
         toast({ title: "授权成功", description: "已进入管理模式。", duration: 2000 });
-        fetchData(); 
-        await fetchAppSettings(); 
+        fetchData();
+        await fetchAppSettings();
       } else {
         toast({ title: "密码错误", description: "请输入正确的管理员密码。", variant: "destructive" });
       }
@@ -411,18 +412,18 @@ export default function HomePage() {
         handleSetActiveCategory(firstPublicCategory?.id || 'all');
     }
     toast({ title: "已退出", description: "已退出管理模式。", duration: 2000 });
-    setHasPendingBookmarkOrderChanges(false); 
+    setHasPendingBookmarkOrderChanges(false);
     fetchData();
   };
-  
+
   const handleOpenAddBookmarkDialog = () => {
-    setInitialDataForAddDialog(null); 
+    setInitialDataForAddDialog(null);
     setIsAddBookmarkDialogOpen(true);
   };
 
   const handleCloseAddBookmarkDialog = () => {
     setIsAddBookmarkDialogOpen(false);
-    setInitialDataForAddDialog(null); 
+    setInitialDataForAddDialog(null);
   };
 
   const handleCopyBookmarkletScript = async () => {
@@ -435,34 +436,37 @@ export default function HomePage() {
     }
   };
 
-  const handleDragEndBookmarks = (result: DropResult) => {
-    console.log("Drag ended:", result);
-    if (!result.destination || !activeCategory || activeCategory === 'all' || !isAdminAuthenticated) {
-      console.log("Drag ended: Conditions not met for reorder. Destination:", result.destination, "Active Category:", activeCategory, "Is Admin:", isAdminAuthenticated);
+  const handleDragEndBookmarks = (event: DragEndEvent) => { // Use DragEndEvent type
+    console.log("Drag ended:", event);
+    const { active, over } = event;
+
+    if (!over || !activeCategory || activeCategory === 'all' || !isAdminAuthenticated) {
+      console.log("Drag ended: Conditions not met for reorder. Over:", over, "Active Category:", activeCategory, "Is Admin:", isAdminAuthenticated);
       return;
     }
 
-    const sourceIndex = result.source.index;
-    const destinationIndex = result.destination.index;
+    const activeId = active.id;
+    const overId = over.id;
 
-    if (sourceIndex === destinationIndex) {
+    if (activeId === overId) {
       console.log("Drag ended: Source and destination are the same.");
       return;
     }
-    
-    const itemsInActiveCategory = bookmarks.filter(bm => bm.categoryId === activeCategory);
-    
-    if (sourceIndex < 0 || sourceIndex >= itemsInActiveCategory.length || destinationIndex < 0 || destinationIndex >= itemsInActiveCategory.length) {
-        console.error("Drag ended: Invalid source or destination index based on itemsInActiveCategory.", { sourceIndex, destinationIndex, listLength: itemsInActiveCategory.length});
-        return;
-    }
-    
-    const reorderedItemsInActiveCategory = Array.from(itemsInActiveCategory);
-    const [movedItem] = reorderedItemsInActiveCategory.splice(sourceIndex, 1);
-    reorderedItemsInActiveCategory.splice(destinationIndex, 0, movedItem);
 
     setBookmarks(prevGlobalBookmarks => {
+      const itemsInActiveCategory = prevGlobalBookmarks.filter(bm => bm.categoryId === activeCategory);
       const otherGlobalBookmarks = prevGlobalBookmarks.filter(bm => bm.categoryId !== activeCategory);
+
+      const oldIndex = itemsInActiveCategory.findIndex(bm => bm.id === activeId);
+      const newIndex = itemsInActiveCategory.findIndex(bm => bm.id === overId);
+
+      if (oldIndex === -1 || newIndex === -1) {
+          console.error("Drag ended: Could not find item in active category.", { activeId, overId, itemsInActiveCategory });
+          return prevGlobalBookmarks; // Return previous state if items not found
+      }
+
+      const reorderedItemsInActiveCategory = arrayMove(itemsInActiveCategory, oldIndex, newIndex);
+
       return [...reorderedItemsInActiveCategory, ...otherGlobalBookmarks];
     });
 
@@ -482,15 +486,15 @@ export default function HomePage() {
       if (res.success) {
         toast({ title: "书签顺序已保存", duration: 2000 });
         setHasPendingBookmarkOrderChanges(false);
-        fetchData(true); 
+        fetchData(true);
       } else {
         toast({ title: "保存书签顺序失败", description: "服务器未能保存顺序。", variant: "destructive" });
-        fetchData(); 
+        fetchData();
       }
     } catch (error) {
       console.error("Error saving bookmark order:", error);
       toast({ title: "保存书签顺序失败", description: "发生网络错误。", variant: "destructive" });
-      fetchData(); 
+      fetchData();
     }
   };
 
@@ -657,7 +661,7 @@ export default function HomePage() {
             <main className="flex-grow p-4 md:p-6 relative">
               <BookmarkGrid
                 bookmarks={displayedBookmarks}
-                categories={categories} 
+                categories={categories}
                 onDeleteBookmark={handleDeleteBookmark}
                 onEditBookmark={handleOpenEditBookmarkDialog}
                 isAdminAuthenticated={isAdminAuthenticated}
@@ -666,6 +670,7 @@ export default function HomePage() {
                 searchQuery={searchQuery}
                 hasPendingOrderChanges={hasPendingBookmarkOrderChanges}
                 onSaveOrder={handleSaveBookmarksOrder}
+                onDragEnd={handleDragEndBookmarks} // Pass the dnd-kit handler
               />
             </main>
             <footer className="text-center py-3 border-t bg-background/50 text-xs text-muted-foreground">
@@ -678,11 +683,8 @@ export default function HomePage() {
 
   return (
     <>
-      {isClientReadyForDnd && isAdminAuthenticated && DragDropContext ? (
-        <DragDropContext onDragEnd={handleDragEndBookmarks}>
-          {mainContent}
-        </DragDropContext>
-      ) : mainContent}
+      {/* Render BookmarkGrid directly, DndContext is inside BookmarkGrid */}
+      {mainContent}
 
       <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 flex flex-col space-y-2 z-40">
         {isAdminAuthenticated && (

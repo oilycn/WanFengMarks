@@ -1,22 +1,30 @@
 
 "use client";
 
-import React from 'react';
+import React, { FC, useMemo } from 'react'; // Import FC and useMemo
 import type { Bookmark, Category } from '@/types';
 import BookmarkItem from './BookmarkItem';
 import { Button } from '@/components/ui/button';
 import { FolderOpen, SearchX, EyeOff, Save, Globe2 } from 'lucide-react';
-import dynamic from 'next/dynamic';
 import { cn } from '@/lib/utils';
 import { iconMap as globalIconMap } from './AppSidebar';
 
-// Dynamically import react-beautiful-dnd components
-const Droppable = dynamic(() =>
-  import('react-beautiful-dnd').then(mod => mod.Droppable), { ssr: false }
-);
-const Draggable = dynamic(() =>
-  import('react-beautiful-dnd').then(mod => mod.Draggable), { ssr: false }
-);
+// Import dnd-kit components and hooks
+import {
+  DndContext,
+  closestCorners, // Using closestCorners for collision detection
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy, // Using rectSortingStrategy for grid
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 
 interface BookmarkGridProps {
@@ -30,9 +38,10 @@ interface BookmarkGridProps {
   searchQuery?: string;
   hasPendingOrderChanges: boolean;
   onSaveOrder: () => void;
+  onDragEnd: (event: DragEndEvent) => void; // Add onDragEnd prop
 }
 
-const BookmarkGrid: React.FC<BookmarkGridProps> = ({
+const BookmarkGrid: FC<BookmarkGridProps> = ({
     bookmarks,
     categories,
     onDeleteBookmark,
@@ -42,21 +51,24 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
     activeCategoryId,
     searchQuery,
     hasPendingOrderChanges,
-    onSaveOrder
+    onSaveOrder,
+    onDragEnd // Destructure onDragEnd
 }) => {
 
-  const getCategoryById = (id: string) => categories.find(c => c.id === id);
-  const canDrag = isAdminAuthenticated && activeCategoryId && activeCategoryId !== 'all' && Droppable && Draggable;
+  const getCategoryById = (id: string) => categories.find((c: Category) => c.id === id);
+  const canDrag = isAdminAuthenticated && activeCategoryId && activeCategoryId !== 'all'; // canDrag logic simplified
 
   const renderNonDraggableBookmarksList = (bookmarksToRender: Bookmark[]) => (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-      {bookmarksToRender.map((bookmark) => (
+      {bookmarksToRender.map((bookmark: Bookmark) => (
         <BookmarkItem
           key={bookmark.id}
           bookmark={bookmark}
           onDeleteBookmark={onDeleteBookmark}
           onEditBookmark={onEditBookmark}
           isAdminAuthenticated={isAdminAuthenticated}
+          isDraggable={false} // Non-draggable items are not draggable
+          // No dnd-kit props needed for non-draggable items
         />
       ))}
     </div>
@@ -95,11 +107,27 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
     );
   }
 
-  const CategoryIconComponent = activeCategoryId && categories.find(c => c.id === activeCategoryId)?.icon
-    ? globalIconMap[categories.find(c => c.id === activeCategoryId)?.icon || 'Default'] || globalIconMap['Default']
+  const CategoryIconComponent = activeCategoryId && categories.find((c: Category) => c.id === activeCategoryId)?.icon
+    ? globalIconMap[categories.find((c: Category) => c.id === activeCategoryId)?.icon || 'Default'] || globalIconMap['Default']
     : Globe2;
 
-  if (canDrag && Droppable && Draggable) {
+  // dnd-kit setup
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // 5px tolerance before dragging starts
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Get the IDs of the bookmarks for the SortableContext
+  const bookmarkIds = useMemo(() => bookmarks.map(bookmark => bookmark.id), [bookmarks]);
+
+
+  if (canDrag) {
     return (
       <>
         <div className="flex justify-between items-center mb-4 border-b pb-2">
@@ -109,7 +137,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
             >
                 <CategoryIconComponent className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
                 {currentCategoryName}
-                {categories.find(c => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
+                {categories.find((c: Category) => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
             </h2>
             {isAdminAuthenticated && hasPendingOrderChanges && (
                 <Button onClick={onSaveOrder} size="sm" className="bg-green-600 hover:bg-green-700 text-white">
@@ -118,48 +146,39 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
                 </Button>
             )}
         </div>
-        <Droppable
-            key={activeCategoryId} 
-            droppableId={activeCategoryId || 'droppable-area-fallback'}
-            type="BOOKMARK"
-            isDropDisabled={!canDrag}
-            ignoreContainerClipping={true} 
-            isCombineEnabled={false}
+        {/* DndContext wraps the entire draggable area */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners} // Use closestCorners for grid
+          onDragEnd={onDragEnd} // onDragEnd is handled by the parent (page.tsx)
         >
-            {(provided, snapshot) => (
+          {/* SortableContext manages the sortable items */}
+          <SortableContext
+            items={bookmarkIds} // Provide the list of item IDs
+            strategy={rectSortingStrategy} // Use rectSortingStrategy for grid
+          >
             <div
-                {...provided.droppableProps}
-                ref={provided.innerRef}
                 className={cn(
-                    "relative grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4",
-                    snapshot.isDraggingOver ? 'bg-accent/10 ring-1 ring-accent/50' : 'bg-transparent'
+                    "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4",
+                    "rounded-md transition-colors",
+                    // No snapshot.isDraggingOver class here, handled by individual items
                 )}
             >
-                {bookmarks.map((bookmark, index) => (
-                    <Draggable
+                {bookmarks.map((bookmark: Bookmark) => (
+                    // BookmarkItem will use useSortable internally
+                    <BookmarkItem
                       key={bookmark.id}
-                      draggableId={bookmark.id}
-                      index={index}
-                      isDragDisabled={!canDrag}
-                    >
-                      {(providedDraggable, snapshotDraggable) => (
-                        <BookmarkItem
-                          bookmark={bookmark}
-                          onDeleteBookmark={onDeleteBookmark}
-                          onEditBookmark={onEditBookmark}
-                          isAdminAuthenticated={isAdminAuthenticated}
-                          innerRef={providedDraggable.innerRef}
-                          draggableProps={providedDraggable.draggableProps}
-                          dragHandleProps={providedDraggable.dragHandleProps}
-                          isDragging={snapshotDraggable.isDragging}
-                        />
-                      )}
-                    </Draggable>
+                      bookmark={bookmark}
+                      onDeleteBookmark={onDeleteBookmark}
+                      onEditBookmark={onEditBookmark}
+                      isAdminAuthenticated={isAdminAuthenticated}
+                      isDraggable={canDrag} // Pass isDraggable prop
+                    />
                 ))}
-                {provided.placeholder}
+                {/* dnd-kit does not use a placeholder element like rbd */}
             </div>
-            )}
-        </Droppable>
+          </SortableContext>
+        </DndContext>
       </>
     );
   }
@@ -169,11 +188,11 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
     <div className="space-y-8">
       {(activeCategoryId === 'all' || !activeCategoryId) ? (
         categories
-          .filter(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated))
-          .sort((a, b) => (b.priority || 0) - (a.priority || 0))
-          .map((category) => {
+          .filter((c: Category) => c.isVisible && (!c.isPrivate || isAdminAuthenticated))
+          .sort((a: Category, b: Category) => (b.priority || 0) - (a.priority || 0))
+          .map((category: Category) => {
             const categoryBookmarks = bookmarks.filter(
-              (bookmark) => bookmark.categoryId === category.id
+              (bookmark: Bookmark) => bookmark.categoryId === category.id
             );
             if (categoryBookmarks.length === 0) return null;
 
@@ -204,7 +223,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
                 >
                     <CategoryIconComponent className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
                     {currentCategoryName}
-                    {activeCategoryId && categories.find(c => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
+                    {activeCategoryId && categories.find((c: Category) => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
                 </h2>
             </div>
             {renderNonDraggableBookmarksList(bookmarks)}
@@ -215,4 +234,3 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
 };
 
 export default BookmarkGrid;
-

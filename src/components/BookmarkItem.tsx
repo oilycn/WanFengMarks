@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef } from 'react'; // Import forwardRef
 import type { Bookmark } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,36 +16,38 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger, // Added missing import
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import type { DraggableProvidedDraggableProps, DraggableProvidedDragHandleProps } from 'react-beautiful-dnd';
+// Removed react-beautiful-dnd type import
 import { cn } from '@/lib/utils';
+
+// Import dnd-kit hooks and utilities
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
 
 interface BookmarkItemProps {
   bookmark: Bookmark;
   onDeleteBookmark: (id: string) => void;
   onEditBookmark: (bookmark: Bookmark) => void;
   isAdminAuthenticated: boolean;
-  innerRef?: (element: HTMLElement | null) => void;
-  draggableProps?: DraggableProvidedDraggableProps;
-  dragHandleProps?: DraggableProvidedDragHandleProps;
-  isDragging?: boolean;
+  isDraggable: boolean; // Add isDraggable prop
+  // Removed rbd-specific props
 }
 
-const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
+// Use forwardRef to pass ref from useSortable
+const BookmarkItem = forwardRef<HTMLDivElement, BookmarkItemProps>(({
   bookmark,
   onDeleteBookmark,
   onEditBookmark,
   isAdminAuthenticated,
-  innerRef,
-  draggableProps,
-  dragHandleProps,
-  isDragging
-}) => {
+  isDraggable, // Destructure isDraggable
+  // Removed rbd-specific props
+}, ref) => { // Receive ref
   const [faviconError, setFaviconError] = useState(false);
 
   useEffect(() => {
-    setFaviconError(false); 
+    setFaviconError(false);
   }, [bookmark.url]);
 
   const getFaviconUrl = (url: string) => {
@@ -55,7 +57,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
       return `https://proxy.oily.cn/proxy/${googleFaviconServiceUrl}`;
     } catch (error) {
       console.error("Invalid URL for favicon:", url, error);
-      return ''; 
+      return '';
     }
   };
   const favicon = getFaviconUrl(bookmark.url);
@@ -68,13 +70,30 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
     return null;
   }
 
+  // dnd-kit useSortable hook
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: bookmark.id }); // Use bookmark.id as the item ID
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   return (
     <div
-      ref={innerRef}
-      {...draggableProps}
+      ref={setNodeRef} // Apply setNodeRef from useSortable
+      style={style} // Apply transform and transition
+      {...attributes} // Apply dnd-kit attributes
       className={cn(
         "group relative rounded-lg flex flex-col transition-shadow",
-        isDragging ? 'shadow-2xl scale-105 bg-card z-50' : 'shadow-lg hover:shadow-xl bg-card/70'
+        isDragging ? 'shadow-2xl scale-105 bg-card z-50' : 'shadow-lg hover:shadow-xl bg-card/70',
+        isDraggable ? 'cursor-default' : '' // Change cursor based on isDraggable
       )}
     >
       <Card className={cn(
@@ -83,8 +102,12 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
         isDragging ? 'border-primary ring-2 ring-primary' : ''
       )}>
         <div className="flex items-center p-3">
-          {isAdminAuthenticated && dragHandleProps && (
-            <div {...dragHandleProps} className="cursor-grab p-1 mr-1 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-50 transition-opacity" aria-label="拖动排序">
+          {isAdminAuthenticated && isDraggable && ( // Use isDraggable prop
+            <div
+              {...listeners} // Apply dnd-kit listeners to the drag handle
+              className="cursor-grab p-1 mr-1 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-50 transition-opacity"
+              aria-label="拖动排序"
+            >
               <GripVertical className="h-4 w-4" />
             </div>
           )}
@@ -92,15 +115,15 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
             href={bookmark.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-grow flex items-center text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline min-w-0" // Added min-w-0
+            className="flex-grow flex items-center text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline min-w-0"
             aria-label={`打开 ${bookmark.name}`}
-            onClick={(e) => { if(isDragging) e.preventDefault();}}
+            // Removed onClick prevention, dnd-kit handles this
           >
             <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center mr-2 rounded-sm overflow-hidden bg-muted/20">
               {favicon && !faviconError ? (
                 <Image
                   src={favicon}
-                  alt="" 
+                  alt=""
                   width={32}
                   height={32}
                   className="object-contain w-full h-full"
@@ -109,14 +132,18 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
                   }}
                 />
               ) : (
-                <Globe2 className="w-5 h-5 text-muted-foreground" /> 
+                <Globe2 className="w-5 h-5 text-muted-foreground" />
               )}
             </div>
 
-            <div className="flex-grow min-w-0"> 
+            <div className="flex-grow min-w-0">
               <h3 className="text-sm font-semibold truncate flex items-center" title={bookmark.name}>
                 {bookmark.name}
-                {bookmark.isPrivate && <EyeOff className="ml-1.5 h-3 w-3 text-muted-foreground/70 flex-shrink-0" title="私密书签"/>}
+                {bookmark.isPrivate && (
+                  <EyeOff className="ml-1.5 h-3 w-3 text-muted-foreground/70 flex-shrink-0">
+                    <title>私密书签</title>
+                  </EyeOff>
+                )}
               </h3>
               {bookmark.description && (
                 <p className="text-xs text-muted-foreground mt-0.5 truncate" title={bookmark.description}>
@@ -130,7 +157,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
         {isAdminAuthenticated && (
           <div className={cn(
             "absolute top-1 right-1 flex items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity space-x-0.5",
-            isDragging && "opacity-100"
+            isDragging && "opacity-100" // Use isDragging from useSortable
           )}>
             <Button
               variant="ghost"
