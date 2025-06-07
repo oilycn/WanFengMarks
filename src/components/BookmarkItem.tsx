@@ -15,7 +15,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 
@@ -65,7 +64,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
       return;
     }
 
-    const cacheKey = `favicon-cache-v2-${domain}`; // Changed cache key version
+    const cacheKey = `favicon-cache-v4-${domain}`; 
     const PROXY_BASE_URL = 'https://proxy.oily.cn/proxy/';
 
     const CACHE_DURATION_SUCCESS = 24 * 60 * 60 * 1000; // 24 hours
@@ -92,18 +91,19 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
         }
       }
     } catch (e) {
+      // Error reading or parsing cache, clear it
       try {
         localStorage.removeItem(cacheKey);
       } catch (removeError) {
-        // Silently ignore
+        // Silently ignore if remove fails
       }
     }
 
-    // Construct the target URL: attempt to fetch domain/favicon.ico
+    // Construct the target URL for the favicon.ico of the domain
     const targetFaviconUrl = `https://${domain}/favicon.ico`;
     
-    // The final URL using the user's proxy. The proxy receives the encoded targetFaviconUrl.
-    const proxiedIconUrl = `${PROXY_BASE_URL}${encodeURIComponent(targetFaviconUrl)}`;
+    // The final URL using the user's proxy. The proxy receives the targetFaviconUrl *without* additional encoding.
+    const proxiedIconUrl = `${PROXY_BASE_URL}${targetFaviconUrl}`;
     
     if (isActive) {
       setCurrentIconSrc(proxiedIconUrl);
@@ -119,10 +119,10 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     try {
       const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
       const domain = new URL(fullBookmarkUrl).hostname;
-      const cacheKey = `favicon-cache-v2-${domain}`;
+      const cacheKey = `favicon-cache-v4-${domain}`;
       localStorage.setItem(cacheKey, JSON.stringify({ errorTimestamp: Date.now() }));
     } catch (e) {
-       // Silently ignore
+       // Silently ignore if domain extraction or localStorage fails
     }
   };
 
@@ -131,13 +131,13 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
       try {
         const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
         const domain = new URL(fullBookmarkUrl).hostname;
-        const cacheKey = `favicon-cache-v2-${domain}`;
+        const cacheKey = `favicon-cache-v4-${domain}`;
         localStorage.setItem(cacheKey, JSON.stringify({
           src: currentIconSrc,
           timestamp: Date.now(),
         }));
       } catch (e) {
-        // Silently ignore
+        // Silently ignore if domain extraction or localStorage fails
       }
     }
   };
@@ -178,16 +178,17 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
       )}>
         <div className="flex items-center p-3">
           {isAdminAuthenticated && isDraggable && (
-            <div
+            <button
               {...listeners}
-              className="cursor-grab p-1 mr-1 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-50 transition-opacity"
+              className="cursor-grab p-1 mr-1 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-50 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
               aria-label="拖动排序"
+              type="button" 
             >
               <GripVertical className="h-4 w-4" />
-            </div>
+            </button>
           )}
           <a
-            href={getFullUrlWithScheme(bookmark.url)} // Ensure the link also has a scheme
+            href={getFullUrlWithScheme(bookmark.url)} 
             target="_blank"
             rel="noopener noreferrer"
             className="flex-grow flex items-center text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline min-w-0"
@@ -277,3 +278,4 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
 };
 
 export default BookmarkItem;
+
