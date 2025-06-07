@@ -1,12 +1,12 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import type { Bookmark } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Globe2, Trash2, EyeOff, PenLine, GripVertical } from 'lucide-react';
-import Image from 'next/image';
+// Removed: import Image from 'next/image';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,24 +42,10 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
   isAdminAuthenticated,
   isDraggable,
 }) => {
-  const [faviconError, setFaviconError] = useState(false);
+  // Removed: const [faviconError, setFaviconError] = useState(false);
+  // Removed: useEffect for faviconError reset
 
-  useEffect(() => {
-    setFaviconError(false); 
-  }, [bookmark.url]);
-
-  const getFaviconUrl = (url: string) => {
-    try {
-      const domain = new URL(url).hostname;
-      // Using icon.horse service
-      const iconHorseServiceUrl = `https://icon.horse/icon/${domain}`;
-      return iconHorseServiceUrl;
-    } catch (error) {
-      console.error("Invalid URL for favicon:", url, error);
-      return ''; // Return empty string or a path to a default icon if URL is invalid
-    }
-  };
-  const favicon = getFaviconUrl(bookmark.url);
+  // Removed: getFaviconUrl function
 
   const handleDelete = () => {
     onDeleteBookmark(bookmark.id);
@@ -119,22 +105,8 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
             aria-label={`打开 ${bookmark.name}`}
           >
             <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center mr-2 rounded-sm overflow-hidden bg-muted/20">
-              {favicon && !faviconError ? (
-                <Image
-                  src={favicon}
-                  alt="" // Decorative, alt text handled by link
-                  width={32} // Explicit width
-                  height={32} // Explicit height
-                  className="object-contain w-full h-full" // Ensure image scales correctly
-                  onError={() => {
-                    console.warn(`Favicon failed to load for: ${bookmark.url} using ${favicon}`);
-                    setFaviconError(true);
-                  }}
-                  unoptimized // If using external favicon service, optimization might not be needed/possible via next/image
-                />
-              ) : (
-                <Globe2 className="w-5 h-5 text-muted-foreground" /> // Fallback icon
-              )}
+              {/* Always render Globe2 icon */}
+              <Globe2 className="w-5 h-5 text-muted-foreground" />
             </div>
 
             {/* Text content area */}
