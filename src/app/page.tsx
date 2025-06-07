@@ -37,7 +37,6 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile';
 
 // Import dnd-kit components and types
-/*
 import {
   DndContext,
   DragEndEvent,
@@ -48,7 +47,6 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-*/
 
 
 // Dynamically import dialogs
@@ -97,7 +95,6 @@ export default function HomePage() {
 
   const { toast } = useToast();
   
-  /*
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -108,7 +105,6 @@ export default function HomePage() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
-  */
   
 
   useEffect(() => {
@@ -448,18 +444,8 @@ export default function HomePage() {
       console.error('Failed to copy bookmarklet script: ', err);
     }
   };
-
-  // Local arrayMove function to avoid @dnd-kit/sortable dependency if it's causing module resolution issues
-  const arrayMove = <T>(array: T[], from: number, to: number): T[] => {
-    const newArray = [...array];
-    const [item] = newArray.splice(from, 1);
-    newArray.splice(to, 0, item);
-    return newArray;
-  };
-
   
-  // const handleDragEndBookmarks = (event: DragEndEvent) => { // DND-Core type
-  const handleDragEndBookmarks = (event: any) => { // Using `any` temporarily if DragEndEvent is not available
+  const handleDragEndBookmarks = (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
@@ -636,81 +622,79 @@ export default function HomePage() {
   const categoriesForSidebar = visibleCategories.length > 0 ? visibleCategories : categories.filter(c => c.isVisible);
 
   const mainContent = (
-    // <DndContext
-    //   sensors={sensors}
-    //   collisionDetection={closestCorners}
-    //   onDragEnd={handleDragEndBookmarks}
-    // >
-      <div className="flex flex-col h-screen overflow-hidden">
-        <AppHeader
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          onToggleMobileSidebar={() => setIsMobileSidebarOpen(prev => !prev)}
-          logoText={logoText}
-          logoIconName={logoIconName}
-        />
-        <div className="flex flex-1 overflow-hidden">
-          {isMobile ? (
-            <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
-              <SheetContent side="left" className="p-0 w-64 sm:w-72 flex flex-col h-full">
-                <SheetHeader className="p-4 border-b flex-shrink-0">
-                  <SheetTitle className="text-lg font-semibold">导航菜单</SheetTitle>
-                </SheetHeader>
-                <AppSidebar
-                  categories={categoriesForSidebar}
-                  onAddCategory={handleAddCategory}
-                  onDeleteCategory={handleDeleteCategory}
-                  onEditCategory={handleOpenEditCategoryDialog}
-                  isAdminAuthenticated={isAdminAuthenticated}
-                  activeCategory={activeCategory}
-                  setActiveCategory={handleSetActiveCategory}
-                  onShowPasswordDialog={() => {
-                    setShowPasswordDialog(true);
-                    setIsMobileSidebarOpen(false);
-                  }}
-                  className="flex-grow border-r-0 shadow-none"
-                />
-              </SheetContent>
-            </Sheet>
-          ) : (
-            <AppSidebar
-              categories={categoriesForSidebar}
-              onAddCategory={handleAddCategory}
-              onDeleteCategory={handleDeleteCategory}
-              onEditCategory={handleOpenEditCategoryDialog}
-              isAdminAuthenticated={isAdminAuthenticated}
-              activeCategory={activeCategory}
-              setActiveCategory={handleSetActiveCategory}
-              onShowPasswordDialog={() => setShowPasswordDialog(true)}
-              className="hidden md:flex"
-            />
-          )}
-          <div className="flex-1 flex flex-col overflow-y-auto bg-background relative">
-            <main className="flex-grow p-4 md:p-6 relative">
-              <BookmarkGrid
-                bookmarks={displayedBookmarks}
-                categories={categories}
-                onDeleteBookmark={handleDeleteBookmark}
-                onEditBookmark={handleOpenEditBookmarkDialog}
+    <div className="flex flex-col h-screen overflow-hidden">
+      <AppHeader
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        onToggleMobileSidebar={() => setIsMobileSidebarOpen(prev => !prev)}
+        logoText={logoText}
+        logoIconName={logoIconName}
+      />
+      <div className="flex flex-1 overflow-hidden">
+        {isMobile ? (
+          <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+            <SheetContent side="left" className="p-0 w-64 sm:w-72 flex flex-col h-full">
+              <SheetHeader className="p-4 border-b flex-shrink-0">
+                <SheetTitle className="text-lg font-semibold">导航菜单</SheetTitle>
+              </SheetHeader>
+              <AppSidebar
+                categories={categoriesForSidebar}
+                onAddCategory={handleAddCategory}
+                onDeleteCategory={handleDeleteCategory}
+                onEditCategory={handleOpenEditCategoryDialog}
                 isAdminAuthenticated={isAdminAuthenticated}
-                currentCategoryName={activeCategory === 'all' ? '全部书签' : categories.find(c=>c.id === activeCategory)?.name || "未知分类"}
-                activeCategoryId={activeCategory}
-                searchQuery={searchQuery}
-                hasPendingOrderChanges={hasPendingBookmarkOrderChanges}
-                onSaveOrder={handleSaveBookmarksOrder}
+                activeCategory={activeCategory}
+                setActiveCategory={handleSetActiveCategory}
+                onShowPasswordDialog={() => {
+                  setShowPasswordDialog(true);
+                  setIsMobileSidebarOpen(false);
+                }}
+                className="flex-grow border-r-0 shadow-none"
               />
-            </main>
-            <footer className="text-center py-3 border-t bg-background/50 text-xs text-muted-foreground">
-              &copy; {new Date().getFullYear()} {logoText}. 版权所有.
-            </footer>
-          </div>
+            </SheetContent>
+          </Sheet>
+        ) : (
+          <AppSidebar
+            categories={categoriesForSidebar}
+            onAddCategory={handleAddCategory}
+            onDeleteCategory={handleDeleteCategory}
+            onEditCategory={handleOpenEditCategoryDialog}
+            isAdminAuthenticated={isAdminAuthenticated}
+            activeCategory={activeCategory}
+            setActiveCategory={handleSetActiveCategory}
+            onShowPasswordDialog={() => setShowPasswordDialog(true)}
+            className="hidden md:flex"
+          />
+        )}
+        <div className="flex-1 flex flex-col overflow-y-auto bg-background relative">
+          <main className="flex-grow p-4 md:p-6 relative">
+            <BookmarkGrid
+              bookmarks={displayedBookmarks}
+              categories={categories}
+              onDeleteBookmark={handleDeleteBookmark}
+              onEditBookmark={handleOpenEditBookmarkDialog}
+              isAdminAuthenticated={isAdminAuthenticated}
+              currentCategoryName={activeCategory === 'all' ? '全部书签' : categories.find(c=>c.id === activeCategory)?.name || "未知分类"}
+              activeCategoryId={activeCategory}
+              searchQuery={searchQuery}
+              hasPendingOrderChanges={hasPendingBookmarkOrderChanges}
+              onSaveOrder={handleSaveBookmarksOrder}
+            />
+          </main>
+          <footer className="text-center py-3 border-t bg-background/50 text-xs text-muted-foreground">
+            &copy; {new Date().getFullYear()} {logoText}. 版权所有.
+          </footer>
         </div>
       </div>
-    // </DndContext>
+    </div>
   );
 
   return (
-    <>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragEnd={handleDragEndBookmarks}
+    >
       {mainContent}
 
       <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 flex flex-col space-y-2 z-40">
@@ -797,6 +781,6 @@ export default function HomePage() {
             adminPasswordPresent={adminPasswordExists}
           />
         )}
-    </>
+    </DndContext>
   );
 }

@@ -21,10 +21,8 @@ import {
 import { cn } from '@/lib/utils';
 
 // Import dnd-kit hooks and utilities
-/*
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-*/
 
 
 interface BookmarkItemProps {
@@ -66,7 +64,6 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     onDeleteBookmark(bookmark.id);
   };
 
-  /*
   const {
     attributes,
     listeners,
@@ -74,20 +71,13 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: id, disabled: !isDraggable });
+  } = useSortable({ id: String(id), disabled: !isDraggable });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 50 : undefined, 
   };
-  */
-  // Placeholder for DND props if not using useSortable
-  const setNodeRef = null; 
-  const style = {};
-  const attributes = {};
-  const listeners = {};
-  const isDragging = false;
 
 
   if (!isAdminAuthenticated && bookmark.isPrivate) {

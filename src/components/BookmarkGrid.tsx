@@ -10,12 +10,10 @@ import { cn } from '@/lib/utils';
 import { iconMap as globalIconMap } from './AppSidebar';
 
 // Import dnd-kit components and hooks
-/*
 import {
   SortableContext,
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
-*/
 
 
 interface BookmarkGridProps {
@@ -65,7 +63,7 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
     </div>
   );
   
-  // const bookmarkIds = useMemo(() => bookmarks.map(bookmark => bookmark.id), [bookmarks]);
+  const bookmarkIds = useMemo(() => bookmarks.map(bookmark => bookmark.id), [bookmarks]);
 
   if (bookmarks.length === 0 && activeCategoryId) {
      if (searchQuery && searchQuery.trim() !== '') {
@@ -126,12 +124,12 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
                 </Button>
             )}
         </div>
-        {/* <SortableContext
+        <SortableContext
           items={itemIdsInCurrentCategory}
           strategy={rectSortingStrategy}
-        > */}
+        >
           {renderBookmarksList(itemsInCurrentCategory, true)}
-        {/* </SortableContext> */}
+        </SortableContext>
       </>
     );
   }
