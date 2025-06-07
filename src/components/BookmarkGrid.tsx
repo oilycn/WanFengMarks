@@ -123,7 +123,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
             droppableId={activeCategoryId || 'droppable-area-fallback'}
             type="BOOKMARK"
             isDropDisabled={!canDrag}
-            ignoreContainerClipping={true}
+            ignoreContainerClipping={true} 
             isCombineEnabled={false}
         >
             {(provided, snapshot) => (
@@ -131,7 +131,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
                 {...provided.droppableProps}
                 ref={provided.innerRef}
                 className={cn(
-                    "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4",
+                    "relative grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4",
                     snapshot.isDraggingOver ? 'bg-accent/10 ring-1 ring-accent/50' : 'bg-transparent'
                 )}
             >
@@ -215,3 +215,4 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
 };
 
 export default BookmarkGrid;
+
