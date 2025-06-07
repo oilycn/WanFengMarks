@@ -5,10 +5,10 @@ import React from 'react';
 import type { Bookmark, Category } from '@/types';
 import BookmarkItem from './BookmarkItem';
 import { Button } from '@/components/ui/button';
-import { FolderOpen, SearchX, EyeOff, Save, Globe2 } from 'lucide-react'; // Added Globe2
+import { FolderOpen, SearchX, EyeOff, Save, Globe2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { cn } from '@/lib/utils';
-import { iconMap as globalIconMap } from './AppSidebar'; // Assuming iconMap is exported
+import { iconMap as globalIconMap } from './AppSidebar';
 
 // Dynamically import react-beautiful-dnd components
 const Droppable = dynamic(() =>
@@ -62,7 +62,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
     </div>
   );
 
-  if (bookmarks.length === 0 && activeCategoryId) { // Ensure activeCategoryId is not null
+  if (bookmarks.length === 0 && activeCategoryId) {
      if (searchQuery && searchQuery.trim() !== '') {
         return (
           <div className="text-center py-12">
@@ -97,7 +97,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
 
   const CategoryIconComponent = activeCategoryId && categories.find(c => c.id === activeCategoryId)?.icon
     ? globalIconMap[categories.find(c => c.id === activeCategoryId)?.icon || 'Default'] || globalIconMap['Default']
-    : Globe2; // Fallback for "All Bookmarks" or if icon not found
+    : Globe2;
 
   if (canDrag) {
     return (
@@ -119,11 +119,12 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
             )}
         </div>
         <Droppable
-            key={activeCategoryId} // Ensure key changes if category changes
-            droppableId={activeCategoryId || 'droppable-area-fallback'} // Provide a fallback ID if activeCategoryId is null
+            key={activeCategoryId}
+            droppableId={activeCategoryId || 'droppable-area-fallback'}
             type="BOOKMARK"
-            isDropDisabled={!canDrag} // Redundant check but good for clarity
-            ignoreContainerClipping={true} // Important for complex scroll/overflow scenarios
+            isDropDisabled={!canDrag}
+            ignoreContainerClipping={true}
+            isCombineEnabled={false} // Explicitly set to false
         >
             {(provided, snapshot) => (
             <div
@@ -131,7 +132,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
                 ref={provided.innerRef}
                 className={cn(
                     "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4",
-                    "rounded-md transition-colors min-h-[100px]", // Ensure some min height
+                    "rounded-md transition-colors min-h-[100px]",
                     snapshot.isDraggingOver ? 'bg-accent/10 ring-1 ring-accent/50' : 'bg-transparent'
                 )}
             >
@@ -140,7 +141,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
                       key={bookmark.id}
                       draggableId={bookmark.id}
                       index={index}
-                      isDragDisabled={!canDrag} // Redundant check
+                      isDragDisabled={!canDrag}
                     >
                       {(providedDraggable, snapshotDraggable) => (
                         <BookmarkItem
@@ -215,3 +216,4 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
 };
 
 export default BookmarkGrid;
+
