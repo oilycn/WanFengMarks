@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, forwardRef } from 'react'; // Import forwardRef
+import React, { useState, useEffect, forwardRef } from 'react';
 import type { Bookmark } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,32 +18,30 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-// Removed react-beautiful-dnd type import
 import { cn } from '@/lib/utils';
 
-// Import dnd-kit hooks and utilities
+// Import dnd-kit hooks and utilities (commented out due to module resolution issues)
+/*
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-
+*/
 
 interface BookmarkItemProps {
   bookmark: Bookmark;
   onDeleteBookmark: (id: string) => void;
   onEditBookmark: (bookmark: Bookmark) => void;
   isAdminAuthenticated: boolean;
-  isDraggable: boolean; // Add isDraggable prop
-  // Removed rbd-specific props
+  isDraggable: boolean;
 }
 
-// Use forwardRef to pass ref from useSortable
+// Use forwardRef to pass ref, though DND is currently disabled
 const BookmarkItem = forwardRef<HTMLDivElement, BookmarkItemProps>(({
   bookmark,
   onDeleteBookmark,
   onEditBookmark,
   isAdminAuthenticated,
-  isDraggable, // Destructure isDraggable
-  // Removed rbd-specific props
-}, ref) => { // Receive ref
+  isDraggable,
+}, ref) => {
   const [faviconError, setFaviconError] = useState(false);
 
   useEffect(() => {
@@ -70,7 +68,8 @@ const BookmarkItem = forwardRef<HTMLDivElement, BookmarkItemProps>(({
     return null;
   }
 
-  // dnd-kit useSortable hook
+  // dnd-kit useSortable hook (commented out)
+  /*
   const {
     attributes,
     listeners,
@@ -78,22 +77,29 @@ const BookmarkItem = forwardRef<HTMLDivElement, BookmarkItemProps>(({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: bookmark.id }); // Use bookmark.id as the item ID
+  } = useSortable({ id: bookmark.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    zIndex: isDragging ? 50 : undefined, // Ensure dragging item is on top
   };
+  */
+  const isDragging = false; // DND disabled
+  const style = {}; // DND disabled
+  const attributes = {}; // DND disabled
+  const listeners = {}; // DND disabled
+  const setNodeRef = ref; // Pass original ref if DND disabled
 
   return (
     <div
-      ref={setNodeRef} // Apply setNodeRef from useSortable
-      style={style} // Apply transform and transition
-      {...attributes} // Apply dnd-kit attributes
+      ref={setNodeRef as React.Ref<HTMLDivElement>} // Use the ref for the main div
+      style={style}
+      {...attributes}
       className={cn(
         "group relative rounded-lg flex flex-col transition-shadow",
         isDragging ? 'shadow-2xl scale-105 bg-card z-50' : 'shadow-lg hover:shadow-xl bg-card/70',
-        isDraggable ? 'cursor-default' : '' // Change cursor based on isDraggable
+        // isDraggable ? 'cursor-default' : '' // DND specific cursor change removed
       )}
     >
       <Card className={cn(
@@ -102,9 +108,9 @@ const BookmarkItem = forwardRef<HTMLDivElement, BookmarkItemProps>(({
         isDragging ? 'border-primary ring-2 ring-primary' : ''
       )}>
         <div className="flex items-center p-3">
-          {isAdminAuthenticated && isDraggable && ( // Use isDraggable prop
+          {isAdminAuthenticated && isDraggable && (
             <div
-              {...listeners} // Apply dnd-kit listeners to the drag handle
+              {...listeners}
               className="cursor-grab p-1 mr-1 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-50 transition-opacity"
               aria-label="拖动排序"
             >
@@ -117,7 +123,6 @@ const BookmarkItem = forwardRef<HTMLDivElement, BookmarkItemProps>(({
             rel="noopener noreferrer"
             className="flex-grow flex items-center text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline min-w-0"
             aria-label={`打开 ${bookmark.name}`}
-            // Removed onClick prevention, dnd-kit handles this
           >
             <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center mr-2 rounded-sm overflow-hidden bg-muted/20">
               {favicon && !faviconError ? (
@@ -157,7 +162,7 @@ const BookmarkItem = forwardRef<HTMLDivElement, BookmarkItemProps>(({
         {isAdminAuthenticated && (
           <div className={cn(
             "absolute top-1 right-1 flex items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity space-x-0.5",
-            isDragging && "opacity-100" // Use isDragging from useSortable
+            isDragging && "opacity-100"
           )}>
             <Button
               variant="ghost"

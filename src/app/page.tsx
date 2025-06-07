@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { PlusCircle, LogOut, Copy, Settings as SettingsIcon } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-// Removed react-beautiful-dnd type import
+
 import {
   getBookmarksAction,
   addBookmarkAction,
@@ -36,9 +36,11 @@ import {
 } from '@/actions/authActions';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-// Import dnd-kit components and types
-import { DndContext, DragEndEvent, closestCorners } from '@dnd-kit/core';
-import { arrayMove } from '@dnd-kit/sortable'; // Import arrayMove
+// Import dnd-kit components and types (commented out due to module resolution issues)
+// import { DndContext, DragEndEvent, closestCorners } from '@dnd-kit/core';
+// Temp type for DragEndEvent
+type DragEndEvent = any;
+
 
 // Dynamically import dialogs
 const AddBookmarkDialog = dynamic(() => import('@/components/AddBookmarkDialog'));
@@ -47,15 +49,22 @@ const EditCategoryDialog = dynamic(() => import('@/components/EditCategoryDialog
 const PasswordDialog = dynamic(() => import('@/components/PasswordDialog'));
 const SettingsDialog = dynamic(() => import('@/components/SettingsDialog'));
 
-// Removed dynamic import for DragDropContext
-
 
 const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1';
 
-const APP_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:9003'; // Changed port to 9003
+const APP_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:9003';
 
 const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);let desc='';const metaDesc=document.querySelector('meta[name="description"]');if(metaDesc&&metaDesc.content){desc=encodeURIComponent(metaDesc.content);}else{const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc&&ogDesc.content){desc=encodeURIComponent(ogDesc.content);}}const popupWidth=500;const popupHeight=650;const left=(screen.width/2)-(popupWidth/2);const top=(screen.height/2)-(popupHeight/2);const wanfengWindow=window.open(\`\${appUrl}/add-bookmark-popup?name=\${title}&url=\${pageUrl}&desc=\${desc}\`, 'wanfengMarksAddBookmarkPopup', \`toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=\${popupWidth}, height=\${popupHeight}, top=\${top}, left=\${left}\`);if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks书签添加窗口。请检查浏览器是否阻止了弹出窗口。');}})();`;
 
+// Helper function to move an item within an array (inlined)
+function localArrayMove<T>(array: T[], from: number, to: number): T[] {
+  const newArray = [...array];
+  const [item] = newArray.splice(from, 1);
+  if (item !== undefined) {
+    newArray.splice(to, 0, item);
+  }
+  return newArray;
+}
 
 export default function HomePage() {
   const router = useRouter();
@@ -65,7 +74,7 @@ export default function HomePage() {
   const [isClient, setIsClient] = useState(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<string | null>('all'); // Default to 'all'
+  const [activeCategory, setActiveCategory] = useState<string | null>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingSetup, setIsCheckingSetup] = useState(true);
@@ -76,13 +85,12 @@ export default function HomePage() {
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
 
   const [initialDataForAddDialog, setInitialDataForAddDialog] = useState<{ name?: string; url?: string; description?: string } | null>(null);
-  const [isClientReadyForDnd, setIsClientReadyForDnd] = useState(false);
+  // const [isClientReadyForDnd, setIsClientReadyForDnd] = useState(false); // DND related state
   const [hasPendingBookmarkOrderChanges, setHasPendingBookmarkOrderChanges] = useState(false);
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
 
-  // Settings Dialog State
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [logoText, setLogoText] = useState<string>("晚风Marks");
   const [logoIconName, setLogoIconName] = useState<string>("ShieldCheck");
@@ -95,11 +103,11 @@ export default function HomePage() {
     setIsClient(true);
   }, []);
 
-  useEffect(() => {
-    if (isClient) {
-      setIsClientReadyForDnd(true);
-    }
-  }, [isClient]);
+  // useEffect(() => { // DND related effect
+  //   if (isClient) {
+  //     setIsClientReadyForDnd(true);
+  //   }
+  // }, [isClient]);
 
 
   const fetchAppSettings = useCallback(async () => {
@@ -119,7 +127,6 @@ export default function HomePage() {
       } else {
         toast({ title: "错误", description: `无法加载应用设置: ${errorMsg}`, variant: "destructive" });
       }
-      // Rethrow or handle as appropriate if other components depend on this finishing
     }
   }, [toast]);
 
@@ -436,7 +443,10 @@ export default function HomePage() {
     }
   };
 
-  const handleDragEndBookmarks = (event: DragEndEvent) => { // Use DragEndEvent type
+  const handleDragEndBookmarks = (event: DragEndEvent) => {
+    // DND functionality is currently disabled due to module resolution issues.
+    // This function body can be restored if @dnd-kit is fixed.
+    /*
     console.log("Drag ended:", event);
     const { active, over } = event;
 
@@ -445,8 +455,8 @@ export default function HomePage() {
       return;
     }
 
-    const activeId = active.id;
-    const overId = over.id;
+    const activeId = String(active.id);
+    const overId = String(over.id);
 
     if (activeId === overId) {
       console.log("Drag ended: Source and destination are the same.");
@@ -462,15 +472,16 @@ export default function HomePage() {
 
       if (oldIndex === -1 || newIndex === -1) {
           console.error("Drag ended: Could not find item in active category.", { activeId, overId, itemsInActiveCategory });
-          return prevGlobalBookmarks; // Return previous state if items not found
+          return prevGlobalBookmarks;
       }
 
-      const reorderedItemsInActiveCategory = arrayMove(itemsInActiveCategory, oldIndex, newIndex);
+      const reorderedItemsInActiveCategory = localArrayMove(itemsInActiveCategory, oldIndex, newIndex);
 
       return [...reorderedItemsInActiveCategory, ...otherGlobalBookmarks];
     });
 
     setHasPendingBookmarkOrderChanges(true);
+    */
   };
 
   const handleSaveBookmarksOrder = async () => {
@@ -521,7 +532,7 @@ export default function HomePage() {
           passwordChanged = true;
         } else {
           toast({ title: "密码更新失败", description: result.error, variant: "destructive" });
-          return; 
+          return;
         }
       } catch (error: any) {
         const errorMsg = error instanceof Error ? error.message : "操作失败";
@@ -559,7 +570,7 @@ export default function HomePage() {
     }
     
     if (passwordChanged || logoChanged) {
-        await fetchAppSettings(); 
+        await fetchAppSettings();
     }
     setIsSettingsDialogOpen(false);
   };
@@ -581,11 +592,11 @@ export default function HomePage() {
   });
 
   const displayedBookmarks = activeCategory === 'all' || !activeCategory
-    ? filteredBookmarksBySearch 
+    ? filteredBookmarksBySearch
     : filteredBookmarksBySearch.filter(bm => bm.categoryId === activeCategory);
 
 
-  if (!isClient || isCheckingSetup || isLoading) { 
+  if (!isClient || isCheckingSetup || isLoading) {
     return (
       <div className="flex flex-col min-h-screen items-center justify-center bg-background">
         <svg className="animate-spin h-20 w-20 text-primary" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
@@ -635,10 +646,10 @@ export default function HomePage() {
                   onEditCategory={handleOpenEditCategoryDialog}
                   isAdminAuthenticated={isAdminAuthenticated}
                   activeCategory={activeCategory}
-                  setActiveCategory={handleSetActiveCategory} 
+                  setActiveCategory={handleSetActiveCategory}
                   onShowPasswordDialog={() => {
                     setShowPasswordDialog(true);
-                    setIsMobileSidebarOpen(false); 
+                    setIsMobileSidebarOpen(false);
                   }}
                   className="flex-grow border-r-0 shadow-none"
                 />
@@ -654,7 +665,7 @@ export default function HomePage() {
               activeCategory={activeCategory}
               setActiveCategory={handleSetActiveCategory}
               onShowPasswordDialog={() => setShowPasswordDialog(true)}
-              className="hidden md:flex" 
+              className="hidden md:flex"
             />
           )}
           <div className="flex-1 flex flex-col overflow-y-auto bg-background relative">
@@ -670,7 +681,7 @@ export default function HomePage() {
                 searchQuery={searchQuery}
                 hasPendingOrderChanges={hasPendingBookmarkOrderChanges}
                 onSaveOrder={handleSaveBookmarksOrder}
-                onDragEnd={handleDragEndBookmarks} // Pass the dnd-kit handler
+                onDragEnd={handleDragEndBookmarks}
               />
             </main>
             <footer className="text-center py-3 border-t bg-background/50 text-xs text-muted-foreground">
@@ -683,7 +694,6 @@ export default function HomePage() {
 
   return (
     <>
-      {/* Render BookmarkGrid directly, DndContext is inside BookmarkGrid */}
       {mainContent}
 
       <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 flex flex-col space-y-2 z-40">
@@ -731,7 +741,7 @@ export default function HomePage() {
           isOpen={isAddBookmarkDialogOpen}
           onClose={handleCloseAddBookmarkDialog}
           onAddBookmark={handleAddBookmark}
-          categories={categoriesForSidebar.filter(c => c.id !== 'all')} 
+          categories={categoriesForSidebar.filter(c => c.id !== 'all')}
           activeCategoryId={activeCategory}
           initialData={initialDataForAddDialog}
         />
@@ -742,7 +752,7 @@ export default function HomePage() {
           onClose={() => { setIsEditBookmarkDialogOpen(false); setBookmarkToEdit(null); }}
           onUpdateBookmark={handleUpdateBookmark}
           bookmarkToEdit={bookmarkToEdit}
-          categories={categoriesForSidebar.filter(c => c.id !== 'all')} 
+          categories={categoriesForSidebar.filter(c => c.id !== 'all')}
         />
       )}
       {categoryToEdit && isEditCategoryDialogOpen && (
@@ -773,16 +783,3 @@ export default function HomePage() {
     </>
   );
 }
-    
-
-    
-
-    
-
-    
-
-    
-
-
-
-    
