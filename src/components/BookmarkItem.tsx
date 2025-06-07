@@ -22,7 +22,6 @@ import { cn } from '@/lib/utils';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-
 interface BookmarkItemProps {
   id: string; 
   bookmark: Bookmark;
@@ -32,6 +31,14 @@ interface BookmarkItemProps {
   isDraggable: boolean;
 }
 
+// Helper function to ensure URL has a scheme
+const getFullUrlWithScheme = (url: string): string => {
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    return `https://${url}`;
+  }
+  return url;
+};
+
 const BookmarkItem: React.FC<BookmarkItemProps> = ({
   id,
   bookmark,
@@ -40,30 +47,110 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
   isAdminAuthenticated,
   isDraggable,
 }) => {
+  const [currentIconSrc, setCurrentIconSrc] = useState<string | null>(null);
   const [showFallbackIcon, setShowFallbackIcon] = useState(false);
 
   useEffect(() => {
-    setShowFallbackIcon(false); // Reset fallback state when bookmark URL changes
+    let isActive = true; // To prevent state updates on unmounted component
+
+    // Reset states for the new bookmark URL
+    setShowFallbackIcon(false);
+    setCurrentIconSrc(null);
+
+    const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
+    let domain: string;
+    try {
+      domain = new URL(fullBookmarkUrl).hostname;
+    } catch (e) {
+      // Invalid URL, show fallback immediately
+      if (isActive) setShowFallbackIcon(true);
+      return;
+    }
+
+    const cacheKey = `favicon-cache-${domain}`;
+    const PROXY_BASE_URL = 'https://proxy.oily.cn/proxy/';
+    const FAVICON_SERVICE_BASE_URL = 'https://favicon.splitbee.io/?url=';
+
+    const CACHE_DURATION_SUCCESS = 24 * 60 * 60 * 1000; // 24 hours
+    const CACHE_DURATION_ERROR = 1 * 60 * 60 * 1000;    // 1 hour
+
+    // Try to load from localStorage
+    try {
+      const cachedItemString = localStorage.getItem(cacheKey);
+      if (cachedItemString) {
+        const cachedItem = JSON.parse(cachedItemString);
+        const now = Date.now();
+
+        // Check for cached success
+        if (cachedItem.src && cachedItem.timestamp && (now - cachedItem.timestamp < CACHE_DURATION_SUCCESS)) {
+          if (isActive) {
+            setCurrentIconSrc(cachedItem.src);
+          }
+          return; // Valid cache hit
+        }
+
+        // Check for cached error
+        if (cachedItem.errorTimestamp && (now - cachedItem.errorTimestamp < CACHE_DURATION_ERROR)) {
+          if (isActive) {
+            setShowFallbackIcon(true);
+          }
+          return; // Recent error cached
+        }
+      }
+    } catch (e) {
+      // Error reading or parsing cache, clear it
+      try {
+        localStorage.removeItem(cacheKey);
+      } catch (removeError) {
+        // Silently ignore if localStorage is unavailable for removal
+      }
+    }
+
+    // If no valid cache, construct the new URL to fetch via proxy
+    // The URL of the favicon service we want to proxy
+    const targetServiceUrl = `${FAVICON_SERVICE_BASE_URL}${encodeURIComponent(fullBookmarkUrl)}`;
+    // The final URL using the user's proxy. The proxy receives the encoded targetServiceUrl as part of its path.
+    const proxiedIconUrl = `${PROXY_BASE_URL}${encodeURIComponent(targetServiceUrl)}`;
+    
+    if (isActive) {
+      setCurrentIconSrc(proxiedIconUrl);
+    }
+
+    return () => {
+      isActive = false;
+    };
   }, [bookmark.url]);
 
-  const getFaviconApiUrl = (url: string): string => {
+  const handleImageError = () => {
+    setShowFallbackIcon(true);
+    // Cache the error
     try {
-      // Ensure the URL has a scheme for the API
-      let fullUrl = url;
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        fullUrl = `https://${url}`;
-      }
-      return `https://favicon.splitbee.io/?url=${encodeURIComponent(fullUrl)}`;
+      const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
+      const domain = new URL(fullBookmarkUrl).hostname;
+      const cacheKey = `favicon-cache-${domain}`;
+      localStorage.setItem(cacheKey, JSON.stringify({ errorTimestamp: Date.now() }));
     } catch (e) {
-      // Fallback if URL parsing fails, though encodeURIComponent should handle most things
-      return `https://favicon.splitbee.io/?url=${encodeURIComponent(url)}`;
+      // Could be an invalid URL if bookmark.url is malformed
     }
   };
 
-  const handleDelete = () => {
-    onDeleteBookmark(bookmark.id);
+  const handleImageLoad = () => {
+    // Image loaded successfully, cache its src
+    if (currentIconSrc && !showFallbackIcon) { // Ensure we have a src and no error occurred
+      try {
+        const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
+        const domain = new URL(fullBookmarkUrl).hostname;
+        const cacheKey = `favicon-cache-${domain}`;
+        localStorage.setItem(cacheKey, JSON.stringify({
+          src: currentIconSrc,
+          timestamp: Date.now(),
+        }));
+      } catch (e) {
+        // Could be an invalid URL
+      }
+    }
   };
-
+  
   const {
     attributes,
     listeners,
@@ -116,17 +203,19 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
             aria-label={`打开 ${bookmark.name}`}
           >
             <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center mr-2 rounded-sm overflow-hidden bg-muted/20">
-              {showFallbackIcon ? (
+              {showFallbackIcon || !currentIconSrc ? (
                 <Globe2 className="w-5 h-5 text-muted-foreground" />
               ) : (
                 <img
-                  src={getFaviconApiUrl(bookmark.url)}
-                  alt="" // Decorative, or use bookmark.name for more specific alt text
+                  key={currentIconSrc} // Re-trigger load if src changes (e.g. after cache clear)
+                  src={currentIconSrc}
+                  alt="" // Decorative
                   width={20}
                   height={20}
                   className="w-5 h-5 object-contain"
                   loading="lazy"
-                  onError={() => setShowFallbackIcon(true)}
+                  onError={handleImageError}
+                  onLoad={handleImageLoad}
                 />
               )}
             </div>
@@ -183,7 +272,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>取消</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                  <AlertDialogAction onClick={() => onDeleteBookmark(bookmark.id)} className="bg-destructive hover:bg-destructive/90">
                     删除
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -197,3 +286,4 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
 };
 
 export default BookmarkItem;
+
