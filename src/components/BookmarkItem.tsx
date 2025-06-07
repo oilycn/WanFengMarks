@@ -15,6 +15,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger, // Added AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 
@@ -53,7 +54,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     let isActive = true; 
 
     setShowFallbackIcon(false);
-    setCurrentIconSrc(null);
+    setCurrentIconSrc(null); // Reset on bookmark URL change
 
     const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
     let domain: string;
@@ -63,10 +64,15 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
       if (isActive) setShowFallbackIcon(true);
       return;
     }
-
-    const cacheKey = `favicon-cache-v4-${domain}`; 
+    
     const PROXY_BASE_URL = 'https://proxy.oily.cn/proxy/';
+    // The target is to fetch the favicon.ico from the root of the domain
+    const targetFaviconUrl = `https://${domain}/favicon.ico`;
+    
+    // The final URL using the user's proxy. The proxy receives the targetFaviconUrl *without* additional encoding.
+    const proxiedIconUrl = `${PROXY_BASE_URL}${targetFaviconUrl}`;
 
+    const cacheKey = `favicon-cache-v4-${domain}`; // Updated cache key version
     const CACHE_DURATION_SUCCESS = 24 * 60 * 60 * 1000; // 24 hours
     const CACHE_DURATION_ERROR = 1 * 60 * 60 * 1000;    // 1 hour
 
@@ -91,19 +97,13 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
         }
       }
     } catch (e) {
-      // Error reading or parsing cache, clear it
+      console.warn(`[BookmarkItem] Error reading or parsing cache for ${domain}:`, e);
       try {
         localStorage.removeItem(cacheKey);
       } catch (removeError) {
         // Silently ignore if remove fails
       }
     }
-
-    // Construct the target URL for the favicon.ico of the domain
-    const targetFaviconUrl = `https://${domain}/favicon.ico`;
-    
-    // The final URL using the user's proxy. The proxy receives the targetFaviconUrl *without* additional encoding.
-    const proxiedIconUrl = `${PROXY_BASE_URL}${targetFaviconUrl}`;
     
     if (isActive) {
       setCurrentIconSrc(proxiedIconUrl);
@@ -122,7 +122,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
       const cacheKey = `favicon-cache-v4-${domain}`;
       localStorage.setItem(cacheKey, JSON.stringify({ errorTimestamp: Date.now() }));
     } catch (e) {
-       // Silently ignore if domain extraction or localStorage fails
+       console.warn(`[BookmarkItem] Error saving error state to cache for ${bookmark.url}:`, e);
     }
   };
 
@@ -137,7 +137,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
           timestamp: Date.now(),
         }));
       } catch (e) {
-        // Silently ignore if domain extraction or localStorage fails
+        console.warn(`[BookmarkItem] Error saving success state to cache for ${bookmark.url}:`, e);
       }
     }
   };
