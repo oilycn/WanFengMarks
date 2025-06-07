@@ -51,10 +51,10 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
   const getFaviconUrl = (url: string) => {
     try {
       const domain = new URL(url).hostname;
-      // Using a more reliable favicon service like Google's, or a robust fallback.
-      // sz=32 requests a 32x32 icon, common size.
-      const googleFaviconServiceUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
-      return googleFaviconServiceUrl;
+      // Using a domestic favicon service: api.iowen.cn
+      // It typically returns a suitably sized icon if available.
+      const iowenFaviconServiceUrl = `https://api.iowen.cn/favicon/${domain}.png`;
+      return iowenFaviconServiceUrl;
     } catch (error) {
       console.error("Invalid URL for favicon:", url, error);
       return ''; // Return empty string or a path to a default icon if URL is invalid
@@ -128,7 +128,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
                   height={32} // Explicit height
                   className="object-contain w-full h-full" // Ensure image scales correctly
                   onError={() => {
-                    console.warn(`Favicon failed to load for: ${bookmark.url}`);
+                    console.warn(`Favicon failed to load for: ${bookmark.url} using ${favicon}`);
                     setFaviconError(true);
                   }}
                   unoptimized // If using external favicon service, optimization might not be needed/possible via next/image
@@ -206,5 +206,3 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
 };
 
 export default BookmarkItem;
-
-    
