@@ -48,7 +48,8 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
   const getFaviconUrl = (url: string) => {
     try {
       const domain = new URL(url).hostname;
-      const googleFaviconServiceUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+      // Request 32x32 size to match display size
+      const googleFaviconServiceUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
       return `https://proxy.oily.cn/proxy/${googleFaviconServiceUrl}`;
     } catch (error) {
       console.error("Invalid URL for favicon:", url, error);
