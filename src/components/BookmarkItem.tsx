@@ -1,12 +1,11 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Bookmark } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Globe2, Trash2, EyeOff, PenLine, GripVertical } from 'lucide-react';
-// Removed: import Image from 'next/image';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +19,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 
-// Import dnd-kit hooks and utilities
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -42,10 +40,25 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
   isAdminAuthenticated,
   isDraggable,
 }) => {
-  // Removed: const [faviconError, setFaviconError] = useState(false);
-  // Removed: useEffect for faviconError reset
+  const [showFallbackIcon, setShowFallbackIcon] = useState(false);
 
-  // Removed: getFaviconUrl function
+  useEffect(() => {
+    setShowFallbackIcon(false); // Reset fallback state when bookmark URL changes
+  }, [bookmark.url]);
+
+  const getFaviconApiUrl = (url: string): string => {
+    try {
+      // Ensure the URL has a scheme for the API
+      let fullUrl = url;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        fullUrl = `https://${url}`;
+      }
+      return `https://favicon.splitbee.io/?url=${encodeURIComponent(fullUrl)}`;
+    } catch (e) {
+      // Fallback if URL parsing fails, though encodeURIComponent should handle most things
+      return `https://favicon.splitbee.io/?url=${encodeURIComponent(url)}`;
+    }
+  };
 
   const handleDelete = () => {
     onDeleteBookmark(bookmark.id);
@@ -57,15 +70,14 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     setNodeRef,
     transform,
     transition,
-    isDragging, // Provided by useSortable
-  } = useSortable({ id: String(id), disabled: !isDraggable }); // Ensure ID is a string
+    isDragging,
+  } = useSortable({ id: String(id), disabled: !isDraggable });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 50 : undefined, // Elevate a dragging item
+    zIndex: isDragging ? 50 : undefined,
   };
-
 
   if (!isAdminAuthenticated && bookmark.isPrivate) {
     return null; 
@@ -73,24 +85,23 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
 
   return (
     <div
-      ref={setNodeRef} // This ref is for dnd-kit
-      style={style} // Apply transform and transition styles
-      {...(isDraggable ? attributes : {})} // Spread dnd-kit attributes if draggable
+      ref={setNodeRef}
+      style={style}
+      {...(isDraggable ? attributes : {})}
       className={cn(
         "group relative rounded-lg flex flex-col transition-shadow",
-        isDragging ? 'shadow-2xl scale-105 bg-card z-50' : 'shadow-lg hover:shadow-xl bg-card/70', // Visual feedback for dragging
+        isDragging ? 'shadow-2xl scale-105 bg-card z-50' : 'shadow-lg hover:shadow-xl bg-card/70',
       )}
     >
       <Card className={cn(
         "flex-grow overflow-hidden backdrop-blur-sm border border-border/60 hover:border-primary/70 rounded-lg",
-        "group-hover:bg-accent/10 group-focus-within:bg-accent/10", // subtle hover/focus for the card itself
-        isDragging ? 'border-primary ring-2 ring-primary' : '' // More prominent border when dragging
+        "group-hover:bg-accent/10 group-focus-within:bg-accent/10",
+        isDragging ? 'border-primary ring-2 ring-primary' : ''
       )}>
         <div className="flex items-center p-3">
-          {/* Drag handle only shown if admin and draggable context */}
           {isAdminAuthenticated && isDraggable && (
             <div
-              {...listeners} // Spread dnd-kit listeners for the drag handle
+              {...listeners}
               className="cursor-grab p-1 mr-1 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-50 transition-opacity"
               aria-label="拖动排序"
             >
@@ -101,16 +112,26 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
             href={bookmark.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-grow flex items-center text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline min-w-0" // Ensure link takes up space and min-w-0 for truncation
+            className="flex-grow flex items-center text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline min-w-0"
             aria-label={`打开 ${bookmark.name}`}
           >
             <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center mr-2 rounded-sm overflow-hidden bg-muted/20">
-              {/* Always render Globe2 icon */}
-              <Globe2 className="w-5 h-5 text-muted-foreground" />
+              {showFallbackIcon ? (
+                <Globe2 className="w-5 h-5 text-muted-foreground" />
+              ) : (
+                <img
+                  src={getFaviconApiUrl(bookmark.url)}
+                  alt="" // Decorative, or use bookmark.name for more specific alt text
+                  width={20}
+                  height={20}
+                  className="w-5 h-5 object-contain"
+                  loading="lazy"
+                  onError={() => setShowFallbackIcon(true)}
+                />
+              )}
             </div>
 
-            {/* Text content area */}
-            <div className="flex-grow min-w-0"> {/* min-w-0 is crucial for truncation to work in flex items */}
+            <div className="flex-grow min-w-0">
               <h3 className="text-sm font-semibold truncate flex items-center" title={bookmark.name}>
                 {bookmark.name}
                 {bookmark.isPrivate && (
@@ -128,11 +149,10 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
           </a>
         </div>
 
-        {/* Admin controls: Edit and Delete */}
         {isAdminAuthenticated && (
           <div className={cn(
             "absolute top-1 right-1 flex items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity space-x-0.5",
-            isDragging && "opacity-100" // Keep controls visible if dragging this item
+            isDragging && "opacity-100"
           )}>
             <Button
               variant="ghost"
