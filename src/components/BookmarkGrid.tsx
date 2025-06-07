@@ -6,8 +6,8 @@ import type { Bookmark, Category } from '@/types';
 import BookmarkItem from './BookmarkItem';
 import { Button } from '@/components/ui/button';
 import { FolderOpen, SearchX, EyeOff, Save } from 'lucide-react';
-import type { DraggableProvidedDraggableProps, DraggableProvidedDragHandleProps } from 'react-beautiful-dnd';
 import dynamic from 'next/dynamic';
+import { cn } from '@/lib/utils';
 import { Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2, Eye } from 'lucide-react';
 
 const Droppable = dynamic(() =>
@@ -96,7 +96,6 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
   const getCategoryById = (id: string) => categories.find(c => c.id === id);
   const canDrag = isAdminAuthenticated && activeCategoryId && activeCategoryId !== 'all';
 
-  // This function is now primarily for non-draggable rendering (e.g., "All Bookmarks" view)
   const renderNonDraggableBookmarksList = (bookmarksToRender: Bookmark[]) => (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
       {bookmarksToRender.map((bookmark) => (
@@ -144,7 +143,6 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
     );
   }
 
-  // Draggable context for a specific category
   if (canDrag && activeCategoryId && Droppable && Draggable) {
     return (
       <>
@@ -165,21 +163,27 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
             )}
         </div>
         <Droppable
-            key={activeCategoryId} // Ensure key changes if activeCategoryId changes
+            key={activeCategoryId}
             droppableId={activeCategoryId}
             type="BOOKMARK"
             isDropDisabled={!canDrag}
             isCombineEnabled={false}
-            ignoreContainerClipping={true} 
+            ignoreContainerClipping={false} // Changed from true, as it can sometimes cause issues if not needed
         >
             {(provided, snapshot) => (
             <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
-                className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 rounded-md p-1 min-h-[100px] transition-colors ${snapshot.isDraggingOver ? 'bg-accent/20 ring-2 ring-accent' : 'bg-transparent'}`}
+                className={cn(
+                    "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4",
+                    "rounded-md transition-colors", // Removed p-1 from here
+                    // Added min-height to ensure droppable area exists even if empty or for the placeholder
+                    // This might help r-b-dnd calculate multi-row drops better
+                    "min-h-[150px]", 
+                    snapshot.isDraggingOver ? 'bg-accent/20 ring-2 ring-accent' : 'bg-transparent'
+                )}
             >
                 {bookmarks.map((bookmark, index) => (
-                  // Ensure Draggable is loaded before attempting to render it
                   Draggable && (
                     <Draggable
                       key={bookmark.id}
@@ -210,12 +214,12 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
     );
   }
 
-  // Default rendering (no D&D or "all" categories view, or DND components not yet loaded)
   return (
     <div className="space-y-8">
       {(activeCategoryId === 'all' || !activeCategoryId) ? (
         categories
           .filter(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated))
+          .sort((a, b) => b.priority - a.priority) // Ensure categories are sorted
           .map((category) => {
             const categoryBookmarks = bookmarks.filter(
               (bookmark) => bookmark.categoryId === category.id
@@ -241,7 +245,6 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
             );
           })
       ) : (
-        // This case handles a specific category selected, but D&D is not active/available
         <>
             <div className="flex justify-between items-center mb-4 border-b pb-2">
                 <h2
@@ -261,5 +264,3 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
 };
 
 export default BookmarkGrid;
-
-    

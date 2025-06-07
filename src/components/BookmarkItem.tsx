@@ -32,7 +32,6 @@ interface BookmarkItemProps {
   isDragging?: boolean;
 }
 
-// Wrap the component definition with React.memo
 const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
   bookmark,
   onDeleteBookmark,
@@ -44,11 +43,15 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
   isDragging
 }) => {
   const { toast } = useToast();
+  const [faviconError, setFaviconError] = React.useState(false);
+
+  React.useEffect(() => {
+    setFaviconError(false); // Reset error state when bookmark URL (and thus favicon URL) changes
+  }, [bookmark.url]);
 
   const getFaviconUrl = (url: string) => {
     try {
       const domain = new URL(url).hostname;
-      // Request 32x32 size to match display size
       const googleFaviconServiceUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
       return `https://proxy.oily.cn/proxy/${googleFaviconServiceUrl}`;
     } catch (error) {
@@ -76,7 +79,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
       <Card className={`flex-grow overflow-hidden backdrop-blur-sm border border-border/60 hover:border-primary/70 rounded-lg group-hover:bg-accent/10 group-focus-within:bg-accent/10 ${isDragging ? 'border-primary ring-2 ring-primary' : ''}`}>
         <div className="flex items-center p-3">
           {isAdminAuthenticated && dragHandleProps && (
-            <div {...dragHandleProps} className="cursor-grab p-1 mr-2 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-50 transition-opacity" aria-label="拖动排序">
+            <div {...dragHandleProps} className="cursor-grab p-1 mr-1 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-50 transition-opacity" aria-label="拖动排序">
               <GripVertical className="h-4 w-4" />
             </div>
           )}
@@ -84,26 +87,23 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
             href={bookmark.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-grow flex items-start space-x-3 text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline"
+            className="flex-grow flex items-center text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline" // Removed space-x-3, will use margin on icon container
             aria-label={`打开 ${bookmark.name}`}
             onClick={(e) => { if(isDragging) e.preventDefault();}} // Prevent navigation while dragging
           >
-            {favicon ? (
-              <Image
-                src={favicon}
-                alt=""
-                width={32}
-                height={32}
-                className="mt-0.5 rounded-md object-contain group-hover:scale-110 transition-transform flex-shrink-0"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  const fallbackIcon = target.closest('.flex')?.querySelector('.fallback-icon');
-                  if (fallbackIcon) fallbackIcon.classList.remove('hidden');
-                }}
-              />
-            ) : null}
-            <Link2 className={`h-8 w-8 text-muted-foreground fallback-icon ${favicon ? 'hidden' : ''} flex-shrink-0`} />
+            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center mr-2"> {/* Icon container with fixed size and margin */}
+              {favicon && !faviconError ? (
+                <Image
+                  src={favicon}
+                  alt="" // Decorative, alt can be empty
+                  width={32}
+                  height={32}
+                  className="rounded-md object-contain" // Removed group-hover scale for simplicity
+                />
+              ) : (
+                <Link2 className="w-5 h-5 text-muted-foreground" /> // Fallback icon, sized to fit well
+              )}
+            </div>
 
             <div className="flex-grow min-w-0">
               <h3 className="text-sm font-semibold truncate flex items-center" title={bookmark.name}>
@@ -163,8 +163,6 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
   );
 });
 
-// It's good practice to set a displayName for memoized components for better debugging
 BookmarkItem.displayName = 'BookmarkItem';
 
 export default BookmarkItem;
-
