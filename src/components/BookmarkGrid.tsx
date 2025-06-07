@@ -5,11 +5,12 @@ import React from 'react';
 import type { Bookmark, Category } from '@/types';
 import BookmarkItem from './BookmarkItem';
 import { Button } from '@/components/ui/button';
-import { FolderOpen, SearchX, EyeOff, Save } from 'lucide-react';
+import { FolderOpen, SearchX, EyeOff, Save, Globe2 } from 'lucide-react'; // Added Globe2
 import dynamic from 'next/dynamic';
 import { cn } from '@/lib/utils';
-import { Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2, Eye, Globe2 } from 'lucide-react';
+import { iconMap as globalIconMap } from './AppSidebar'; // Assuming iconMap is exported
 
+// Dynamically import react-beautiful-dnd components
 const Droppable = dynamic(() =>
   import('react-beautiful-dnd').then(mod => mod.Droppable), { ssr: false }
 );
@@ -17,56 +18,6 @@ const Draggable = dynamic(() =>
   import('react-beautiful-dnd').then(mod => mod.Draggable), { ssr: false }
 );
 
-const availableIcons: { name: string; value: string; IconComponent: React.ElementType }[] = [
-  { name: '文件夹', value: 'Folder', IconComponent: Folder },
-  { name: '公文包', value: 'Briefcase', IconComponent: Briefcase },
-  { name: '书本', value: 'BookOpen', IconComponent: BookOpen },
-  { name: '电影', value: 'Film', IconComponent: Film },
-  { name: '游戏', value: 'Gamepad2', IconComponent: Gamepad2 },
-  { name: '毕业帽', value: 'GraduationCap', IconComponent: GraduationCap },
-  { name: '耳机', value: 'Headphones', IconComponent: Headphones },
-  { name: '爱心', value: 'Heart', IconComponent: Heart },
-  { name: '主页', value: 'Home', IconComponent: Home },
-  { name: '图片', value: 'Image', IconComponent: Image },
-  { name: '灯泡', value: 'Lightbulb', IconComponent: Lightbulb },
-  { name: '列表', value: 'List', IconComponent: List },
-  { name: '锁', value: 'Lock', IconComponent: Lock },
-  { name: '地图钉', value: 'MapPin', IconComponent: MapPin },
-  { name: '消息', value: 'MessageSquare', IconComponent: MessageSquare },
-  { name: '音乐', value: 'Music', IconComponent: Music },
-  { name: '报纸', value: 'Newspaper', IconComponent: Newspaper },
-  { name: '包裹', value: 'Package', IconComponent: Package },
-  { name: '调色板', value: 'Palette', IconComponent: Palette },
-  { name: '飞机', value: 'Plane', IconComponent: Plane },
-  { name: '播放', value: 'PlayCircle', IconComponent: PlayCircle },
-  { name: '保存', value: 'Save', IconComponent: Save },
-  { name: '购物袋', value: 'ShoppingBag', IconComponent: ShoppingBag },
-  { name: '购物车', value: 'ShoppingCart', IconComponent: ShoppingCart },
-  { name: '手机', value: 'Smartphone', IconComponent: Smartphone },
-  { name: '闪光', value: 'Sparkles', IconComponent: Sparkles },
-  { name: '星星', value: 'Star', IconComponent: Star },
-  { name: '点赞', value: 'ThumbsUp', IconComponent: ThumbsUp },
-  { name: '钢笔工具', value: 'PenTool', IconComponent: PenTool },
-  { name: '趋势', value: 'TrendingUp', IconComponent: TrendingUp },
-  { name: '电视', value: 'Tv2', IconComponent: Tv2 },
-  { name: '用户', value: 'User', IconComponent: User },
-  { name: '视频', value: 'Video', IconComponent: Video },
-  { name: '钱包', value: 'Wallet', IconComponent: Wallet },
-  { name: '扳手', value: 'Wrench', IconComponent: Wrench },
-  { name: 'YouTube', value: 'Youtube', IconComponent: Youtube },
-  { name: '闪电', value: 'Zap', IconComponent: Zap },
-  { name: '设置', value: 'Settings', IconComponent: Settings },
-  { name: '拖动点', value: 'GripVertical', IconComponent: GripVertical },
-  { name: '齿轮', value: 'Settings2', IconComponent: Settings2 },
-  { name: '眼睛', value: 'Eye', IconComponent: Eye },
-  { name: '闭眼', value: 'EyeOff', IconComponent: EyeOff },
-  { name: '地球', value: 'Globe2', IconComponent: Globe2 },
-];
-
-const iconMap: { [key: string]: React.ElementType } = Object.fromEntries(
-  availableIcons.map(icon => [icon.value, icon.IconComponent])
-);
-iconMap['Default'] = Folder; // Default for categories
 
 interface BookmarkGridProps {
   bookmarks: Bookmark[];
@@ -95,10 +46,10 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
 }) => {
 
   const getCategoryById = (id: string) => categories.find(c => c.id === id);
-  const canDrag = isAdminAuthenticated && activeCategoryId && activeCategoryId !== 'all';
+  const canDrag = isAdminAuthenticated && activeCategoryId && activeCategoryId !== 'all' && Droppable && Draggable;
 
   const renderNonDraggableBookmarksList = (bookmarksToRender: Bookmark[]) => (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
       {bookmarksToRender.map((bookmark) => (
         <BookmarkItem
           key={bookmark.id}
@@ -111,7 +62,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
     </div>
   );
 
-  if (bookmarks.length === 0 && activeCategoryId !== 'all') {
+  if (bookmarks.length === 0 && activeCategoryId) { // Ensure activeCategoryId is not null
      if (searchQuery && searchQuery.trim() !== '') {
         return (
           <div className="text-center py-12">
@@ -121,7 +72,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
           </div>
         );
      }
-     const activeCat = activeCategoryId ? getCategoryById(activeCategoryId) : null;
+     const activeCat = getCategoryById(activeCategoryId);
      if (activeCat && activeCat.isPrivate && !isAdminAuthenticated) {
         return (
           <div className="text-center py-12">
@@ -144,15 +95,19 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
     );
   }
 
-  if (canDrag && activeCategoryId && Droppable && Draggable) {
+  const CategoryIconComponent = activeCategoryId && categories.find(c => c.id === activeCategoryId)?.icon
+    ? globalIconMap[categories.find(c => c.id === activeCategoryId)?.icon || 'Default'] || globalIconMap['Default']
+    : Globe2; // Fallback for "All Bookmarks" or if icon not found
+
+  if (canDrag) {
     return (
       <>
         <div className="flex justify-between items-center mb-4 border-b pb-2">
             <h2
-                id={`category-title-main`}
+                id={`category-title-main-${activeCategoryId}`}
                 className="text-xl font-semibold text-foreground flex items-center"
             >
-                {categories.find(c => c.id === activeCategoryId)?.icon && React.createElement(iconMap[categories.find(c => c.id === activeCategoryId)?.icon || 'Default'] || iconMap['Default'], {className: "mr-2 h-5 w-5 text-primary flex-shrink-0"})}
+                <CategoryIconComponent className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
                 {currentCategoryName}
                 {categories.find(c => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
             </h2>
@@ -164,30 +119,28 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
             )}
         </div>
         <Droppable
-            key={activeCategoryId}
-            droppableId={activeCategoryId}
+            key={activeCategoryId} // Ensure key changes if category changes
+            droppableId={activeCategoryId || 'droppable-area-fallback'} // Provide a fallback ID if activeCategoryId is null
             type="BOOKMARK"
-            isDropDisabled={!canDrag}
-            isCombineEnabled={false}
-            ignoreContainerClipping={true} // Crucial for some complex layouts
+            isDropDisabled={!canDrag} // Redundant check but good for clarity
+            ignoreContainerClipping={true} // Important for complex scroll/overflow scenarios
         >
             {(provided, snapshot) => (
             <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
                 className={cn(
-                    "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4",
-                    "rounded-md transition-colors",
-                    snapshot.isDraggingOver ? 'bg-accent/10 ring-1 ring-accent/50' : 'bg-transparent' // Softened style
+                    "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4",
+                    "rounded-md transition-colors min-h-[100px]", // Ensure some min height
+                    snapshot.isDraggingOver ? 'bg-accent/10 ring-1 ring-accent/50' : 'bg-transparent'
                 )}
             >
                 {bookmarks.map((bookmark, index) => (
-                  Draggable && (
                     <Draggable
                       key={bookmark.id}
                       draggableId={bookmark.id}
                       index={index}
-                      isDragDisabled={!canDrag}
+                      isDragDisabled={!canDrag} // Redundant check
                     >
                       {(providedDraggable, snapshotDraggable) => (
                         <BookmarkItem
@@ -202,7 +155,6 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
                         />
                       )}
                     </Draggable>
-                  )
                 ))}
                 {provided.placeholder}
             </div>
@@ -212,19 +164,20 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
     );
   }
 
+  // Fallback for non-draggable views (e.g., "All Bookmarks" or not admin)
   return (
     <div className="space-y-8">
       {(activeCategoryId === 'all' || !activeCategoryId) ? (
         categories
           .filter(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated))
-          .sort((a, b) => b.priority - a.priority) 
+          .sort((a, b) => (b.priority || 0) - (a.priority || 0))
           .map((category) => {
             const categoryBookmarks = bookmarks.filter(
               (bookmark) => bookmark.categoryId === category.id
             );
             if (categoryBookmarks.length === 0) return null;
 
-            const IconComponent = iconMap[category.icon || 'Default'] || iconMap['Default'];
+            const CatIcon = globalIconMap[category.icon || 'Default'] || globalIconMap['Default'];
 
             return (
               <section key={category.id} aria-labelledby={`category-title-${category.id}`}>
@@ -233,7 +186,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
                         id={`category-title-${category.id}`}
                         className="text-xl font-semibold text-foreground flex items-center"
                     >
-                        <IconComponent className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
+                        <CatIcon className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
                         {category.name}
                         {category.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
                     </h2>
@@ -246,12 +199,12 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
         <>
             <div className="flex justify-between items-center mb-4 border-b pb-2">
                 <h2
-                    id={`category-title-main`}
+                    id={`category-title-main-${activeCategoryId}`}
                     className="text-xl font-semibold text-foreground flex items-center"
                 >
-                    {categories.find(c => c.id === activeCategoryId)?.icon && React.createElement(iconMap[categories.find(c => c.id === activeCategoryId)?.icon || 'Default'] || iconMap['Default'], {className: "mr-2 h-5 w-5 text-primary flex-shrink-0"})}
+                    <CategoryIconComponent className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
                     {currentCategoryName}
-                    {categories.find(c => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
+                    {activeCategoryId && categories.find(c => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
                 </h2>
             </div>
             {renderNonDraggableBookmarksList(bookmarks)}
