@@ -10,20 +10,12 @@ import { cn } from '@/lib/utils';
 import { iconMap as globalIconMap } from './AppSidebar';
 
 // Import dnd-kit components and hooks
-import {
-  DndContext,
-  closestCorners,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
+/*
 import {
   SortableContext,
-  sortableKeyboardCoordinates,
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
+*/
 
 
 interface BookmarkGridProps {
@@ -37,7 +29,7 @@ interface BookmarkGridProps {
   searchQuery?: string;
   hasPendingOrderChanges: boolean;
   onSaveOrder: () => void;
-  onDragEnd: (event: DragEndEvent) => void;
+  // onDragEnd?: (event: any) => void; // Temporarily commented out
 }
 
 const BookmarkGrid: FC<BookmarkGridProps> = ({
@@ -51,40 +43,33 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
     searchQuery,
     hasPendingOrderChanges,
     onSaveOrder,
-    onDragEnd
+    // onDragEnd, // Temporarily commented out
 }) => {
 
   const getCategoryById = (id: string) => categories.find((c: Category) => c.id === id);
-  const canDrag = isAdminAuthenticated && activeCategoryId && activeCategoryId !== 'all';
+  const canDrag = false; // isAdminAuthenticated && activeCategoryId && activeCategoryId !== 'all'; // DND Temporarily disabled
 
-  const renderNonDraggableBookmarksList = (bookmarksToRender: Bookmark[]) => (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+  const renderBookmarksList = (bookmarksToRender: Bookmark[], isDraggableContext: boolean) => (
+    <div className={cn(
+        "relative grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4",
+        // "p-1", // Removed to rely on gap
+        // "min-h-[100px]" // Removed explicit min-height
+    )}>
       {bookmarksToRender.map((bookmark: Bookmark) => (
         <BookmarkItem
           key={bookmark.id}
-          id={bookmark.id} // Pass id for @dnd-kit
+          id={bookmark.id} 
           bookmark={bookmark}
           onDeleteBookmark={onDeleteBookmark}
           onEditBookmark={onEditBookmark}
           isAdminAuthenticated={isAdminAuthenticated}
-          isDraggable={false} 
+          isDraggable={isDraggableContext && canDrag} 
         />
       ))}
     </div>
   );
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5, // Require mouse to move 5px before starting a drag
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
   
-  const bookmarkIds = useMemo(() => bookmarks.map(bookmark => bookmark.id), [bookmarks]);
+  // const bookmarkIds = useMemo(() => bookmarks.map(bookmark => bookmark.id), [bookmarks]); // DND Temporarily disabled
 
   if (bookmarks.length === 0 && activeCategoryId) {
      if (searchQuery && searchQuery.trim() !== '') {
@@ -124,7 +109,9 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
     : Globe2;
 
 
-  if (canDrag && activeCategoryId) { // Ensure activeCategoryId is not null for droppableId
+  // If DND is enabled (canDrag is true), wrap with SortableContext
+  if (canDrag && activeCategoryId) {
+    // const bookmarkIds = bookmarks.map(bookmark => bookmark.id); // DND Temporarily disabled
     return (
       <>
         <div className="flex justify-between items-center mb-4 border-b pb-2">
@@ -143,35 +130,12 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
                 </Button>
             )}
         </div>
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragEnd={onDragEnd}
-        >
-          <SortableContext
-            items={bookmarkIds}
-            strategy={rectSortingStrategy}
-          >
-            <div
-                className={cn(
-                    "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 relative",
-                    // Removed isDraggingOver styling as it's not directly available from SortableContext here
-                )}
-            >
-                {bookmarks.map((bookmark: Bookmark) => (
-                    <BookmarkItem
-                      key={bookmark.id}
-                      id={bookmark.id} 
-                      bookmark={bookmark}
-                      onDeleteBookmark={onDeleteBookmark}
-                      onEditBookmark={onEditBookmark}
-                      isAdminAuthenticated={isAdminAuthenticated}
-                      isDraggable={canDrag}
-                    />
-                ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+        {/* <SortableContext
+          items={bookmarkIds}
+          strategy={rectSortingStrategy}
+        > */}
+          {renderBookmarksList(bookmarks, true)}
+        {/* </SortableContext> */}
       </>
     );
   }
@@ -203,14 +167,13 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
                         {category.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
                     </h2>
                  </div>
-                {renderNonDraggableBookmarksList(categoryBookmarks)}
+                {renderBookmarksList(categoryBookmarks, false)}
               </section>
             );
           })
       ) : (
-        // Display for a single category when not draggable (e.g., not admin)
         <>
-            <div className="flex justify-between items-center mb-4 border-b pb-2">
+            <div className="flex justify-between items-center mb-4 border-b pb-2 relative">
                 <h2
                     id={`category-title-main-${activeCategoryId}`}
                     className="text-xl font-semibold text-foreground flex items-center"
@@ -219,8 +182,14 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
                     {currentCategoryName}
                     {activeCategoryId && categories.find((c: Category) => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
                 </h2>
+                 {isAdminAuthenticated && hasPendingOrderChanges && activeCategoryId && activeCategoryId !== 'all' && (
+                    <Button onClick={onSaveOrder} size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+                        <Save className="mr-2 h-4 w-4" />
+                        保存书签顺序
+                    </Button>
+                )}
             </div>
-            {renderNonDraggableBookmarksList(bookmarks)}
+            {renderBookmarksList(bookmarks, canDrag)}
         </>
       )}
     </div>
@@ -228,5 +197,3 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
 };
 
 export default BookmarkGrid;
-
-    

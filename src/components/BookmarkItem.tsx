@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, forwardRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Bookmark } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,11 +21,13 @@ import {
 import { cn } from '@/lib/utils';
 
 // Import dnd-kit hooks and utilities
+/*
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+*/
 
 interface BookmarkItemProps {
-  id: string; // Required for useSortable
+  id: string; 
   bookmark: Bookmark;
   onDeleteBookmark: (id: string) => void;
   onEditBookmark: (bookmark: Bookmark) => void;
@@ -44,18 +46,17 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
   const [faviconError, setFaviconError] = useState(false);
 
   useEffect(() => {
-    setFaviconError(false); // Reset error state if URL changes
+    setFaviconError(false); 
   }, [bookmark.url]);
 
   const getFaviconUrl = (url: string) => {
     try {
       const domain = new URL(url).hostname;
-      // Using a proxy for Google Favicon service to avoid potential CORS issues or direct client exposure
       const googleFaviconServiceUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
-      return `https://proxy.oily.cn/proxy/${googleFaviconServiceUrl}`;
+      return googleFaviconServiceUrl;
     } catch (error) {
       console.error("Invalid URL for favicon:", url, error);
-      return ''; // Return empty string if URL is invalid
+      return ''; 
     }
   };
   const favicon = getFaviconUrl(bookmark.url);
@@ -64,6 +65,14 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     onDeleteBookmark(bookmark.id);
   };
 
+  // DND Kit Sortable setup (temporarily disabled)
+  const isDragging = false; 
+  const style = {}; 
+  const setNodeRef = null; 
+  const attributes = {}; 
+  const listeners = {}; 
+  
+  /*
   const {
     attributes,
     listeners,
@@ -71,23 +80,25 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id });
+  } = useSortable({ id: id, disabled: !isDraggable });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 50 : undefined,
+    zIndex: isDragging ? 50 : undefined, 
   };
+  */
+
 
   if (!isAdminAuthenticated && bookmark.isPrivate) {
-    return null; // Don't render private bookmarks if not admin
+    return null; 
   }
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes} // Only spread attributes if not using a separate drag handle
+      ref={setNodeRef} 
+      style={style} 
+      // {...(isDraggable ? attributes : {})} // DND Temporarily disabled
       className={cn(
         "group relative rounded-lg flex flex-col transition-shadow",
         isDragging ? 'shadow-2xl scale-105 bg-card z-50' : 'shadow-lg hover:shadow-xl bg-card/70',
@@ -101,7 +112,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
         <div className="flex items-center p-3">
           {isAdminAuthenticated && isDraggable && (
             <div
-              {...listeners} // Apply listeners to the drag handle
+              // {...listeners} // DND Temporarily disabled
               className="cursor-grab p-1 mr-1 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-50 transition-opacity"
               aria-label="拖动排序"
             >
@@ -124,9 +135,9 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
                   height={32}
                   className="object-contain w-full h-full"
                   onError={() => {
-                    console.log(`Favicon error for ${bookmark.name} at ${favicon}`);
                     setFaviconError(true);
                   }}
+                  unoptimized 
                 />
               ) : (
                 <Globe2 className="w-5 h-5 text-muted-foreground" />
@@ -154,7 +165,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
         {isAdminAuthenticated && (
           <div className={cn(
             "absolute top-1 right-1 flex items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity space-x-0.5",
-            isDragging && "opacity-100" // Keep controls visible if dragging this item
+            isDragging && "opacity-100" 
           )}>
             <Button
               variant="ghost"
@@ -199,5 +210,3 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
 };
 
 export default BookmarkItem;
-
-    
