@@ -5,7 +5,7 @@ import React from 'react'; // Import React
 import type { Bookmark } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Link2, Trash2, EyeOff, PenLine, GripVertical } from 'lucide-react';
+import { Globe2, Trash2, EyeOff, PenLine, GripVertical } from 'lucide-react'; // Changed Link2 to Globe2
 import Image from 'next/image';
 import {
   AlertDialog,
@@ -87,21 +87,22 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
             href={bookmark.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-grow flex items-center text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline" // Removed space-x-3, will use margin on icon container
+            className="flex-grow flex items-center text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline"
             aria-label={`打开 ${bookmark.name}`}
             onClick={(e) => { if(isDragging) e.preventDefault();}} // Prevent navigation while dragging
           >
-            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center mr-2"> {/* Icon container with fixed size and margin */}
+            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center mr-2"> {/* Icon container */}
               {favicon && !faviconError ? (
                 <Image
                   src={favicon}
-                  alt="" // Decorative, alt can be empty
+                  alt="" 
                   width={32}
                   height={32}
-                  className="rounded-md object-contain" // Removed group-hover scale for simplicity
+                  className="rounded-md object-contain"
+                  onError={() => setFaviconError(true)}
                 />
               ) : (
-                <Link2 className="w-5 h-5 text-muted-foreground" /> // Fallback icon, sized to fit well
+                <Globe2 className="w-5 h-5 text-muted-foreground" /> {/* Fallback icon */}
               )}
             </div>
 

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { FolderOpen, SearchX, EyeOff, Save } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { cn } from '@/lib/utils';
-import { Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2, Eye } from 'lucide-react';
+import { Folder, Briefcase, BookOpen, Film, Gamepad2, GraduationCap, Headphones, Heart, Home, Image, Lightbulb, List, Lock, MapPin, MessageSquare, Music, Newspaper, Package, Palette, Plane, PlayCircle, ShoppingBag, ShoppingCart, Smartphone, Sparkles, Star, ThumbsUp, PenTool, TrendingUp, Tv2, User, Video, Wallet, Wrench, Youtube, Zap, Settings, GripVertical, Settings2, Eye, Globe2 } from 'lucide-react';
 
 const Droppable = dynamic(() =>
   import('react-beautiful-dnd').then(mod => mod.Droppable), { ssr: false }
@@ -60,12 +60,13 @@ const availableIcons: { name: string; value: string; IconComponent: React.Elemen
   { name: '齿轮', value: 'Settings2', IconComponent: Settings2 },
   { name: '眼睛', value: 'Eye', IconComponent: Eye },
   { name: '闭眼', value: 'EyeOff', IconComponent: EyeOff },
+  { name: '地球', value: 'Globe2', IconComponent: Globe2 },
 ];
 
 const iconMap: { [key: string]: React.ElementType } = Object.fromEntries(
   availableIcons.map(icon => [icon.value, icon.IconComponent])
 );
-iconMap['Default'] = Folder;
+iconMap['Default'] = Folder; // Default for categories
 
 interface BookmarkGridProps {
   bookmarks: Bookmark[];
@@ -168,7 +169,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
             type="BOOKMARK"
             isDropDisabled={!canDrag}
             isCombineEnabled={false}
-            ignoreContainerClipping={false} // Changed from true, as it can sometimes cause issues if not needed
+            ignoreContainerClipping={true} // Crucial for some complex layouts
         >
             {(provided, snapshot) => (
             <div
@@ -176,11 +177,8 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
                 ref={provided.innerRef}
                 className={cn(
                     "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4",
-                    "rounded-md transition-colors", // Removed p-1 from here
-                    // Added min-height to ensure droppable area exists even if empty or for the placeholder
-                    // This might help r-b-dnd calculate multi-row drops better
-                    "min-h-[150px]", 
-                    snapshot.isDraggingOver ? 'bg-accent/20 ring-2 ring-accent' : 'bg-transparent'
+                    "rounded-md transition-colors",
+                    snapshot.isDraggingOver ? 'bg-accent/10 ring-1 ring-accent/50' : 'bg-transparent' // Softened style
                 )}
             >
                 {bookmarks.map((bookmark, index) => (
@@ -219,7 +217,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
       {(activeCategoryId === 'all' || !activeCategoryId) ? (
         categories
           .filter(c => c.isVisible && (!c.isPrivate || isAdminAuthenticated))
-          .sort((a, b) => b.priority - a.priority) // Ensure categories are sorted
+          .sort((a, b) => b.priority - a.priority) 
           .map((category) => {
             const categoryBookmarks = bookmarks.filter(
               (bookmark) => bookmark.categoryId === category.id
