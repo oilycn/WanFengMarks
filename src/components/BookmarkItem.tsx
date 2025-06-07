@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import type { Bookmark } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Globe2, Trash2, EyeOff, PenLine, GripVertical } from 'lucide-react'; // Link2 changed to Globe2
+import { Globe2, Trash2, EyeOff, PenLine, GripVertical } from 'lucide-react';
 import Image from 'next/image';
 import {
   AlertDialog,
@@ -16,8 +16,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger, // Added missing import
 } from "@/components/ui/alert-dialog";
-// Removed useToast as it's not directly used here for delete confirmation
 import type { DraggableProvidedDraggableProps, DraggableProvidedDragHandleProps } from 'react-beautiful-dnd';
 import { cn } from '@/lib/utils';
 
@@ -96,14 +96,14 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
             aria-label={`打开 ${bookmark.name}`}
             onClick={(e) => { if(isDragging) e.preventDefault();}}
           >
-            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center mr-2 rounded-sm overflow-hidden">
+            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center mr-2 rounded-sm overflow-hidden bg-muted/20">
               {favicon && !faviconError ? (
                 <Image
                   src={favicon}
                   alt="" 
                   width={32}
                   height={32}
-                  className="object-contain w-full h-full" // Ensure image fills container
+                  className="object-contain w-full h-full"
                   onError={() => {
                     setFaviconError(true);
                   }}
@@ -130,7 +130,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
         {isAdminAuthenticated && (
           <div className={cn(
             "absolute top-1 right-1 flex items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity space-x-0.5",
-            isDragging && "opacity-100" // Ensure controls are visible if somehow dragging over self
+            isDragging && "opacity-100"
           )}>
             <Button
               variant="ghost"
