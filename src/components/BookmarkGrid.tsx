@@ -119,12 +119,12 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
             )}
         </div>
         <Droppable
-            key={activeCategoryId}
-            droppableId={activeCategoryId || 'droppable-area-fallback'}
+            key={activeCategoryId} // Ensure key changes if category changes
+            droppableId={activeCategoryId || 'droppable-area-fallback'} // Provide a fallback ID if activeCategoryId is null
             type="BOOKMARK"
             isDropDisabled={!canDrag}
-            ignoreContainerClipping={true}
-            isCombineEnabled={false} // Explicitly set to false
+            ignoreContainerClipping={true} 
+            isCombineEnabled={false} 
         >
             {(provided, snapshot) => (
             <div
@@ -132,7 +132,7 @@ const BookmarkGrid: React.FC<BookmarkGridProps> = ({
                 ref={provided.innerRef}
                 className={cn(
                     "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4",
-                    "rounded-md transition-colors min-h-[100px]",
+                    "rounded-md transition-colors", // Removed min-h-[100px]
                     snapshot.isDraggingOver ? 'bg-accent/10 ring-1 ring-accent/50' : 'bg-transparent'
                 )}
             >
