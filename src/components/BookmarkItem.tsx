@@ -26,6 +26,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 */
 
+
 interface BookmarkItemProps {
   id: string; 
   bookmark: Bookmark;
@@ -65,13 +66,6 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     onDeleteBookmark(bookmark.id);
   };
 
-  // DND Kit Sortable setup (temporarily disabled)
-  const isDragging = false; 
-  const style = {}; 
-  const setNodeRef = null; 
-  const attributes = {}; 
-  const listeners = {}; 
-  
   /*
   const {
     attributes,
@@ -88,6 +82,12 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     zIndex: isDragging ? 50 : undefined, 
   };
   */
+  // Placeholder for DND props if not using useSortable
+  const setNodeRef = null; 
+  const style = {};
+  const attributes = {};
+  const listeners = {};
+  const isDragging = false;
 
 
   if (!isAdminAuthenticated && bookmark.isPrivate) {
@@ -98,7 +98,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     <div
       ref={setNodeRef} 
       style={style} 
-      // {...(isDraggable ? attributes : {})} // DND Temporarily disabled
+      {...(isDraggable ? attributes : {})}
       className={cn(
         "group relative rounded-lg flex flex-col transition-shadow",
         isDragging ? 'shadow-2xl scale-105 bg-card z-50' : 'shadow-lg hover:shadow-xl bg-card/70',
@@ -112,7 +112,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
         <div className="flex items-center p-3">
           {isAdminAuthenticated && isDraggable && (
             <div
-              // {...listeners} // DND Temporarily disabled
+              {...listeners}
               className="cursor-grab p-1 mr-1 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-50 transition-opacity"
               aria-label="拖动排序"
             >

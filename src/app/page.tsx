@@ -50,6 +50,7 @@ import {
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 */
 
+
 // Dynamically import dialogs
 const AddBookmarkDialog = dynamic(() => import('@/components/AddBookmarkDialog'));
 const EditBookmarkDialog = dynamic(() => import('@/components/EditBookmarkDialog'));
@@ -63,14 +64,6 @@ const LS_ADMIN_AUTH_KEY = 'wanfeng_admin_auth_v1';
 const APP_BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:9003';
 
 const BOOKMARKLET_SCRIPT = `javascript:(function(){const appUrl='${APP_BASE_URL}';const title=encodeURIComponent(document.title);const pageUrl=encodeURIComponent(window.location.href);let desc='';const metaDesc=document.querySelector('meta[name="description"]');if(metaDesc&&metaDesc.content){desc=encodeURIComponent(metaDesc.content);}else{const ogDesc=document.querySelector('meta[property="og:description"]');if(ogDesc&&ogDesc.content){desc=encodeURIComponent(ogDesc.content);}}const popupWidth=500;const popupHeight=650;const left=(screen.width/2)-(popupWidth/2);const top=(screen.height/2)-(popupHeight/2);const wanfengWindow=window.open(\`\${appUrl}/add-bookmark-popup?name=\${title}&url=\${pageUrl}&desc=\${desc}\`, 'wanfengMarksAddBookmarkPopup', \`toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=yes, resizable=yes, copyhistory=no, width=\${popupWidth}, height=\${popupHeight}, top=\${top}, left=\${left}\`);if(wanfengWindow){wanfengWindow.focus();}else{alert('无法打开晚风Marks书签添加窗口。请检查浏览器是否阻止了弹出窗口。');}})();`;
-
-// Local arrayMove function as a fallback if @dnd-kit/sortable is not found
-function arrayMove<T>(array: T[], from: number, to: number): T[] {
-  const newArray = array.slice();
-  const [item] = newArray.splice(from, 1);
-  newArray.splice(to, 0, item);
-  return newArray;
-}
 
 export default function HomePage() {
   const router = useRouter();
@@ -116,6 +109,7 @@ export default function HomePage() {
     })
   );
   */
+  
 
   useEffect(() => {
     setIsClient(true);
@@ -455,8 +449,17 @@ export default function HomePage() {
     }
   };
 
-  /*
-  const handleDragEndBookmarks = (event: DragEndEvent) => {
+  // Local arrayMove function to avoid @dnd-kit/sortable dependency if it's causing module resolution issues
+  const arrayMove = <T>(array: T[], from: number, to: number): T[] => {
+    const newArray = [...array];
+    const [item] = newArray.splice(from, 1);
+    newArray.splice(to, 0, item);
+    return newArray;
+  };
+
+  
+  // const handleDragEndBookmarks = (event: DragEndEvent) => { // DND-Core type
+  const handleDragEndBookmarks = (event: any) => { // Using `any` temporarily if DragEndEvent is not available
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
@@ -472,27 +475,25 @@ export default function HomePage() {
         const activeBookmark = prevBookmarks[oldIndex];
         const overBookmark = prevBookmarks[newIndex];
 
-        if (activeCategory && activeCategory !== 'all') {
-          // Only reorder if bookmarks are in the same active category
-          if (activeBookmark.categoryId === activeCategory && overBookmark.categoryId === activeCategory) {
-            const itemsInActiveCategory = prevBookmarks.filter(bm => bm.categoryId === activeCategory);
-            const oldIndexInContext = itemsInActiveCategory.findIndex(bm => bm.id === activeId);
-            const newIndexInContext = itemsInActiveCategory.findIndex(bm => bm.id === overId);
-            
-            const reorderedItemsInContext = arrayMove(itemsInActiveCategory, oldIndexInContext, newIndexInContext);
-            
-            const nonActiveCategoryBookmarks = prevBookmarks.filter(bm => bm.categoryId !== activeCategory);
-            const finalBookmarks = [...reorderedItemsInContext, ...nonActiveCategoryBookmarks];
-            
-            setHasPendingBookmarkOrderChanges(true);
-            return finalBookmarks;
-          }
+        if (activeCategory && activeCategory !== 'all' && activeBookmark.categoryId === activeCategory && overBookmark.categoryId === activeCategory) {
+          const itemsInActiveCategory = prevBookmarks.filter(bm => bm.categoryId === activeCategory);
+          const oldIndexInContext = itemsInActiveCategory.findIndex(bm => bm.id === activeId);
+          const newIndexInContext = itemsInActiveCategory.findIndex(bm => bm.id === overId);
+          
+          if (oldIndexInContext === -1 || newIndexInContext === -1) return prevBookmarks;
+
+          const reorderedItemsInContext = arrayMove(itemsInActiveCategory, oldIndexInContext, newIndexInContext);
+          
+          const updatedGlobalBookmarks = prevBookmarks.filter(bm => bm.categoryId !== activeCategory).concat(reorderedItemsInContext);
+
+          setHasPendingBookmarkOrderChanges(true);
+          return updatedGlobalBookmarks;
         }
-        return prevBookmarks; // No change if not in the same draggable context or 'all' view
+        return prevBookmarks; 
       });
     }
   };
-  */
+  
 
   const handleSaveBookmarksOrder = async () => {
     if (!isAdminAuthenticated || !hasPendingBookmarkOrderChanges || !activeCategory || activeCategory === 'all') {
@@ -697,7 +698,6 @@ export default function HomePage() {
                 searchQuery={searchQuery}
                 hasPendingOrderChanges={hasPendingBookmarkOrderChanges}
                 onSaveOrder={handleSaveBookmarksOrder}
-                // onDragEnd={handleDragEndBookmarks} // Temporarily commented out
               />
             </main>
             <footer className="text-center py-3 border-t bg-background/50 text-xs text-muted-foreground">

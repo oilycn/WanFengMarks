@@ -29,7 +29,6 @@ interface BookmarkGridProps {
   searchQuery?: string;
   hasPendingOrderChanges: boolean;
   onSaveOrder: () => void;
-  // onDragEnd?: (event: any) => void; // Temporarily commented out
 }
 
 const BookmarkGrid: FC<BookmarkGridProps> = ({
@@ -43,17 +42,14 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
     searchQuery,
     hasPendingOrderChanges,
     onSaveOrder,
-    // onDragEnd, // Temporarily commented out
 }) => {
 
   const getCategoryById = (id: string) => categories.find((c: Category) => c.id === id);
-  const canDrag = false; // isAdminAuthenticated && activeCategoryId && activeCategoryId !== 'all'; // DND Temporarily disabled
+  const canDrag = isAdminAuthenticated && activeCategoryId && activeCategoryId !== 'all';
 
   const renderBookmarksList = (bookmarksToRender: Bookmark[], isDraggableContext: boolean) => (
     <div className={cn(
         "relative grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4",
-        // "p-1", // Removed to rely on gap
-        // "min-h-[100px]" // Removed explicit min-height
     )}>
       {bookmarksToRender.map((bookmark: Bookmark) => (
         <BookmarkItem
@@ -69,7 +65,7 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
     </div>
   );
   
-  // const bookmarkIds = useMemo(() => bookmarks.map(bookmark => bookmark.id), [bookmarks]); // DND Temporarily disabled
+  // const bookmarkIds = useMemo(() => bookmarks.map(bookmark => bookmark.id), [bookmarks]);
 
   if (bookmarks.length === 0 && activeCategoryId) {
      if (searchQuery && searchQuery.trim() !== '') {
@@ -109,9 +105,9 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
     : Globe2;
 
 
-  // If DND is enabled (canDrag is true), wrap with SortableContext
-  if (canDrag && activeCategoryId) {
-    // const bookmarkIds = bookmarks.map(bookmark => bookmark.id); // DND Temporarily disabled
+  if (canDrag && activeCategoryId && activeCategoryId !== 'all') {
+    const itemsInCurrentCategory = bookmarks.filter(bm => bm.categoryId === activeCategoryId);
+    const itemIdsInCurrentCategory = itemsInCurrentCategory.map(bm => bm.id);
     return (
       <>
         <div className="flex justify-between items-center mb-4 border-b pb-2">
@@ -131,16 +127,15 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
             )}
         </div>
         {/* <SortableContext
-          items={bookmarkIds}
+          items={itemIdsInCurrentCategory}
           strategy={rectSortingStrategy}
         > */}
-          {renderBookmarksList(bookmarks, true)}
+          {renderBookmarksList(itemsInCurrentCategory, true)}
         {/* </SortableContext> */}
       </>
     );
   }
 
-  // Fallback for non-draggable views (e.g., "All Bookmarks" or not admin)
   return (
     <div className="space-y-8">
       {(activeCategoryId === 'all' || !activeCategoryId) ? (
@@ -189,7 +184,7 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
                     </Button>
                 )}
             </div>
-            {renderBookmarksList(bookmarks, canDrag)}
+            {renderBookmarksList(bookmarks, false)} {/* Show non-draggable if not canDrag */}
         </>
       )}
     </div>
