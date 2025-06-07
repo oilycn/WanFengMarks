@@ -1,11 +1,11 @@
 
 "use client";
 
-import React from 'react'; // Import React
+import React, { useState, useEffect } from 'react'; // Import React
 import type { Bookmark } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Globe2, Trash2, EyeOff, PenLine, GripVertical } from 'lucide-react'; // Changed Link2 to Globe2
+import { Globe2, Trash2, EyeOff, PenLine, GripVertical } from 'lucide-react';
 import Image from 'next/image';
 import {
   AlertDialog,
@@ -43,33 +43,36 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
   isDragging
 }) => {
   const { toast } = useToast();
-  const [faviconError, setFaviconError] = React.useState(false);
+  const [faviconError, setFaviconError] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setFaviconError(false); // Reset error state when bookmark URL (and thus favicon URL) changes
   }, [bookmark.url]);
 
   const getFaviconUrl = (url: string) => {
     try {
       const domain = new URL(url).hostname;
+      // Using Google's favicon service, proxied for privacy/CORS
       const googleFaviconServiceUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
       return `https://proxy.oily.cn/proxy/${googleFaviconServiceUrl}`;
     } catch (error) {
       console.error("Invalid URL for favicon:", url, error);
-      return '';
+      return ''; // Return empty string or a path to a default local fallback
     }
   };
   const favicon = getFaviconUrl(bookmark.url);
 
   const handleDelete = () => {
     onDeleteBookmark(bookmark.id);
-    toast({ title: "书签已删除", description: `"${bookmark.name}" 已被删除。`, variant: "destructive", duration: 2000 });
+    // Toast is handled by the parent component now
   };
 
   if (!isAdminAuthenticated && bookmark.isPrivate) {
     return null;
   }
 
+  // The return statement for the component's JSX must be wrapped in parentheses
+  // if the opening tag of the top-level JSX element is not on the same line as `return`.
   return (
     <div
       ref={innerRef}
@@ -95,18 +98,21 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
               {favicon && !faviconError ? (
                 <Image
                   src={favicon}
-                  alt="" 
+                  alt="" // Alt text can be empty for decorative favicons if name is descriptive
                   width={32}
                   height={32}
                   className="rounded-md object-contain"
-                  onError={() => setFaviconError(true)}
+                  onError={() => {
+                    console.log(`Favicon error for: ${favicon}`);
+                    setFaviconError(true);
+                  }}
                 />
               ) : (
-                <Globe2 className="w-5 h-5 text-muted-foreground" /> {/* Fallback icon */}
+                <Globe2 className="w-5 h-5 text-muted-foreground" /> // Fallback icon
               )}
             </div>
 
-            <div className="flex-grow min-w-0">
+            <div className="flex-grow min-w-0"> {/* Ensure text can shrink and truncate */}
               <h3 className="text-sm font-semibold truncate flex items-center" title={bookmark.name}>
                 {bookmark.name}
                 {bookmark.isPrivate && <EyeOff className="ml-1.5 h-3 w-3 text-muted-foreground/70 flex-shrink-0" title="私密书签"/>}
@@ -161,9 +167,9 @@ const BookmarkItem: React.FC<BookmarkItemProps> = React.memo(({
         )}
       </Card>
     </div>
-  );
+  ); // This closing parenthesis matches the one after `return (`
 });
 
-BookmarkItem.displayName = 'BookmarkItem';
+BookmarkItem.displayName = 'BookmarkItem'; // Good practice for React.memo components
 
 export default BookmarkItem;
