@@ -51,11 +51,13 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
   const getFaviconUrl = (url: string) => {
     try {
       const domain = new URL(url).hostname;
+      // Using a more reliable favicon service like Google's, or a robust fallback.
+      // sz=32 requests a 32x32 icon, common size.
       const googleFaviconServiceUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
       return googleFaviconServiceUrl;
     } catch (error) {
       console.error("Invalid URL for favicon:", url, error);
-      return ''; 
+      return ''; // Return empty string or a path to a default icon if URL is invalid
     }
   };
   const favicon = getFaviconUrl(bookmark.url);
@@ -70,13 +72,13 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     setNodeRef,
     transform,
     transition,
-    isDragging,
-  } = useSortable({ id: String(id), disabled: !isDraggable });
+    isDragging, // Provided by useSortable
+  } = useSortable({ id: String(id), disabled: !isDraggable }); // Ensure ID is a string
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 50 : undefined, 
+    zIndex: isDragging ? 50 : undefined, // Elevate a dragging item
   };
 
 
@@ -86,23 +88,24 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
 
   return (
     <div
-      ref={setNodeRef} 
-      style={style} 
-      {...(isDraggable ? attributes : {})}
+      ref={setNodeRef} // This ref is for dnd-kit
+      style={style} // Apply transform and transition styles
+      {...(isDraggable ? attributes : {})} // Spread dnd-kit attributes if draggable
       className={cn(
         "group relative rounded-lg flex flex-col transition-shadow",
-        isDragging ? 'shadow-2xl scale-105 bg-card z-50' : 'shadow-lg hover:shadow-xl bg-card/70',
+        isDragging ? 'shadow-2xl scale-105 bg-card z-50' : 'shadow-lg hover:shadow-xl bg-card/70', // Visual feedback for dragging
       )}
     >
       <Card className={cn(
         "flex-grow overflow-hidden backdrop-blur-sm border border-border/60 hover:border-primary/70 rounded-lg",
-        "group-hover:bg-accent/10 group-focus-within:bg-accent/10",
-        isDragging ? 'border-primary ring-2 ring-primary' : ''
+        "group-hover:bg-accent/10 group-focus-within:bg-accent/10", // subtle hover/focus for the card itself
+        isDragging ? 'border-primary ring-2 ring-primary' : '' // More prominent border when dragging
       )}>
         <div className="flex items-center p-3">
+          {/* Drag handle only shown if admin and draggable context */}
           {isAdminAuthenticated && isDraggable && (
             <div
-              {...listeners}
+              {...listeners} // Spread dnd-kit listeners for the drag handle
               className="cursor-grab p-1 mr-1 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-50 transition-opacity"
               aria-label="拖动排序"
             >
@@ -113,28 +116,30 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
             href={bookmark.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-grow flex items-center text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline min-w-0"
+            className="flex-grow flex items-center text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline min-w-0" // Ensure link takes up space and min-w-0 for truncation
             aria-label={`打开 ${bookmark.name}`}
           >
             <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center mr-2 rounded-sm overflow-hidden bg-muted/20">
               {favicon && !faviconError ? (
                 <Image
                   src={favicon}
-                  alt=""
-                  width={32}
-                  height={32}
-                  className="object-contain w-full h-full"
+                  alt="" // Decorative, alt text handled by link
+                  width={32} // Explicit width
+                  height={32} // Explicit height
+                  className="object-contain w-full h-full" // Ensure image scales correctly
                   onError={() => {
+                    console.warn(`Favicon failed to load for: ${bookmark.url}`);
                     setFaviconError(true);
                   }}
-                  unoptimized 
+                  unoptimized // If using external favicon service, optimization might not be needed/possible via next/image
                 />
               ) : (
-                <Globe2 className="w-5 h-5 text-muted-foreground" />
+                <Globe2 className="w-5 h-5 text-muted-foreground" /> // Fallback icon
               )}
             </div>
 
-            <div className="flex-grow min-w-0">
+            {/* Text content area */}
+            <div className="flex-grow min-w-0"> {/* min-w-0 is crucial for truncation to work in flex items */}
               <h3 className="text-sm font-semibold truncate flex items-center" title={bookmark.name}>
                 {bookmark.name}
                 {bookmark.isPrivate && (
@@ -152,10 +157,11 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
           </a>
         </div>
 
+        {/* Admin controls: Edit and Delete */}
         {isAdminAuthenticated && (
           <div className={cn(
             "absolute top-1 right-1 flex items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity space-x-0.5",
-            isDragging && "opacity-100" 
+            isDragging && "opacity-100" // Keep controls visible if dragging this item
           )}>
             <Button
               variant="ghost"
@@ -200,3 +206,5 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
 };
 
 export default BookmarkItem;
+
+    

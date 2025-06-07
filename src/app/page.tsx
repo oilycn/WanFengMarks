@@ -461,20 +461,29 @@ export default function HomePage() {
         const activeBookmark = prevBookmarks[oldIndex];
         const overBookmark = prevBookmarks[newIndex];
 
+        // Check if both bookmarks are in the currently active and sortable category
         if (activeCategory && activeCategory !== 'all' && activeBookmark.categoryId === activeCategory && overBookmark.categoryId === activeCategory) {
-          const itemsInActiveCategory = prevBookmarks.filter(bm => bm.categoryId === activeCategory);
+          // Get only the items within the current sortable context (active category)
+          let itemsInActiveCategory = prevBookmarks.filter(bm => bm.categoryId === activeCategory);
           const oldIndexInContext = itemsInActiveCategory.findIndex(bm => bm.id === activeId);
           const newIndexInContext = itemsInActiveCategory.findIndex(bm => bm.id === overId);
           
-          if (oldIndexInContext === -1 || newIndexInContext === -1) return prevBookmarks;
-
-          const reorderedItemsInContext = arrayMove(itemsInActiveCategory, oldIndexInContext, newIndexInContext);
+          if (oldIndexInContext === -1 || newIndexInContext === -1) return prevBookmarks; // Should not happen if initial check passed
           
-          const updatedGlobalBookmarks = prevBookmarks.filter(bm => bm.categoryId !== activeCategory).concat(reorderedItemsInContext);
+          itemsInActiveCategory = arrayMove(itemsInActiveCategory, oldIndexInContext, newIndexInContext); 
+          
+          // Reconstruct the global bookmarks list:
+          // 1. Take all bookmarks NOT in the active category
+          // 2. Add the reordered bookmarks from the active category
+          const updatedGlobalBookmarks = prevBookmarks
+            .filter(bm => bm.categoryId !== activeCategory)
+            .concat(itemsInActiveCategory);
 
           setHasPendingBookmarkOrderChanges(true);
           return updatedGlobalBookmarks;
         }
+        // If drag happens outside the sortable context or between different categories (not supported visually yet),
+        // or if activeCategory is 'all', do not reorder, return original.
         return prevBookmarks; 
       });
     }
@@ -487,6 +496,7 @@ export default function HomePage() {
       return;
     }
 
+    // Get only the bookmarks from the active category, in their current (potentially reordered) state
     const orderedIdsInActiveCategory = bookmarks
         .filter(bm => bm.categoryId === activeCategory)
         .map(bm => bm.id);
@@ -496,15 +506,19 @@ export default function HomePage() {
       if (res.success) {
         toast({ title: "书签顺序已保存", duration: 2000 });
         setHasPendingBookmarkOrderChanges(false);
-        fetchData(true); 
+        // Re-fetch data but preserve the order changes that were just saved.
+        // The backend will now return data reflecting this new order.
+        // Setting preservePendingOrderChanges to true here might be redundant if backend sorts correctly.
+        // Let's fetch fresh, as the backend is the source of truth for priority.
+        fetchData(false); 
       } else {
         toast({ title: "保存书签顺序失败", description: "服务器未能保存顺序。", variant: "destructive" });
-        fetchData(); 
+        fetchData(); // Re-fetch to revert to last known good order from server
       }
     } catch (error) {
       console.error("Error saving bookmark order:", error);
       toast({ title: "保存书签顺序失败", description: "发生网络错误。", variant: "destructive" });
-      fetchData(); 
+      fetchData(); // Re-fetch to revert
     }
   };
 
@@ -784,3 +798,5 @@ export default function HomePage() {
     </DndContext>
   );
 }
+
+    

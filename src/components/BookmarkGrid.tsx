@@ -63,7 +63,19 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
     </div>
   );
   
-  const bookmarkIds = useMemo(() => bookmarks.map(bookmark => bookmark.id), [bookmarks]);
+  const bookmarkIds = useMemo(() => {
+    if (activeCategoryId && activeCategoryId !== 'all') {
+      return bookmarks.filter(bm => bm.categoryId === activeCategoryId).map(bookmark => bookmark.id);
+    }
+    // When 'all' categories are shown, or if no specific category is active for sorting,
+    // DND context might not be applied per category, so an empty array or all IDs could be returned.
+    // For simplicity, if not dragging in a specific category context, we can return all IDs,
+    // but the actual drag enabling logic (`canDrag`) should prevent sorting in 'all' view.
+    // Or return IDs of currently displayed bookmarks if that makes more sense for a broader context.
+    // For now, to align with `canDrag`, this only makes sense if `activeCategoryId` is specific.
+    return bookmarks.map(bookmark => bookmark.id);
+  }, [bookmarks, activeCategoryId]);
+
 
   if (bookmarks.length === 0 && activeCategoryId) {
      if (searchQuery && searchQuery.trim() !== '') {
@@ -104,11 +116,12 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
 
 
   if (canDrag && activeCategoryId && activeCategoryId !== 'all') {
+    // Ensure we are only passing IDs of items *within the current sortable category* to SortableContext
     const itemsInCurrentCategory = bookmarks.filter(bm => bm.categoryId === activeCategoryId);
     const itemIdsInCurrentCategory = itemsInCurrentCategory.map(bm => bm.id);
     return (
       <>
-        <div className="flex justify-between items-center mb-4 border-b pb-2">
+        <div className="flex justify-between items-center mb-4 border-b pb-2 relative">
             <h2
                 id={`category-title-main-${activeCategoryId}`}
                 className="text-xl font-semibold text-foreground flex items-center"
@@ -125,8 +138,8 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
             )}
         </div>
         <SortableContext
-          items={itemIdsInCurrentCategory}
-          strategy={rectSortingStrategy}
+          items={itemIdsInCurrentCategory} // Only pass IDs of items in the current, sortable category
+          strategy={rectSortingStrategy} // Suitable for grids
         >
           {renderBookmarksList(itemsInCurrentCategory, true)}
         </SortableContext>
@@ -134,12 +147,13 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
     );
   }
 
+  // Fallback for 'all' categories or when not in admin mode for a specific category
   return (
     <div className="space-y-8">
       {(activeCategoryId === 'all' || !activeCategoryId) ? (
         categories
           .filter((c: Category) => c.isVisible && (!c.isPrivate || isAdminAuthenticated))
-          .sort((a: Category, b: Category) => (b.priority || 0) - (a.priority || 0))
+          .sort((a: Category, b: Category) => (b.priority || 0) - (a.priority || 0)) // Sort categories by priority
           .map((category: Category) => {
             const categoryBookmarks = bookmarks.filter(
               (bookmark: Bookmark) => bookmark.categoryId === category.id
@@ -165,6 +179,7 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
             );
           })
       ) : (
+         // This case handles a specific category selected, but not in draggable mode (e.g., not admin)
         <>
             <div className="flex justify-between items-center mb-4 border-b pb-2 relative">
                 <h2
@@ -175,6 +190,7 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
                     {currentCategoryName}
                     {activeCategoryId && categories.find((c: Category) => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
                 </h2>
+                 {/* Save button is shown here if changes are pending, even if not actively dragging (canDrag might be false but changes exist) */}
                  {isAdminAuthenticated && hasPendingOrderChanges && activeCategoryId && activeCategoryId !== 'all' && (
                     <Button onClick={onSaveOrder} size="sm" className="bg-green-600 hover:bg-green-700 text-white">
                         <Save className="mr-2 h-4 w-4" />
@@ -182,7 +198,7 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
                     </Button>
                 )}
             </div>
-            {renderBookmarksList(bookmarks, false)} {/* Show non-draggable if not canDrag */}
+            {renderBookmarksList(bookmarks, false)}
         </>
       )}
     </div>
@@ -190,3 +206,5 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
 };
 
 export default BookmarkGrid;
+
+    
