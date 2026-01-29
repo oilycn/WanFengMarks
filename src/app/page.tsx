@@ -612,14 +612,15 @@ export default function HomePage() {
 
   if (!isClient || isCheckingSetup || isLoading) {
     return (
-        <div className="flex flex-col min-h-screen items-center justify-center bg-background" data-ai-hint="loading page">
+        <div className="flex flex-col min-h-screen items-center justify-center bg-background" data-ai-hint="loading page animation">
             <div className="relative flex items-center justify-center">
-                <div className="absolute h-48 w-48 rounded-full bg-primary/5 animate-ping"></div>
-                <div className="absolute h-32 w-32 rounded-full bg-primary/10 animate-ping [animation-delay:-0.5s]"></div>
+                <div className="absolute h-64 w-64 rounded-full bg-chart-1/10 animate-ping [animation-duration:3s]"></div>
+                <div className="absolute h-48 w-48 rounded-full bg-chart-4/10 animate-ping [animation-delay:-0.75s] [animation-duration:3s]"></div>
+                <div className="absolute h-32 w-32 rounded-full bg-chart-2/10 animate-ping [animation-delay:-1.5s] [animation-duration:3s]"></div>
                 
                 <div className="relative flex flex-col items-center gap-4">
-                    <AegisLogo logoText={logoText} logoIconName={logoIconName} />
-                    <p className="text-sm font-medium text-muted-foreground animate-pulse">正在加载...</p>
+                    <AegisLogo logoText="晚风Marks" logoIconName="ShieldCheck" />
+                    <p className="text-sm font-medium text-muted-foreground">正在加载...</p>
                 </div>
             </div>
         </div>
