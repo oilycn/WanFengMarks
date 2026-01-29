@@ -25,5 +25,3 @@ const AegisLogo: React.FC<AegisLogoProps> = ({
 };
 
 export default AegisLogo;
-
-    

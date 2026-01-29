@@ -206,5 +206,3 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
 };
 
 export default BookmarkGrid;
-
-    

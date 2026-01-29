@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import AppSidebar from '@/components/AppSidebar';
 import AppHeader from '@/components/AppHeader';
+import AegisLogo from '@/components/AegisLogo';
 import BookmarkGrid from '@/components/BookmarkGrid';
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -611,25 +612,17 @@ export default function HomePage() {
 
   if (!isClient || isCheckingSetup || isLoading) {
     return (
-      <div className="flex flex-col min-h-screen items-center justify-center bg-background">
-        <svg className="animate-spin h-20 w-20 text-primary" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
-          <circle
-            cx="25" cy="25" r="20"
-            fill="none"
-            stroke="hsl(var(--primary) / 0.25)"
-            strokeWidth="4"
-          ></circle>
-          <circle
-            cx="25" cy="25" r="20"
-            fill="none"
-            stroke="hsl(var(--primary))"
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeDasharray="94.2477796076938 31.41592653589793"
-          ></circle>
-        </svg>
-        <p className="mt-6 text-lg font-medium text-foreground">正在加载 晚风Marks...</p>
-      </div>
+        <div className="flex flex-col min-h-screen items-center justify-center bg-background" data-ai-hint="loading page">
+            <div className="relative flex items-center justify-center">
+                <div className="absolute h-48 w-48 rounded-full bg-primary/5 animate-ping"></div>
+                <div className="absolute h-32 w-32 rounded-full bg-primary/10 animate-ping [animation-delay:-0.5s]"></div>
+                
+                <div className="relative flex flex-col items-center gap-4">
+                    <AegisLogo logoText={logoText} logoIconName={logoIconName} />
+                    <p className="text-sm font-medium text-muted-foreground animate-pulse">正在加载...</p>
+                </div>
+            </div>
+        </div>
     );
   }
 
@@ -798,5 +791,3 @@ export default function HomePage() {
     </DndContext>
   );
 }
-
-    

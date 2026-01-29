@@ -15,7 +15,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger, // Added AlertDialogTrigger
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 
@@ -278,4 +278,3 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
 };
 
 export default BookmarkItem;
-

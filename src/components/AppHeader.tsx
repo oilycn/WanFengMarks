@@ -60,6 +60,3 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 };
 
 export default AppHeader;
-    
-
-    
