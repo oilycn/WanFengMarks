@@ -3,39 +3,34 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'Inter', 'Noto Sans SC', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-}
-
 @layer base {
   :root {
-    --background: 220 20% 96%; 
-    --foreground: 220 15% 25%; 
-
-    --card: 0 0% 100%; 
-    --card-foreground: 220 15% 20%; 
+    --background: 195 32% 94%;
+    --foreground: 217 28% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 217 28% 18%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 20%;
+    --popover-foreground: 217 28% 18%;
 
-    --primary: 205 65% 55%; 
-    --primary-foreground: 0 0% 100%; 
+    --primary: 202 87% 42%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 90%; 
-    --secondary-foreground: 220 15% 25%;
+    --secondary: 193 20% 90%;
+    --secondary-foreground: 217 24% 24%;
 
-    --muted: 220 15% 95%; 
-    --muted-foreground: 220 15% 45%;
+    --muted: 191 24% 93%;
+    --muted-foreground: 215 13% 42%;
 
-    --accent: 160 60% 50%; 
-    --accent-foreground: 0 0% 100%; 
+    --accent: 173 64% 38%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%; 
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 88%; 
-    --input: 220 15% 92%; 
-    --ring: 205 65% 55%; 
+    --border: 197 22% 88%;
+    --input: 194 28% 92%;
+    --ring: 202 87% 42%;
 
     --radius: 0.5rem;
 
@@ -44,42 +39,44 @@ body {
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    
-    --header-solid-bg: 220 60% 97%; 
-    /* --header-bg-image removed */
+
+    --bg-glow-primary: 198 92% 72%;
+    --bg-glow-accent: 173 84% 66%;
+    --bg-gradient-end: 193 26% 90%;
   }
 
   .dark {
-    --background: 220 15% 10%;
-    --foreground: 220 20% 96%;
+    --background: 214 33% 10%;
+    --foreground: 198 24% 93%;
 
-    --card: 220 15% 15%;
-    --card-foreground: 220 20% 96%;
+    --card: 214 28% 14%;
+    --card-foreground: 198 24% 93%;
 
-    --popover: 220 15% 15%;
-    --popover-foreground: 220 20% 96%;
+    --popover: 214 28% 14%;
+    --popover-foreground: 198 24% 93%;
 
-    --primary: 205 65% 55%;
+    --primary: 196 86% 54%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 25%;
-    --secondary-foreground: 220 20% 96%;
+    --secondary: 214 19% 24%;
+    --secondary-foreground: 198 24% 93%;
 
-    --muted: 220 15% 20%;
-    --muted-foreground: 220 15% 65%;
+    --muted: 214 20% 19%;
+    --muted-foreground: 200 16% 72%;
 
-    --accent: 160 60% 50%;
+    --accent: 171 63% 45%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 66% 45%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 30%;
-    --input: 220 15% 25%;
-    --ring: 205 65% 55%;
-    
-    --header-solid-bg: 220 15% 20%; 
-    /* --header-bg-image removed */
+    --border: 215 18% 31%;
+    --input: 214 20% 26%;
+    --ring: 196 86% 54%;
+
+    --bg-glow-primary: 205 86% 44%;
+    --bg-glow-accent: 171 68% 40%;
+    --bg-gradient-end: 216 30% 12%;
   }
 }
 
@@ -87,9 +84,118 @@ body {
   * {
     @apply border-border;
   }
+
+  html,
+  body {
+    min-height: 100%;
+  }
+
   body {
     @apply bg-background text-foreground;
-    /* font-body class from layout.tsx will take precedence if correctly configured */
-    /* @apply font-body; */ 
+    font-family: var(--font-body), "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background-image:
+      radial-gradient(circle at 8% 10%, hsl(var(--bg-glow-primary) / 0.14) 0%, transparent 32%),
+      radial-gradient(circle at 92% 4%, hsl(var(--bg-glow-accent) / 0.1) 0%, transparent 36%),
+      linear-gradient(160deg, hsl(var(--background)) 0%, hsl(var(--bg-gradient-end)) 100%);
+    background-attachment: fixed;
+    transition: background-color 220ms ease, color 220ms ease;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.35);
+    border-radius: 999px;
+    border: 2px solid hsl(var(--background));
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer utilities {
+  .wm-panel {
+    @apply rounded-2xl bg-card/70 backdrop-blur-xl ring-1 ring-foreground/[0.05] shadow-[0_18px_38px_-28px_hsl(var(--foreground)/0.52)];
+  }
+
+  .wm-gradient-line {
+    background-image: linear-gradient(
+      90deg,
+      hsl(var(--primary) / 0.08) 0%,
+      hsl(var(--primary) / 0.7) 45%,
+      hsl(var(--accent) / 0.72) 100%
+    );
+  }
+
+  .wm-fade-up {
+    animation: wm-fade-up 520ms ease-out both;
+  }
+
+  .wm-soft-divider {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-foreground/[0.08] to-transparent;
+  }
+
+  .wm-splash-orbit {
+    animation: wm-splash-orbit 10s linear infinite;
+  }
+
+  .wm-splash-breathe {
+    animation: wm-splash-breathe 2.6s ease-in-out infinite;
+  }
+
+  .wm-splash-fade {
+    animation: wm-splash-fade 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes wm-fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wm-splash-orbit {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.02);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes wm-splash-breathe {
+  0% {
+    transform: scale(0.98);
+    opacity: 0.86;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.98);
+    opacity: 0.86;
+  }
+}
+
+@keyframes wm-splash-fade {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
   }
 }

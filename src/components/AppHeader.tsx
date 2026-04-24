@@ -25,35 +25,35 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
   return (
     <header
-      className="p-3 flex flex-col md:flex-row md:items-center md:justify-between relative border-b shadow-sm"
-      style={{ backgroundColor: 'hsl(var(--header-solid-bg))' }}
+      className="sticky top-0 z-30 bg-background/65 backdrop-blur-2xl"
       data-ai-hint="light muted background"
     >
-      {/* Row 1 (Mobile) / Main Header Content (Desktop) */}
-      <div className="flex w-full items-center justify-between md:w-auto">
-        {/* Left part: Menu toggle and Logo */}
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="md:hidden h-8 w-8" // Only show on mobile
-            onClick={onToggleMobileSidebar}
-            aria-label="打开侧边栏"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-          <AegisLogo logoText={logoText} logoIconName={logoIconName} />
-        </div>
+      <div className="mx-auto w-full max-w-[1880px] px-3 py-3 md:px-6 md:py-4">
+        <div className="flex w-full flex-col gap-3 md:grid md:grid-cols-[auto_minmax(440px,1fr)_auto] md:items-center md:gap-4">
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="md:hidden h-9 w-9 rounded-xl bg-card/70 hover:bg-muted/60"
+              onClick={onToggleMobileSidebar}
+              aria-label="打开侧边栏"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <AegisLogo logoText={logoText} logoIconName={logoIconName} />
+          </div>
 
-        {/* Right part of Row 1 (Mobile) / Far right of Header (Desktop) */}
-        <div className="flex-shrink-0"> 
-          <Clock />
-        </div>
-      </div>
+          <div className="w-full md:max-w-none">
+            <SearchBar currentQuery={searchQuery} onQueryChange={setSearchQuery} />
+          </div>
 
-      {/* Row 2 (Mobile) / Center part of Header (Desktop) */}
-      <div className="mt-2 w-full md:mt-0 md:flex-1 md:flex md:justify-center md:px-2 lg:px-4">
-        <SearchBar currentQuery={searchQuery} onQueryChange={setSearchQuery} />
+          <div className="hidden md:flex md:justify-end"> 
+            <Clock />
+          </div>
+          <div className="flex justify-end md:hidden">
+            <Clock />
+          </div>
+        </div>
       </div>
     </header>
   );

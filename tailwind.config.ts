@@ -18,8 +18,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        body: ['Inter', 'Noto Sans SC', 'sans-serif'], 
-        headline: ['Inter', 'Noto Sans SC', 'sans-serif'], 
+        body: ['var(--font-body)', 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'sans-serif'], 
+        headline: ['var(--font-headline)', 'var(--font-body)', 'Noto Sans SC', 'PingFang SC', 'sans-serif'], 
         code: ['monospace'],
       },
       colors: {

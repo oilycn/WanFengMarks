@@ -612,17 +612,25 @@ export default function HomePage() {
 
   if (!isClient || isCheckingSetup || isLoading) {
     return (
-        <div className="flex flex-col min-h-screen items-center justify-center bg-background" data-ai-hint="loading page animation">
-            <div className="relative flex items-center justify-center">
-                <div className="absolute h-64 w-64 rounded-full bg-chart-1/10 animate-ping [animation-duration:3s]"></div>
-                <div className="absolute h-48 w-48 rounded-full bg-chart-4/10 animate-ping [animation-delay:-0.75s] [animation-duration:3s]"></div>
-                <div className="absolute h-32 w-32 rounded-full bg-chart-2/10 animate-ping [animation-delay:-1.5s] [animation-duration:3s]"></div>
-                
-                <div className="relative flex flex-col items-center gap-4">
-                    <AegisLogo logoText="晚风Marks" logoIconName="ShieldCheck" />
-                    <p className="text-sm font-medium text-muted-foreground">正在加载...</p>
-                </div>
+        <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4" data-ai-hint="loading splash animation">
+          <div className="pointer-events-none absolute -top-28 -left-24 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-accent/18 blur-3xl" />
+          <div className="relative flex flex-col items-center">
+            <div className="relative flex h-52 w-52 items-center justify-center">
+              <div className="absolute h-52 w-52 rounded-full border border-primary/20 wm-splash-orbit" />
+              <div className="absolute h-40 w-40 rounded-full border border-accent/25 wm-splash-orbit [animation-direction:reverse] [animation-duration:7s]" />
+              <div className="absolute h-28 w-28 rounded-full bg-primary/10 blur-xl wm-splash-breathe" />
+              <div className="relative px-2 py-1 wm-splash-breathe">
+                <AegisLogo logoText="晚风导航" logoIconName="Home" />
+              </div>
             </div>
+            <p className="mt-5 text-sm text-muted-foreground tracking-wide wm-splash-fade">正在为你整理书签...</p>
+            <div className="mt-3 flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary/80 wm-splash-fade" />
+              <span className="h-1.5 w-1.5 rounded-full bg-primary/60 wm-splash-fade [animation-delay:180ms]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-primary/40 wm-splash-fade [animation-delay:360ms]" />
+            </div>
+          </div>
         </div>
     );
   }
@@ -630,7 +638,8 @@ export default function HomePage() {
   const categoriesForSidebar = visibleCategories.length > 0 ? visibleCategories : categories.filter(c => c.isVisible);
 
   const mainContent = (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="relative flex flex-col h-[100dvh] overflow-hidden">
+      <div className="pointer-events-none absolute -top-28 left-[8%] h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
       <AppHeader
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -638,7 +647,7 @@ export default function HomePage() {
         logoText={logoText}
         logoIconName={logoIconName}
       />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="mx-auto w-full max-w-[1880px] flex flex-1 min-h-0 overflow-hidden px-2 md:px-4">
         {isMobile ? (
           <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
             <SheetContent side="left" className="p-0 w-64 sm:w-72 flex flex-col h-full">
@@ -657,7 +666,7 @@ export default function HomePage() {
                   setShowPasswordDialog(true);
                   setIsMobileSidebarOpen(false);
                 }}
-                className="flex-grow border-r-0 shadow-none"
+                className="flex-grow border-r-0 shadow-none bg-card/95"
               />
             </SheetContent>
           </Sheet>
@@ -671,27 +680,26 @@ export default function HomePage() {
             activeCategory={activeCategory}
             setActiveCategory={handleSetActiveCategory}
             onShowPasswordDialog={() => setShowPasswordDialog(true)}
-            className="hidden md:flex"
+            className="hidden md:flex relative z-20 rounded-2xl md:mt-3 overflow-hidden"
           />
         )}
-        <div className="flex-1 flex flex-col overflow-y-auto bg-background relative">
-          <main className="flex-grow p-4 md:p-6 relative">
-            <BookmarkGrid
-              bookmarks={displayedBookmarks}
-              categories={categories}
-              onDeleteBookmark={handleDeleteBookmark}
-              onEditBookmark={handleOpenEditBookmarkDialog}
-              isAdminAuthenticated={isAdminAuthenticated}
-              currentCategoryName={activeCategory === 'all' ? '全部书签' : categories.find(c=>c.id === activeCategory)?.name || "未知分类"}
-              activeCategoryId={activeCategory}
-              searchQuery={searchQuery}
-              hasPendingOrderChanges={hasPendingBookmarkOrderChanges}
-              onSaveOrder={handleSaveBookmarksOrder}
-            />
+        <div className="relative z-10 flex-1 min-h-0 flex flex-col md:mt-3 rounded-2xl bg-background/35 overflow-hidden">
+          <main className="flex-grow min-h-0 overflow-y-auto p-4 md:p-6 lg:p-7 relative">
+            <div className="mx-auto max-w-[1620px] wm-fade-up">
+              <BookmarkGrid
+                bookmarks={displayedBookmarks}
+                categories={categories}
+                onDeleteBookmark={handleDeleteBookmark}
+                onEditBookmark={handleOpenEditBookmarkDialog}
+                isAdminAuthenticated={isAdminAuthenticated}
+                currentCategoryName={activeCategory === 'all' ? '全部书签' : categories.find(c=>c.id === activeCategory)?.name || "未知分类"}
+                activeCategoryId={activeCategory}
+                searchQuery={searchQuery}
+                hasPendingOrderChanges={hasPendingBookmarkOrderChanges}
+                onSaveOrder={handleSaveBookmarksOrder}
+              />
+            </div>
           </main>
-          <footer className="text-center py-3 border-t bg-background/50 text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} {logoText}. 版权所有.
-          </footer>
         </div>
       </div>
     </div>
@@ -710,7 +718,7 @@ export default function HomePage() {
           <>
             <Button
               onClick={handleOpenAddBookmarkDialog}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
+              className="h-11 w-11 rounded-2xl p-0 flex items-center justify-center bg-gradient-to-br from-primary to-accent text-white shadow-[0_18px_26px_-18px_hsl(var(--foreground)/0.85)] hover:brightness-110"
               aria-label="添加书签"
               title="添加书签"
             >
@@ -718,7 +726,7 @@ export default function HomePage() {
             </Button>
             <Button
               onClick={handleCopyBookmarkletScript}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
+              className="h-11 w-11 rounded-2xl p-0 flex items-center justify-center bg-card/85 text-foreground backdrop-blur-xl shadow-[0_18px_26px_-18px_hsl(var(--foreground)/0.85)] hover:bg-card"
               aria-label="复制书签脚本"
               title="复制书签脚本"
             >
@@ -726,7 +734,7 @@ export default function HomePage() {
             </Button>
             <Button
               onClick={handleOpenSettingsDialog}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
+              className="h-11 w-11 rounded-2xl p-0 flex items-center justify-center bg-card/85 text-foreground backdrop-blur-xl shadow-[0_18px_26px_-18px_hsl(var(--foreground)/0.85)] hover:bg-card"
               aria-label="应用设置"
               title="应用设置"
             >
@@ -734,7 +742,7 @@ export default function HomePage() {
             </Button>
             <Button
               onClick={handleLogoutAdmin}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg h-10 w-10 rounded-full p-0 flex items-center justify-center"
+              className="h-11 w-11 rounded-2xl p-0 flex items-center justify-center bg-destructive/10 text-destructive shadow-[0_18px_26px_-18px_hsl(var(--foreground)/0.85)] hover:bg-destructive/15"
               aria-label="退出管理模式"
               title="退出管理模式"
             >

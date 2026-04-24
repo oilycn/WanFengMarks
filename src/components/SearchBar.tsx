@@ -41,15 +41,15 @@ const SearchBar: React.FC<SearchBarProps> = ({ currentQuery, onQueryChange }) =>
   return (
     <form
       onSubmit={handleSearchSubmit}
-      className="flex w-full max-w-xl items-center space-x-1 bg-muted dark:bg-card p-1 rounded-lg shadow-md"
+      className="wm-panel group flex w-full items-center gap-1.5 p-1.5 transition-all duration-300 focus-within:ring-primary/25 focus-within:shadow-[0_20px_45px_-34px_hsl(var(--primary)/0.8)]"
     >
       <Select value={selectedEngine} onValueChange={setSelectedEngine}>
         <SelectTrigger
-          className="w-auto min-w-[90px] bg-slate-100 hover:bg-slate-200 dark:bg-neutral-600 dark:hover:bg-neutral-500/90 border border-input text-foreground/80 dark:text-neutral-300 focus:ring-0 focus:ring-offset-0 h-9 text-xs px-2.5 rounded-md shadow-none"
+          className="w-auto min-w-[96px] bg-background/75 text-foreground/85 h-10 text-xs px-2.5 rounded-xl border-0 shadow-none focus:ring-0 focus:ring-offset-0"
           aria-label="选择搜索引擎"
         >
-          <div className="flex items-center gap-1 truncate">
-            <Globe className="h-3.5 w-3.5 opacity-80" />
+          <div className="flex items-center gap-1.5 truncate">
+            <Globe className="h-3.5 w-3.5 opacity-75" />
             <SelectValue placeholder="引擎" />
           </div>
         </SelectTrigger>
@@ -66,7 +66,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ currentQuery, onQueryChange }) =>
         placeholder="搜索网页 或 筛选下方书签..."
         value={currentQuery}
         onChange={(e) => onQueryChange(e.target.value)}
-        className="flex-grow bg-input dark:bg-input border-none text-foreground placeholder:text-muted-foreground dark:placeholder:text-neutral-400/70 focus-visible:ring-0 text-sm h-9 px-3 rounded-md"
+        className="flex-grow border-none bg-transparent text-foreground placeholder:text-muted-foreground/90 focus-visible:ring-0 text-sm h-10 px-3 rounded-xl"
         aria-label="搜索网页或筛选书签"
       />
       <Button
@@ -74,7 +74,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ currentQuery, onQueryChange }) =>
         variant="default"
         size="icon"
         aria-label="搜索"
-        className="bg-primary hover:bg-primary/90 text-primary-foreground h-9 w-9 rounded-md"
+        className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-accent hover:brightness-110 text-primary-foreground shadow-sm"
       >
         <Search className="h-4 w-4" />
       </Button>

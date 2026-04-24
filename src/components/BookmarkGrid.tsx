@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { FC, useMemo } from 'react';
+import React, { FC } from 'react';
 import type { Bookmark, Category } from '@/types';
 import BookmarkItem from './BookmarkItem';
 import { Button } from '@/components/ui/button';
@@ -44,10 +44,12 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
 
   const getCategoryById = (id: string) => categories.find((c: Category) => c.id === id);
   const canDrag = isAdminAuthenticated && activeCategoryId && activeCategoryId !== 'all';
+  const sectionTitleClass = "text-xl font-semibold text-foreground flex items-center tracking-tight";
+  const sectionTitleWrapClass = "flex justify-between items-end gap-3 mb-3 px-1";
 
   const renderBookmarksList = (bookmarksToRender: Bookmark[], isDraggableContext: boolean) => (
     <div className={cn(
-        "relative grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4",
+        "relative grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-3 md:gap-4",
     )}>
       {bookmarksToRender.map((bookmark: Bookmark) => (
         <BookmarkItem
@@ -62,25 +64,11 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
       ))}
     </div>
   );
-  
-  const bookmarkIds = useMemo(() => {
-    if (activeCategoryId && activeCategoryId !== 'all') {
-      return bookmarks.filter(bm => bm.categoryId === activeCategoryId).map(bookmark => bookmark.id);
-    }
-    // When 'all' categories are shown, or if no specific category is active for sorting,
-    // DND context might not be applied per category, so an empty array or all IDs could be returned.
-    // For simplicity, if not dragging in a specific category context, we can return all IDs,
-    // but the actual drag enabling logic (`canDrag`) should prevent sorting in 'all' view.
-    // Or return IDs of currently displayed bookmarks if that makes more sense for a broader context.
-    // For now, to align with `canDrag`, this only makes sense if `activeCategoryId` is specific.
-    return bookmarks.map(bookmark => bookmark.id);
-  }, [bookmarks, activeCategoryId]);
-
 
   if (bookmarks.length === 0 && activeCategoryId) {
      if (searchQuery && searchQuery.trim() !== '') {
         return (
-          <div className="text-center py-12">
+          <div className="wm-panel text-center py-14 px-6">
             <SearchX className="mx-auto h-16 w-16 text-muted-foreground/50 mb-4" />
             <h2 className="text-2xl font-semibold mb-2 text-foreground/80">未找到与 "{searchQuery}" 相关的书签</h2>
             <p className="text-md text-muted-foreground">请尝试修改您的搜索词，或清除搜索框以显示所有书签。</p>
@@ -90,7 +78,7 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
      const activeCat = getCategoryById(activeCategoryId);
      if (activeCat && activeCat.isPrivate && !isAdminAuthenticated) {
         return (
-          <div className="text-center py-12">
+          <div className="wm-panel text-center py-14 px-6">
             <EyeOff className="mx-auto h-16 w-16 text-muted-foreground/50 mb-4" />
             <h2 className="text-2xl font-semibold mb-2 text-foreground/80">此分类为私密分类</h2>
             <p className="text-md text-muted-foreground">请输入管理员密码以查看内容。</p>
@@ -98,7 +86,7 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
         );
      }
      return (
-      <div className="text-center py-12">
+      <div className="wm-panel text-center py-14 px-6">
         <FolderOpen className="mx-auto h-16 w-16 text-muted-foreground/50 mb-4" />
         <h2 className="text-2xl font-semibold mb-2 text-foreground/80">"{currentCategoryName || '此分类'}" 中没有书签</h2>
         {isAdminAuthenticated ? (
@@ -121,17 +109,22 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
     const itemIdsInCurrentCategory = itemsInCurrentCategory.map(bm => bm.id);
     return (
       <>
-        <div className="flex justify-between items-center mb-4 border-b pb-2 relative">
-            <h2
-                id={`category-title-main-${activeCategoryId}`}
-                className="text-xl font-semibold text-foreground flex items-center"
-            >
-                <CategoryIconComponent className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
-                {currentCategoryName}
-                {categories.find((c: Category) => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
-            </h2>
+        <div className={sectionTitleWrapClass}>
+            <div>
+              <h2
+                  id={`category-title-main-${activeCategoryId}`}
+                  className={sectionTitleClass}
+              >
+                  <CategoryIconComponent className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
+                  {currentCategoryName}
+                  {categories.find((c: Category) => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
+              </h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                共 {itemsInCurrentCategory.length} 个书签
+              </p>
+            </div>
             {isAdminAuthenticated && hasPendingOrderChanges && (
-                <Button onClick={onSaveOrder} size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+                <Button onClick={onSaveOrder} size="sm" className="rounded-xl bg-gradient-to-r from-primary to-accent text-white hover:brightness-110">
                     <Save className="mr-2 h-4 w-4" />
                     保存书签顺序
                 </Button>
@@ -163,16 +156,21 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
             const CatIcon = globalIconMap[category.icon || 'Default'] || globalIconMap['Default'];
 
             return (
-              <section key={category.id} aria-labelledby={`category-title-${category.id}`}>
-                 <div className="flex justify-between items-center mb-4 border-b pb-2">
-                    <h2
-                        id={`category-title-${category.id}`}
-                        className="text-xl font-semibold text-foreground flex items-center"
-                    >
-                        <CatIcon className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
-                        {category.name}
-                        {category.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
-                    </h2>
+              <section key={category.id} aria-labelledby={`category-title-${category.id}`} className="wm-fade-up">
+                 <div className={sectionTitleWrapClass}>
+                    <div>
+                      <h2
+                          id={`category-title-${category.id}`}
+                          className={sectionTitleClass}
+                      >
+                          <CatIcon className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
+                          {category.name}
+                          {category.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
+                      </h2>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        共 {categoryBookmarks.length} 个书签
+                      </p>
+                    </div>
                  </div>
                 {renderBookmarksList(categoryBookmarks, false)}
               </section>
@@ -181,18 +179,23 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
       ) : (
          // This case handles a specific category selected, but not in draggable mode (e.g., not admin)
         <>
-            <div className="flex justify-between items-center mb-4 border-b pb-2 relative">
-                <h2
-                    id={`category-title-main-${activeCategoryId}`}
-                    className="text-xl font-semibold text-foreground flex items-center"
-                >
-                    <CategoryIconComponent className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
-                    {currentCategoryName}
-                    {activeCategoryId && categories.find((c: Category) => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
-                </h2>
+            <div className={sectionTitleWrapClass}>
+                <div>
+                  <h2
+                      id={`category-title-main-${activeCategoryId}`}
+                      className={sectionTitleClass}
+                  >
+                      <CategoryIconComponent className="mr-2 h-5 w-5 text-primary flex-shrink-0" />
+                      {currentCategoryName}
+                      {activeCategoryId && categories.find((c: Category) => c.id === activeCategoryId)?.isPrivate && <EyeOff className="ml-2 h-4 w-4 text-muted-foreground" title="私密分类" />}
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    共 {bookmarks.length} 个书签
+                  </p>
+                </div>
                  {/* Save button is shown here if changes are pending, even if not actively dragging (canDrag might be false but changes exist) */}
                  {isAdminAuthenticated && hasPendingOrderChanges && activeCategoryId && activeCategoryId !== 'all' && (
-                    <Button onClick={onSaveOrder} size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+                    <Button onClick={onSaveOrder} size="sm" className="rounded-xl bg-gradient-to-r from-primary to-accent text-white hover:brightness-110">
                         <Save className="mr-2 h-4 w-4" />
                         保存书签顺序
                     </Button>

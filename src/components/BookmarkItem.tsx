@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import type { Bookmark } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Globe2, Trash2, EyeOff, PenLine, GripVertical } from 'lucide-react';
+import { Bookmark as BookmarkIcon, Trash2, EyeOff, PenLine, GripVertical } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +39,14 @@ const getFullUrlWithScheme = (url: string): string => {
   return url;
 };
 
+const getBookmarkDomain = (url: string): string => {
+  try {
+    return new URL(getFullUrlWithScheme(url)).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+};
+
 const BookmarkItem: React.FC<BookmarkItemProps> = ({
   id,
   bookmark,
@@ -54,7 +62,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     let isActive = true; 
 
     setShowFallbackIcon(false);
-    setCurrentIconSrc(null); // Reset on bookmark URL change
+    setCurrentIconSrc(null);
 
     const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
     let domain: string;
@@ -65,16 +73,16 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
       return;
     }
     
-    const PROXY_BASE_URL = 'https://proxy.oily.cn/proxy/';
-    // The target is to fetch the favicon.ico from the root of the domain
-    const targetFaviconUrl = `https://${domain}/favicon.ico`;
-    
-    // The final URL using the user's proxy. The proxy receives the targetFaviconUrl *without* additional encoding.
-    const proxiedIconUrl = `${PROXY_BASE_URL}${targetFaviconUrl}`;
+    const normalizedDomain = domain.replace(/^www\./, '');
+    const iconCandidates = [
+      `https://proxy.oily.cn/proxy/https://${normalizedDomain}/favicon.ico`,
+      `https://proxy.oily.cn/proxy/https://${normalizedDomain}/apple-touch-icon.png`,
+      `https://proxy.oily.cn/proxy/https://${normalizedDomain}/apple-touch-icon-precomposed.png`,
+    ];
 
-    const cacheKey = `favicon-cache-v4-${domain}`; // Updated cache key version
-    const CACHE_DURATION_SUCCESS = 24 * 60 * 60 * 1000; // 24 hours
-    const CACHE_DURATION_ERROR = 1 * 60 * 60 * 1000;    // 1 hour
+    const cacheKey = `favicon-cache-v6-${normalizedDomain}`;
+    const CACHE_DURATION_SUCCESS = 24 * 60 * 60 * 1000;
+    const CACHE_DURATION_ERROR = 60 * 60 * 1000;
 
     try {
       const cachedItemString = localStorage.getItem(cacheKey);
@@ -93,20 +101,20 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
           if (isActive) {
             setShowFallbackIcon(true);
           }
-          return; 
+          return;
         }
       }
-    } catch (e) {
-      console.warn(`[BookmarkItem] Error reading or parsing cache for ${domain}:`, e);
+    } catch (error) {
+      console.warn(`[BookmarkItem] Error reading or parsing cache for ${normalizedDomain}:`, error);
       try {
         localStorage.removeItem(cacheKey);
       } catch (removeError) {
-        // Silently ignore if remove fails
+        console.warn(`[BookmarkItem] Error removing invalid cache for ${normalizedDomain}:`, removeError);
       }
     }
     
     if (isActive) {
-      setCurrentIconSrc(proxiedIconUrl);
+      setCurrentIconSrc(iconCandidates[0]);
     }
 
     return () => {
@@ -115,14 +123,30 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
   }, [bookmark.url]);
 
   const handleImageError = () => {
-    setShowFallbackIcon(true);
     try {
       const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
-      const domain = new URL(fullBookmarkUrl).hostname;
-      const cacheKey = `favicon-cache-v4-${domain}`;
+      const domain = new URL(fullBookmarkUrl).hostname.replace(/^www\./, '');
+      const iconCandidates = [
+        `https://proxy.oily.cn/proxy/https://${domain}/favicon.ico`,
+        `https://proxy.oily.cn/proxy/https://${domain}/apple-touch-icon.png`,
+        `https://proxy.oily.cn/proxy/https://${domain}/apple-touch-icon-precomposed.png`,
+      ];
+
+      const activeSourceIndex = currentIconSrc
+        ? iconCandidates.findIndex((iconSrc) => iconSrc === currentIconSrc)
+        : -1;
+      const nextSourceIndex = activeSourceIndex + 1;
+      if (nextSourceIndex < iconCandidates.length) {
+        setCurrentIconSrc(iconCandidates[nextSourceIndex]);
+        return;
+      }
+
+      setShowFallbackIcon(true);
+      const cacheKey = `favicon-cache-v6-${domain}`;
       localStorage.setItem(cacheKey, JSON.stringify({ errorTimestamp: Date.now() }));
-    } catch (e) {
-       console.warn(`[BookmarkItem] Error saving error state to cache for ${bookmark.url}:`, e);
+    } catch (error) {
+      setShowFallbackIcon(true);
+      console.warn(`[BookmarkItem] Error handling favicon fallback for ${bookmark.url}:`, error);
     }
   };
 
@@ -130,14 +154,14 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     if (currentIconSrc && !showFallbackIcon) { 
       try {
         const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
-        const domain = new URL(fullBookmarkUrl).hostname;
-        const cacheKey = `favicon-cache-v4-${domain}`;
+        const domain = new URL(fullBookmarkUrl).hostname.replace(/^www\./, '');
+        const cacheKey = `favicon-cache-v6-${domain}`;
         localStorage.setItem(cacheKey, JSON.stringify({
           src: currentIconSrc,
           timestamp: Date.now(),
         }));
-      } catch (e) {
-        console.warn(`[BookmarkItem] Error saving success state to cache for ${bookmark.url}:`, e);
+      } catch (error) {
+        console.warn(`[BookmarkItem] Error saving success state to cache for ${bookmark.url}:`, error);
       }
     }
   };
@@ -161,26 +185,31 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     return null; 
   }
 
+  const bookmarkDomain = getBookmarkDomain(bookmark.url);
+  const metaText = bookmark.description?.trim() || bookmarkDomain;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...(isDraggable ? attributes : {})}
       className={cn(
-        "group relative rounded-lg flex flex-col transition-shadow",
-        isDragging ? 'shadow-2xl scale-105 bg-card z-50' : 'shadow-lg hover:shadow-xl bg-card/70',
+        "group relative rounded-2xl flex flex-col transition-all duration-250",
+        isDragging
+          ? 'shadow-2xl scale-[1.02] z-50'
+          : 'hover:shadow-[0_24px_34px_-24px_hsl(var(--foreground)/0.45)]',
       )}
     >
       <Card className={cn(
-        "flex-grow overflow-hidden backdrop-blur-sm border border-border/60 hover:border-primary/70 rounded-lg",
-        "group-hover:bg-accent/10 group-focus-within:bg-accent/10",
-        isDragging ? 'border-primary ring-2 ring-primary' : ''
+        "flex-grow overflow-hidden rounded-2xl border border-black/[0.03] bg-card shadow-[0_14px_26px_-18px_hsl(var(--foreground)/0.42)]",
+        "group-hover:-translate-y-0.5 group-hover:shadow-[0_22px_34px_-20px_hsl(var(--foreground)/0.48)]",
+        isDragging ? 'shadow-[0_24px_38px_-18px_hsl(var(--foreground)/0.58)]' : ''
       )}>
-        <div className="flex items-center p-3">
+        <div className="flex items-center p-2.5">
           {isAdminAuthenticated && isDraggable && (
             <button
               {...listeners}
-              className="cursor-grab p-1 mr-1 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-50 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+              className="cursor-grab p-1 mr-1.5 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-55 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
               aria-label="拖动排序"
               type="button" 
             >
@@ -194,17 +223,17 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
             className="flex-grow flex items-center text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline min-w-0"
             aria-label={`打开 ${bookmark.name}`}
           >
-            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center mr-2 rounded-sm overflow-hidden bg-muted/20">
+            <div className="flex-shrink-0 w-11 h-11 flex items-center justify-center mr-2.5 rounded-xl overflow-hidden bg-gradient-to-br from-muted to-background">
               {showFallbackIcon || !currentIconSrc ? (
-                <Globe2 className="w-5 h-5 text-muted-foreground" />
+                <BookmarkIcon className="w-5 h-5 text-primary/80" />
               ) : (
                 <img
                   key={currentIconSrc} 
                   src={currentIconSrc}
                   alt="" 
-                  width={20}
-                  height={20}
-                  className="w-5 h-5 object-contain"
+                  width={44}
+                  height={44}
+                  className="w-full h-full object-cover"
                   loading="lazy"
                   onError={handleImageError}
                   onLoad={handleImageLoad}
@@ -213,7 +242,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
             </div>
 
             <div className="flex-grow min-w-0">
-              <h3 className="text-sm font-semibold truncate flex items-center" title={bookmark.name}>
+              <h3 className="text-[13px] font-semibold truncate flex items-center tracking-tight leading-tight" title={bookmark.name}>
                 {bookmark.name}
                 {bookmark.isPrivate && (
                   <EyeOff className="ml-1.5 h-3 w-3 text-muted-foreground/70 flex-shrink-0">
@@ -221,38 +250,36 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
                   </EyeOff>
                 )}
               </h3>
-              {bookmark.description && (
-                <p className="text-xs text-muted-foreground mt-0.5 truncate" title={bookmark.description}>
-                  {bookmark.description}
-                </p>
-              )}
+              <p className="text-[11px] text-muted-foreground/95 mt-0.5 truncate leading-tight" title={metaText}>
+                {metaText}
+              </p>
             </div>
           </a>
         </div>
 
         {isAdminAuthenticated && (
           <div className={cn(
-            "absolute top-1 right-1 flex items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity space-x-0.5",
+            "absolute top-1.5 right-1.5 flex items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity space-x-1",
             isDragging && "opacity-100"
           )}>
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-foreground/60 hover:text-foreground hover:bg-accent/10 p-1 rounded-full"
+              className="h-6 w-6 rounded-lg bg-background/80 text-foreground/65 hover:text-foreground hover:bg-background p-1"
               aria-label={`编辑 ${bookmark.name}`}
               onClick={() => onEditBookmark(bookmark)}
             >
-              <PenLine className="h-3.5 w-3.5" />
+              <PenLine className="h-3 w-3" />
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 text-destructive/60 hover:text-destructive hover:bg-destructive/10 p-1 rounded-full"
+                  className="h-6 w-6 rounded-lg bg-background/80 text-destructive/70 hover:text-destructive hover:bg-destructive/10 p-1"
                   aria-label={`删除 ${bookmark.name}`}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3 w-3" />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
