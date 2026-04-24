@@ -2,10 +2,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { Bookmark } from '@/types';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Bookmark as BookmarkIcon, Trash2, EyeOff, PenLine, GripVertical } from 'lucide-react';
+import { Trash2, EyeOff, PenLine, GripVertical } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +15,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 
@@ -57,6 +56,17 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
 }) => {
   const [currentIconSrc, setCurrentIconSrc] = useState<string | null>(null);
   const [showFallbackIcon, setShowFallbackIcon] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number }>({
+    visible: false,
+    x: 0,
+    y: 0,
+  });
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     let isActive = true; 
@@ -75,12 +85,14 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     
     const normalizedDomain = domain.replace(/^www\./, '');
     const iconCandidates = [
-      `https://proxy.oily.cn/proxy/https://${normalizedDomain}/favicon.ico`,
-      `https://proxy.oily.cn/proxy/https://${normalizedDomain}/apple-touch-icon.png`,
-      `https://proxy.oily.cn/proxy/https://${normalizedDomain}/apple-touch-icon-precomposed.png`,
+      `https://${normalizedDomain}/favicon.ico`,
+      `https://${normalizedDomain}/apple-touch-icon.png`,
+      `https://${normalizedDomain}/apple-touch-icon-precomposed.png`,
+      `https://icons.duckduckgo.com/ip3/${encodeURIComponent(normalizedDomain)}.ico`,
+      `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(normalizedDomain)}`,
     ];
 
-    const cacheKey = `favicon-cache-v6-${normalizedDomain}`;
+    const cacheKey = `favicon-cache-v7-${normalizedDomain}`;
     const CACHE_DURATION_SUCCESS = 24 * 60 * 60 * 1000;
     const CACHE_DURATION_ERROR = 60 * 60 * 1000;
 
@@ -100,6 +112,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
         if (cachedItem.errorTimestamp && (now - cachedItem.errorTimestamp < CACHE_DURATION_ERROR)) {
           if (isActive) {
             setShowFallbackIcon(true);
+            setCurrentIconSrc(null);
           }
           return;
         }
@@ -127,9 +140,11 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
       const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
       const domain = new URL(fullBookmarkUrl).hostname.replace(/^www\./, '');
       const iconCandidates = [
-        `https://proxy.oily.cn/proxy/https://${domain}/favicon.ico`,
-        `https://proxy.oily.cn/proxy/https://${domain}/apple-touch-icon.png`,
-        `https://proxy.oily.cn/proxy/https://${domain}/apple-touch-icon-precomposed.png`,
+        `https://${domain}/favicon.ico`,
+        `https://${domain}/apple-touch-icon.png`,
+        `https://${domain}/apple-touch-icon-precomposed.png`,
+        `https://icons.duckduckgo.com/ip3/${encodeURIComponent(domain)}.ico`,
+        `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(domain)}`,
       ];
 
       const activeSourceIndex = currentIconSrc
@@ -142,10 +157,12 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
       }
 
       setShowFallbackIcon(true);
-      const cacheKey = `favicon-cache-v6-${domain}`;
+      setCurrentIconSrc(null);
+      const cacheKey = `favicon-cache-v7-${domain}`;
       localStorage.setItem(cacheKey, JSON.stringify({ errorTimestamp: Date.now() }));
     } catch (error) {
       setShowFallbackIcon(true);
+      setCurrentIconSrc(null);
       console.warn(`[BookmarkItem] Error handling favicon fallback for ${bookmark.url}:`, error);
     }
   };
@@ -155,7 +172,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
       try {
         const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
         const domain = new URL(fullBookmarkUrl).hostname.replace(/^www\./, '');
-        const cacheKey = `favicon-cache-v6-${domain}`;
+        const cacheKey = `favicon-cache-v7-${domain}`;
         localStorage.setItem(cacheKey, JSON.stringify({
           src: currentIconSrc,
           timestamp: Date.now(),
@@ -185,6 +202,47 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     return null; 
   }
 
+  const closeContextMenu = () => {
+    setContextMenu((prev) => (prev.visible ? { ...prev, visible: false } : prev));
+  };
+
+  const handleContextMenu = (event: React.MouseEvent) => {
+    if (!isAdminAuthenticated) return;
+    event.preventDefault();
+    const MENU_WIDTH = 160;
+    const MENU_HEIGHT = 84;
+    const PADDING = 8;
+
+    const x = Math.min(event.clientX, window.innerWidth - MENU_WIDTH - PADDING);
+    const y = Math.min(event.clientY, window.innerHeight - MENU_HEIGHT - PADDING);
+    setContextMenu({
+      visible: true,
+      x: Math.max(PADDING, x),
+      y: Math.max(PADDING, y),
+    });
+  };
+
+  useEffect(() => {
+    if (!contextMenu.visible) return;
+
+    const handleClose = () => closeContextMenu();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeContextMenu();
+    };
+
+    window.addEventListener('click', handleClose);
+    window.addEventListener('scroll', handleClose, true);
+    window.addEventListener('resize', handleClose);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('click', handleClose);
+      window.removeEventListener('scroll', handleClose, true);
+      window.removeEventListener('resize', handleClose);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [contextMenu.visible]);
+
   const bookmarkDomain = getBookmarkDomain(bookmark.url);
   const metaText = bookmark.description?.trim() || bookmarkDomain;
 
@@ -204,7 +262,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
         "flex-grow overflow-hidden rounded-2xl border border-black/[0.03] bg-card shadow-[0_14px_26px_-18px_hsl(var(--foreground)/0.42)]",
         "group-hover:-translate-y-0.5 group-hover:shadow-[0_22px_34px_-20px_hsl(var(--foreground)/0.48)]",
         isDragging ? 'shadow-[0_24px_38px_-18px_hsl(var(--foreground)/0.58)]' : ''
-      )}>
+      )} onContextMenu={handleContextMenu}>
         <div className="flex items-center p-2.5">
           {isAdminAuthenticated && isDraggable && (
             <button
@@ -223,10 +281,13 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
             className="flex-grow flex items-center text-card-foreground hover:text-primary transition-colors no-underline hover:no-underline min-w-0"
             aria-label={`打开 ${bookmark.name}`}
           >
-            <div className="flex-shrink-0 w-11 h-11 flex items-center justify-center mr-2.5 rounded-xl overflow-hidden bg-gradient-to-br from-muted to-background">
-              {showFallbackIcon || !currentIconSrc ? (
-                <BookmarkIcon className="w-5 h-5 text-primary/80" />
-              ) : (
+            <div
+              className={cn(
+                "flex-shrink-0 w-11 h-11 flex items-center justify-center mr-2.5 rounded-xl overflow-hidden",
+                showFallbackIcon || !currentIconSrc ? "bg-transparent" : "bg-muted/55"
+              )}
+            >
+              {!showFallbackIcon && currentIconSrc && (
                 <img
                   key={currentIconSrc} 
                   src={currentIconSrc}
@@ -256,50 +317,63 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
             </div>
           </a>
         </div>
-
-        {isAdminAuthenticated && (
-          <div className={cn(
-            "absolute top-1.5 right-1.5 flex items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity space-x-1",
-            isDragging && "opacity-100"
-          )}>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 rounded-lg bg-background/80 text-foreground/65 hover:text-foreground hover:bg-background p-1"
-              aria-label={`编辑 ${bookmark.name}`}
-              onClick={() => onEditBookmark(bookmark)}
-            >
-              <PenLine className="h-3 w-3" />
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 rounded-lg bg-background/80 text-destructive/70 hover:text-destructive hover:bg-destructive/10 p-1"
-                  aria-label={`删除 ${bookmark.name}`}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>确定删除书签 "{bookmark.name}"?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    此操作无法撤销。
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>取消</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onDeleteBookmark(bookmark.id)} className="bg-destructive hover:bg-destructive/90">
-                    删除
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        )}
       </Card>
+
+      {isMounted && isAdminAuthenticated && contextMenu.visible && createPortal(
+        <div
+          className="fixed z-[90] min-w-40 rounded-xl border border-border/70 bg-popover/95 text-popover-foreground backdrop-blur p-1.5 shadow-[0_18px_36px_-22px_hsl(var(--foreground)/0.6)]"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(event) => event.stopPropagation()}
+          onContextMenu={(event) => event.preventDefault()}
+        >
+          <button
+            type="button"
+            className="w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm hover:bg-muted transition-colors"
+            onClick={() => {
+              closeContextMenu();
+              onEditBookmark(bookmark);
+            }}
+          >
+            <PenLine className="h-3.5 w-3.5" />
+            编辑书签
+          </button>
+          <button
+            type="button"
+            className="w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+            onClick={() => {
+              closeContextMenu();
+              setIsDeleteDialogOpen(true);
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            删除书签
+          </button>
+        </div>,
+        document.body
+      )}
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确定删除书签 "{bookmark.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              此操作无法撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                onDeleteBookmark(bookmark.id);
+              }}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

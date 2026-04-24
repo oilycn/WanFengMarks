@@ -43,7 +43,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             <AegisLogo logoText={logoText} logoIconName={logoIconName} />
           </div>
 
-          <div className="w-full md:max-w-none">
+          <div className="w-full md:max-w-[680px] md:justify-self-center">
             <SearchBar currentQuery={searchQuery} onQueryChange={setSearchQuery} />
           </div>
 
