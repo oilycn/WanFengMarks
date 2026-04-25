@@ -44,7 +44,7 @@ import {
   DragEndEvent,
   KeyboardSensor,
   PointerSensor,
-  closestCorners,
+  closestCenter,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
@@ -100,7 +100,7 @@ export default function HomePage() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5, 
+        distance: 2, 
       },
     }),
     useSensor(KeyboardSensor, {
@@ -715,7 +715,7 @@ export default function HomePage() {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={closestCenter}
       onDragEnd={handleDragEndBookmarks}
     >
       {mainContent}

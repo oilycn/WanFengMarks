@@ -297,8 +297,9 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
   } = useSortable({ id: String(id), disabled: !isDraggable });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+    transform: CSS.Translate.toString(transform),
+    transition: isDragging ? 'none' : transition,
+    willChange: isDragging ? 'transform' : undefined,
     zIndex: isDragging ? 50 : undefined,
   };
 
@@ -356,10 +357,10 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
       style={style}
       {...(isDraggable ? attributes : {})}
       className={cn(
-        "group relative rounded-2xl flex flex-col transition-all duration-250",
+        "group relative rounded-2xl flex flex-col",
         isDragging
           ? 'shadow-2xl scale-[1.02] z-50'
-          : 'hover:shadow-[0_24px_34px_-24px_hsl(var(--foreground)/0.45)]',
+          : 'transition-shadow duration-200 hover:shadow-[0_24px_34px_-24px_hsl(var(--foreground)/0.45)]',
       )}
     >
       <Card className={cn(
@@ -371,7 +372,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
           {isAdminAuthenticated && isDraggable && (
             <button
               {...listeners}
-              className="cursor-grab p-1 mr-1.5 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-55 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
+              className="cursor-grab touch-none p-1 mr-1.5 text-muted-foreground hover:text-foreground group-hover:opacity-100 opacity-55 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
               aria-label="拖动排序"
               type="button" 
             >
