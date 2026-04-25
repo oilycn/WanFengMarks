@@ -91,7 +91,7 @@ export default function HomePage() {
 
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [logoText, setLogoText] = useState<string>("晚风Marks");
-  const [logoIconName, setLogoIconName] = useState<string>("ShieldCheck");
+  const [logoIconName, setLogoIconName] = useState<string>("MarkImage");
   const [adminPasswordExists, setAdminPasswordExists] = useState(false);
 
 
@@ -628,7 +628,7 @@ export default function HomePage() {
               <div className="absolute h-40 w-40 rounded-full border border-accent/25 wm-splash-orbit [animation-direction:reverse] [animation-duration:7s]" />
               <div className="absolute h-28 w-28 rounded-full bg-primary/10 blur-xl wm-splash-breathe" />
               <div className="relative px-2 py-1 wm-splash-breathe">
-                <AegisLogo logoText="晚风导航" logoIconName="Home" />
+                <AegisLogo logoText="晚风导航" logoIconName="MarkImage" />
               </div>
             </div>
             <p className="mt-5 text-sm text-muted-foreground tracking-wide wm-splash-fade">正在为你整理书签...</p>

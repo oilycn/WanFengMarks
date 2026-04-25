@@ -20,6 +20,11 @@ const headlineFont = Space_Grotesk({
 export const metadata: Metadata = {
   title: '晚风Marks 书签导航',
   description: '您的个性化书签仪表盘，集成时钟、天气和搜索功能。',
+  icons: {
+    icon: '/mark.png',
+    shortcut: '/mark.png',
+    apple: '/mark.png',
+  },
 };
 
 export default function RootLayout({

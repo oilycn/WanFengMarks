@@ -79,7 +79,6 @@ async function ensureBookmarkIconUrlColumn(): Promise<void> {
 }
 
 function mapDbRowToBookmark(row: BookmarkRow): Bookmark {
-  console.log(`[BookmarkAction][mapDbRowToBookmark] Mapping row for ID: ${row.id}, Priority: ${row.priority}`);
   return {
     id: String(row.id),
     name: row.name,

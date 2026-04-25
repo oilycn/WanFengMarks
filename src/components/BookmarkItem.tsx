@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import type { Bookmark } from '@/types';
 import { Card } from '@/components/ui/card';
-import { Trash2, EyeOff, PenLine, GripVertical, Globe } from 'lucide-react';
+import { Trash2, EyeOff, PenLine, GripVertical } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -394,11 +394,19 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
             <div
               className={cn(
                 "relative flex-shrink-0 w-11 h-11 flex items-center justify-center mr-2.5 rounded-xl overflow-hidden",
-                showFallbackIcon || !currentIconSrc ? "bg-muted/35" : "bg-muted/55"
+                "bg-transparent"
               )}
             >
               {(showFallbackIcon || !currentIconSrc) && (
-                <Globe className="h-4 w-4 text-muted-foreground/60" aria-hidden="true" />
+                <img
+                  src="/mark.png"
+                  alt=""
+                  width={44}
+                  height={44}
+                  className="absolute inset-0 w-full h-full object-contain"
+                  loading="lazy"
+                  decoding="async"
+                />
               )}
               {!showFallbackIcon && currentIconSrc && (
                 <img

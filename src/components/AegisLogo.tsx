@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { ShieldCheck } from 'lucide-react'; 
 import { iconMap as globalIconMap } from './AppSidebar'; // Assuming iconMap is exported from AppSidebar
 
 interface AegisLogoProps {
@@ -12,9 +11,9 @@ interface AegisLogoProps {
 const AegisLogo: React.FC<AegisLogoProps> = ({ 
   className, 
   logoText = "晚风Marks", 
-  logoIconName = "ShieldCheck" 
+  logoIconName = "MarkImage" 
 }) => {
-  const IconComponent = globalIconMap[logoIconName] || ShieldCheck;
+  const IconComponent = globalIconMap[logoIconName] || globalIconMap['MarkImage'];
 
   return (
     <div className={`flex items-center gap-3 ${className}`}>

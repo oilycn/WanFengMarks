@@ -129,7 +129,7 @@ export async function initializeMySQLDatabaseAction(): Promise<ActionResult> {
     }
     const currentLogoIcon = await getConfigValue(LOGO_ICON_KEY, connection);
     if (!currentLogoIcon) {
-      await setConfigValue(LOGO_ICON_KEY, 'ShieldCheck', connection);
+      await setConfigValue(LOGO_ICON_KEY, 'MarkImage', connection);
     }
 
     console.log('[AuthAction][initializeMySQLDatabaseAction] Creating `categories` table if not exists...');
@@ -401,10 +401,11 @@ export async function getAppSettingsAction(): Promise<AppSettingsResult> {
     const logoText = await getConfigValue(LOGO_TEXT_KEY, connection);
     const logoIcon = await getConfigValue(LOGO_ICON_KEY, connection);
     const adminPasswordHash = await getConfigValue(ADMIN_PASSWORD_KEY, connection);
+    const resolvedLogoIcon = !logoIcon || logoIcon === 'ShieldCheck' ? 'MarkImage' : logoIcon;
     
     const settings = { 
       logoText: logoText || '晚风Marks', 
-      logoIcon: logoIcon || 'ShieldCheck',
+      logoIcon: resolvedLogoIcon,
       adminPasswordSet: !!adminPasswordHash
     };
     console.log('[AuthAction][getAppSettingsAction] SUCCESS_EXIT - Successfully fetched settings:', settings);
@@ -413,7 +414,7 @@ export async function getAppSettingsAction(): Promise<AppSettingsResult> {
     console.error(`[AuthAction][getAppSettingsAction] ERROR_EXIT - Message: ${error.message}`, error);
     const defaultSettings = { 
         logoText: '晚风Marks', 
-        logoIcon: 'ShieldCheck', 
+        logoIcon: 'MarkImage', 
         adminPasswordSet: false 
     };
     console.warn('[AuthAction][getAppSettingsAction] Returning default settings due to error.');

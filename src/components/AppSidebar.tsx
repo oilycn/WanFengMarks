@@ -28,8 +28,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
 
+const MarkImageIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <img src="/mark.png" alt="" className={cn("object-contain", className)} />
+);
 
 export const availableIcons: { name: string; value: string; IconComponent: React.ElementType }[] = [
+  { name: '默认图标', value: 'MarkImage', IconComponent: MarkImageIcon },
   { name: '文件夹', value: 'Folder', IconComponent: Folder },
   { name: '公文包', value: 'Briefcase', IconComponent: Briefcase },
   { name: '书本', value: 'BookOpen', IconComponent: BookOpen },
