@@ -13,6 +13,10 @@ RUN npm install --frozen-lockfile
 # Copy the rest of the application code
 COPY . .
 
+# Ensure both lowercase and uppercase default icon paths exist in Linux container.
+# Some existing data or clients may still request /mark.PNG.
+RUN if [ -f /app/public/mark.png ]; then cp /app/public/mark.png /app/public/mark.PNG; fi
+
 # Set the NEXT_TS_CONFIG_PATH environment variable to tell Next.js where to find the tsconfig.json
 ENV NEXT_TS_CONFIG_PATH=/app/tsconfig.json
 
@@ -39,6 +43,8 @@ USER nextjs
 # Including the standalone output and node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Copy public assets (e.g. /mark.png) so runtime can serve them.
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 
 # Expose the port the application runs on
@@ -46,4 +52,3 @@ EXPOSE 3000
 
 # Start the application
 CMD ["node", "server.js"]
-

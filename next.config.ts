@@ -25,7 +25,12 @@ const nextConfig: NextConfig = {
         hostname: '**',
       },
     ],
-  }
+  },
+  async rewrites() {
+    return [
+      { source: '/mark.PNG', destination: '/mark.png' },
+    ];
+  },
 };
 
 export default withBundleAnalyzer(nextConfig);
