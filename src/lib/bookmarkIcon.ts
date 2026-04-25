@@ -65,9 +65,11 @@ export function buildIconCandidates(bookmarkUrl: string, sourceIconUrl?: string)
   }
 
   try {
-    const hostname = new URL(bookmarkUrl).hostname.replace(/^www\./, '');
-    candidates.push(`https://${hostname}/favicon.ico`);
-    candidates.push(`https://icons.duckduckgo.com/ip3/${encodeURIComponent(hostname)}.ico`);
+    const parsed = new URL(bookmarkUrl);
+    const hostWithPort = parsed.host.replace(/^www\./, '');
+    const scheme = parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.protocol : 'https:';
+    candidates.push(`${scheme}//${hostWithPort}/favicon.ico`);
+    candidates.push(`https://icons.duckduckgo.com/ip3/${encodeURIComponent(hostWithPort)}.ico`);
   } catch {
     // Ignore parse error; caller validates URL separately.
   }

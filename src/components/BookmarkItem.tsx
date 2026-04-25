@@ -40,7 +40,7 @@ const getFullUrlWithScheme = (url: string): string => {
 
 const getBookmarkDomain = (url: string): string => {
   try {
-    return new URL(getFullUrlWithScheme(url)).hostname.replace(/^www\./, '');
+    return new URL(getFullUrlWithScheme(url)).host.replace(/^www\./, '');
   } catch {
     return url;
   }
@@ -66,11 +66,11 @@ const runtimeFaviconCache = new Map<string, RuntimeFaviconCacheItem>();
 
 const getFaviconCacheKey = (domain: string): string => `${FAVICON_CACHE_PREFIX}${domain}`;
 
-const getIconCandidates = (domain: string, customIcon?: string): string[] => {
-  const normalizedDomain = domain.replace(/^www\./, '');
+const getIconCandidates = (hostWithPort: string, scheme: 'http:' | 'https:' = 'https:', customIcon?: string): string[] => {
+  const normalizedHost = hostWithPort.replace(/^www\./, '');
   const candidates = [
-    `https://${normalizedDomain}/favicon.ico`,
-    `https://icons.duckduckgo.com/ip3/${encodeURIComponent(normalizedDomain)}.ico`,
+    `${scheme}//${normalizedHost}/favicon.ico`,
+    `https://icons.duckduckgo.com/ip3/${encodeURIComponent(normalizedHost)}.ico`,
   ];
 
   if (customIcon?.trim()) {
@@ -111,17 +111,20 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     setIsCurrentIconLoaded(false);
 
     const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
-    let domain: string;
+    let hostWithPort: string;
+    let scheme: 'http:' | 'https:' = 'https:';
     try {
-      domain = new URL(fullBookmarkUrl).hostname;
+      const parsed = new URL(fullBookmarkUrl);
+      hostWithPort = parsed.host;
+      scheme = parsed.protocol === 'http:' ? 'http:' : 'https:';
     } catch {
       if (isActive) setShowFallbackIcon(true);
       return;
     }
-    const normalizedDomain = domain.replace(/^www\./, '');
+    const normalizedHost = hostWithPort.replace(/^www\./, '');
     const customIconUrl = bookmark.iconUrl || bookmark.icon;
-    const iconCandidates = getIconCandidates(normalizedDomain, customIconUrl);
-    const cacheKey = getFaviconCacheKey(normalizedDomain);
+    const iconCandidates = getIconCandidates(normalizedHost, scheme, customIconUrl);
+    const cacheKey = getFaviconCacheKey(normalizedHost);
 
     // If we already have a DB-persisted icon URL, always prefer it over domain cache.
     // This avoids sticking to stale favicon cache after a manual icon upload.
@@ -137,7 +140,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     try {
       const cachedItemString = localStorage.getItem(cacheKey);
       const now = Date.now();
-      const runtimeCachedItem = runtimeFaviconCache.get(normalizedDomain);
+      const runtimeCachedItem = runtimeFaviconCache.get(normalizedHost);
 
       if (runtimeCachedItem && runtimeCachedItem.expiresAt > now) {
         if (isActive) {
@@ -152,7 +155,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
       }
 
       if (runtimeCachedItem && runtimeCachedItem.expiresAt <= now) {
-        runtimeFaviconCache.delete(normalizedDomain);
+        runtimeFaviconCache.delete(normalizedHost);
       }
 
       if (cachedItemString) {
@@ -163,7 +166,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
           cachedItem.timestamp &&
           now - cachedItem.timestamp < CACHE_DURATION_SUCCESS
         ) {
-          runtimeFaviconCache.set(normalizedDomain, {
+          runtimeFaviconCache.set(normalizedHost, {
             src: cachedItem.src,
             expiresAt: cachedItem.timestamp + CACHE_DURATION_SUCCESS,
           });
@@ -177,7 +180,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
           cachedItem.errorTimestamp &&
           now - cachedItem.errorTimestamp < CACHE_DURATION_ERROR
         ) {
-          runtimeFaviconCache.set(normalizedDomain, {
+          runtimeFaviconCache.set(normalizedHost, {
             src: null,
             expiresAt: cachedItem.errorTimestamp + CACHE_DURATION_ERROR,
           });
@@ -189,11 +192,11 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
         }
       }
     } catch (error) {
-      console.warn(`[BookmarkItem] Error reading or parsing cache for ${normalizedDomain}:`, error);
+      console.warn(`[BookmarkItem] Error reading or parsing cache for ${normalizedHost}:`, error);
       try {
         localStorage.removeItem(cacheKey);
       } catch (removeError) {
-        console.warn(`[BookmarkItem] Error removing invalid cache for ${normalizedDomain}:`, removeError);
+        console.warn(`[BookmarkItem] Error removing invalid cache for ${normalizedHost}:`, removeError);
       }
     }
     
@@ -209,9 +212,11 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
   const moveToNextIconCandidate = useCallback(() => {
     try {
       const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
-      const domain = new URL(fullBookmarkUrl).hostname.replace(/^www\./, '');
+      const parsed = new URL(fullBookmarkUrl);
+      const hostWithPort = parsed.host.replace(/^www\./, '');
+      const scheme = parsed.protocol === 'http:' ? 'http:' : 'https:';
       const customIconUrl = bookmark.iconUrl || bookmark.icon;
-      const iconCandidates = getIconCandidates(domain, customIconUrl);
+      const iconCandidates = getIconCandidates(hostWithPort, scheme, customIconUrl);
 
       const activeSourceIndex = currentIconSrc
         ? iconCandidates.findIndex((iconSrc) => iconSrc === currentIconSrc)
@@ -225,8 +230,8 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
       setShowFallbackIcon(true);
       setCurrentIconSrc(null);
       const errorTimestamp = Date.now();
-      const cacheKey = getFaviconCacheKey(domain);
-      runtimeFaviconCache.set(domain, {
+      const cacheKey = getFaviconCacheKey(hostWithPort);
+      runtimeFaviconCache.set(hostWithPort, {
         src: null,
         expiresAt: errorTimestamp + CACHE_DURATION_ERROR,
       });
@@ -265,15 +270,15 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
       setIsCurrentIconLoaded(true);
       try {
         const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
-        const domain = new URL(fullBookmarkUrl).hostname.replace(/^www\./, '');
+        const hostWithPort = new URL(fullBookmarkUrl).host.replace(/^www\./, '');
         const customIconUrl = bookmark.iconUrl || bookmark.icon;
         if (customIconUrl?.trim()) {
           // Do not cache DB custom icon URL into domain cache to avoid stale cache pollution.
           return;
         }
-        const cacheKey = getFaviconCacheKey(domain);
+        const cacheKey = getFaviconCacheKey(hostWithPort);
         const timestamp = Date.now();
-        runtimeFaviconCache.set(domain, {
+        runtimeFaviconCache.set(hostWithPort, {
           src: currentIconSrc,
           expiresAt: timestamp + CACHE_DURATION_SUCCESS,
         });

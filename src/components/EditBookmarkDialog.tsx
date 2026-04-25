@@ -42,8 +42,10 @@ const getFullUrlWithScheme = (value: string): string => {
 
 const getDefaultSiteIconUrl = (bookmarkUrl: string): string => {
   try {
-    const hostname = new URL(getFullUrlWithScheme(bookmarkUrl)).hostname.replace(/^www\./, '');
-    return `https://${hostname}/favicon.ico`;
+    const parsed = new URL(getFullUrlWithScheme(bookmarkUrl));
+    const hostWithPort = parsed.host.replace(/^www\./, '');
+    const scheme = parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.protocol : 'https:';
+    return `${scheme}//${hostWithPort}/favicon.ico`;
   } catch {
     return '';
   }
@@ -51,8 +53,8 @@ const getDefaultSiteIconUrl = (bookmarkUrl: string): string => {
 
 const getDuckDuckGoIconUrl = (bookmarkUrl: string): string => {
   try {
-    const hostname = new URL(getFullUrlWithScheme(bookmarkUrl)).hostname.replace(/^www\./, '');
-    return `https://icons.duckduckgo.com/ip3/${encodeURIComponent(hostname)}.ico`;
+    const hostWithPort = new URL(getFullUrlWithScheme(bookmarkUrl)).host.replace(/^www\./, '');
+    return `https://icons.duckduckgo.com/ip3/${encodeURIComponent(hostWithPort)}.ico`;
   } catch {
     return '';
   }
