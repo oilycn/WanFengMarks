@@ -51,47 +51,9 @@ const getDefaultSiteIconUrl = (bookmarkUrl: string): string => {
   }
 };
 
-const getDuckDuckGoIconUrl = (bookmarkUrl: string): string => {
-  try {
-    const hostWithPort = new URL(getFullUrlWithScheme(bookmarkUrl)).host.replace(/^www\./, '');
-    return `https://icons.duckduckgo.com/ip3/${encodeURIComponent(hostWithPort)}.ico`;
-  } catch {
-    return '';
-  }
-};
-
-const canLoadImage = (src: string, timeoutMs = 2500): Promise<boolean> =>
-  new Promise((resolve) => {
-    if (!src) {
-      resolve(false);
-      return;
-    }
-    const img = new Image();
-    let settled = false;
-
-    const finalize = (ok: boolean) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      img.onload = null;
-      img.onerror = null;
-      resolve(ok);
-    };
-
-    const timer = window.setTimeout(() => finalize(false), timeoutMs);
-    img.onload = () => finalize(true);
-    img.onerror = () => finalize(false);
-    img.src = src;
-  });
-
 const resolvePreferredDefaultIconUrl = async (bookmarkUrl: string): Promise<string> => {
   const siteIcon = getDefaultSiteIconUrl(bookmarkUrl);
-  const duckIcon = getDuckDuckGoIconUrl(bookmarkUrl);
-  if (!siteIcon) {
-    return duckIcon;
-  }
-  const siteOk = await canLoadImage(siteIcon);
-  return siteOk ? siteIcon : (duckIcon || siteIcon);
+  return siteIcon || '';
 };
 
 const EditBookmarkDialog: React.FC<EditBookmarkDialogProps> = ({
@@ -308,7 +270,7 @@ const EditBookmarkDialog: React.FC<EditBookmarkDialogProps> = ({
                   <UploadCloud className="mr-1.5 h-3.5 w-3.5" />
                   {isAutoUploadingIcon ? '上传并保存中...' : '上传企业微信图床并保存'}
                 </Button>
-                <p className="text-xs text-muted-foreground">默认优先 `当前站点/favicon.ico`，若加载失败会自动切到 DuckDuckGo；上传后会改为数据库里的企业微信 URL。</p>
+                <p className="text-xs text-muted-foreground">默认使用 `当前站点/favicon.ico`；上传后会改为数据库里的企业微信 URL。</p>
               </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">

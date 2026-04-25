@@ -70,7 +70,6 @@ const getIconCandidates = (hostWithPort: string, scheme: 'http:' | 'https:' = 'h
   const normalizedHost = hostWithPort.replace(/^www\./, '');
   const candidates = [
     `${scheme}//${normalizedHost}/favicon.ico`,
-    `https://icons.duckduckgo.com/ip3/${encodeURIComponent(normalizedHost)}.ico`,
   ];
 
   if (customIcon?.trim()) {

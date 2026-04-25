@@ -306,7 +306,7 @@ export async function syncNonWechatIconsToWechatAction(): Promise<BatchIconSyncR
 
       result.processed += 1;
 
-      // Always try favicon.ico -> DuckDuckGo first for non-WeChat rows.
+      // Always try favicon.ico first for non-WeChat rows.
       let uploadedUrl: string | null = await autoUploadBookmarkIcon(row.url);
 
       if (!uploadedUrl) {

@@ -199,7 +199,7 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
                   type="url"
                   disabled={isSubmitting}
                 />
-                <p className="text-xs text-muted-foreground">自动抓取顺序：站点 favicon {'->'} DuckDuckGo 图标。</p>
+                <p className="text-xs text-muted-foreground">自动抓取顺序：站点 favicon。</p>
               </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
