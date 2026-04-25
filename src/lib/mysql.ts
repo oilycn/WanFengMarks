@@ -136,6 +136,7 @@ CREATE TABLE IF NOT EXISTS bookmarks (
   url TEXT NOT NULL,
   category_id INT,
   description TEXT,
+  icon_url TEXT,
   is_private BOOLEAN DEFAULT FALSE,
   priority INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -143,4 +144,3 @@ CREATE TABLE IF NOT EXISTS bookmarks (
   FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 */
-

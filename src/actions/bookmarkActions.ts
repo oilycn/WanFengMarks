@@ -3,6 +3,7 @@
 
 import type { Bookmark } from '@/types';
 import { connectToDatabase, query } from '@/lib/mysql';
+import { autoUploadBookmarkIcon, isWeChatHostedIconUrl, uploadIconBySourceUrl } from '@/lib/bookmarkIcon';
 import type { RowDataPacket, OkPacket, PoolConnection } from 'mysql2/promise';
 
 interface BookmarkRow extends RowDataPacket {
@@ -11,6 +12,7 @@ interface BookmarkRow extends RowDataPacket {
   url: string;
   category_id: number | null;
   description: string | null;
+  icon_url: string | null;
   is_private: boolean | number;
   priority: number;
 }
@@ -23,6 +25,59 @@ interface MinPriorityRow extends RowDataPacket {
   min_priority: number | null;
 }
 
+interface ColumnExistsRow extends RowDataPacket {
+  exists_flag: number;
+}
+
+interface ExistingBookmarkIconRow extends RowDataPacket {
+  id: number;
+  url: string;
+  icon_url: string | null;
+}
+
+export interface BatchIconSyncResult {
+  processed: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+}
+
+let ensureIconUrlColumnPromise: Promise<void> | null = null;
+
+async function ensureBookmarkIconUrlColumn(): Promise<void> {
+  if (ensureIconUrlColumnPromise) {
+    return ensureIconUrlColumnPromise;
+  }
+
+  ensureIconUrlColumnPromise = (async () => {
+    try {
+      const rows = await query<ColumnExistsRow[]>(
+        `SELECT 1 AS exists_flag
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'bookmarks'
+           AND COLUMN_NAME = 'icon_url'
+         LIMIT 1`
+      );
+
+      if (rows.length === 0) {
+        console.log('[BookmarkAction][ensureBookmarkIconUrlColumn] icon_url column missing, applying migration.');
+        await query("ALTER TABLE bookmarks ADD COLUMN icon_url TEXT NULL AFTER description");
+        console.log('[BookmarkAction][ensureBookmarkIconUrlColumn] icon_url column migration applied.');
+      }
+    } catch (error: any) {
+      // Duplicate column can happen under concurrent startup; treat as success.
+      if (error?.message?.includes('Duplicate column name')) {
+        return;
+      }
+      console.error('[BookmarkAction][ensureBookmarkIconUrlColumn] Migration check failed:', error);
+      throw error;
+    }
+  })();
+
+  return ensureIconUrlColumnPromise;
+}
+
 function mapDbRowToBookmark(row: BookmarkRow): Bookmark {
   console.log(`[BookmarkAction][mapDbRowToBookmark] Mapping row for ID: ${row.id}, Priority: ${row.priority}`);
   return {
@@ -31,6 +86,8 @@ function mapDbRowToBookmark(row: BookmarkRow): Bookmark {
     url: row.url,
     categoryId: row.category_id ? String(row.category_id) : 'default',
     description: row.description || '',
+    iconUrl: row.icon_url || undefined,
+    icon: row.icon_url || undefined,
     isPrivate: Boolean(row.is_private),
     priority: row.priority === null || row.priority === undefined ? 0 : row.priority, // Ensure priority is a number, default to 0
   };
@@ -39,6 +96,7 @@ function mapDbRowToBookmark(row: BookmarkRow): Bookmark {
 export async function getBookmarksAction(): Promise<Bookmark[]> {
   console.log('[BookmarkAction][getBookmarksAction] ENTRY');
   try {
+    await ensureBookmarkIconUrlColumn();
     const rows = await query<BookmarkRow[]>("SELECT * FROM bookmarks ORDER BY priority DESC, created_at DESC");
     const bookmarks = rows.map(mapDbRowToBookmark);
     console.log(`[BookmarkAction][getBookmarksAction] SUCCESS_EXIT - Fetched ${bookmarks.length} bookmarks.`);
@@ -51,10 +109,15 @@ export async function getBookmarksAction(): Promise<Bookmark[]> {
 
 export async function addBookmarkAction(bookmarkData: Omit<Bookmark, 'id' | 'priority'>): Promise<Bookmark> {
   console.log('[BookmarkAction][addBookmarkAction] ENTRY - Data:', bookmarkData);
-  const { name, url, categoryId, description, isPrivate } = bookmarkData;
+  const { name, url, categoryId, description, isPrivate, iconUrl, icon } = bookmarkData;
+  let finalIconUrl = (iconUrl || icon || '').trim() || null;
+  if (!finalIconUrl) {
+    finalIconUrl = await autoUploadBookmarkIcon(url);
+  }
 
   let connection: PoolConnection | null = null;
   try {
+    await ensureBookmarkIconUrlColumn();
     connection = await connectToDatabase();
     console.log('[BookmarkAction][addBookmarkAction] Database connection obtained.');
     await connection.beginTransaction();
@@ -87,8 +150,8 @@ export async function addBookmarkAction(bookmarkData: Omit<Bookmark, 'id' | 'pri
     console.log(`[BookmarkAction][addBookmarkAction] Determined new priority: ${newPriority}`);
 
     const [result] = await connection.query<OkPacket>(
-      "INSERT INTO bookmarks (name, url, category_id, description, is_private, priority) VALUES (?, ?, ?, ?, ?, ?)",
-      [name, url, categoryId === 'default' ? null : Number(categoryId), description || null, isPrivate || false, newPriority]
+      "INSERT INTO bookmarks (name, url, category_id, description, icon_url, is_private, priority) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [name, url, categoryId === 'default' ? null : Number(categoryId), description || null, finalIconUrl, isPrivate || false, newPriority]
     );
     console.log('[BookmarkAction][addBookmarkAction] Insert query executed. Result:', result);
 
@@ -101,6 +164,8 @@ export async function addBookmarkAction(bookmarkData: Omit<Bookmark, 'id' | 'pri
     const newBookmark = {
       id: String(result.insertId),
       ...bookmarkData,
+      iconUrl: finalIconUrl || undefined,
+      icon: finalIconUrl || undefined,
       priority: newPriority,
     };
     console.log('[BookmarkAction][addBookmarkAction] SUCCESS_EXIT - Bookmark added:', newBookmark);
@@ -123,9 +188,11 @@ export async function addBookmarkAction(bookmarkData: Omit<Bookmark, 'id' | 'pri
 
 export async function updateBookmarkAction(bookmarkToUpdate: Bookmark): Promise<Bookmark> {
   console.log('[BookmarkAction][updateBookmarkAction] ENTRY - Bookmark to update:', bookmarkToUpdate);
-  const { id, name, url, categoryId, description, isPrivate, priority } = bookmarkToUpdate;
+  const { id, name, url, categoryId, description, isPrivate, priority, iconUrl, icon } = bookmarkToUpdate;
+  let finalIconUrl = (iconUrl || icon || '').trim() || null;
   let connection: PoolConnection | null = null;
   try {
+    await ensureBookmarkIconUrlColumn();
     connection = await connectToDatabase();
     console.log('[BookmarkAction][updateBookmarkAction] Database connection obtained.');
     await connection.beginTransaction();
@@ -137,16 +204,35 @@ export async function updateBookmarkAction(bookmarkToUpdate: Bookmark): Promise<
       throw new Error('此书签网址已存在于其他书签，请勿重复。');
     }
 
+    if (!finalIconUrl) {
+      const [currentBookmarkRows] = await connection.query<ExistingBookmarkIconRow[]>(
+        "SELECT url, icon_url FROM bookmarks WHERE id = ? LIMIT 1",
+        [Number(id)]
+      );
+      const currentBookmark = currentBookmarkRows[0];
+
+      if (currentBookmark && currentBookmark.icon_url && currentBookmark.url === url) {
+        finalIconUrl = currentBookmark.icon_url;
+      } else {
+        finalIconUrl = await autoUploadBookmarkIcon(url);
+      }
+    }
+
     await connection.query(
-      "UPDATE bookmarks SET name = ?, url = ?, category_id = ?, description = ?, is_private = ?, priority = ? WHERE id = ?",
-      [name, url, categoryId === 'default' ? null : Number(categoryId), description || null, isPrivate || false, priority, Number(id)]
+      "UPDATE bookmarks SET name = ?, url = ?, category_id = ?, description = ?, icon_url = ?, is_private = ?, priority = ? WHERE id = ?",
+      [name, url, categoryId === 'default' ? null : Number(categoryId), description || null, finalIconUrl, isPrivate || false, priority, Number(id)]
     );
     console.log('[BookmarkAction][updateBookmarkAction] Update query executed.');
 
     await connection.commit();
     console.log('[BookmarkAction][updateBookmarkAction] Transaction committed.');
-    console.log('[BookmarkAction][updateBookmarkAction] SUCCESS_EXIT - Bookmark updated:', bookmarkToUpdate);
-    return bookmarkToUpdate;
+    const normalizedBookmarkToUpdate = {
+      ...bookmarkToUpdate,
+      iconUrl: finalIconUrl || undefined,
+      icon: finalIconUrl || undefined,
+    };
+    console.log('[BookmarkAction][updateBookmarkAction] SUCCESS_EXIT - Bookmark updated:', normalizedBookmarkToUpdate);
+    return normalizedBookmarkToUpdate;
   } catch (error: any) {
     if (connection) {
       console.error('[BookmarkAction][updateBookmarkAction] Rolling back transaction due to error.');
@@ -193,6 +279,66 @@ export async function deleteBookmarkAction(bookmarkId: string): Promise<{ id: st
       console.log('[BookmarkAction][deleteBookmarkAction] Releasing database connection.');
       connection.release();
     }
+  }
+}
+
+export async function syncNonWechatIconsToWechatAction(): Promise<BatchIconSyncResult> {
+  console.log('[BookmarkAction][syncNonWechatIconsToWechatAction] ENTRY');
+  await ensureBookmarkIconUrlColumn();
+
+  const result: BatchIconSyncResult = {
+    processed: 0,
+    updated: 0,
+    skipped: 0,
+    failed: 0,
+  };
+
+  try {
+    const rows = await query<ExistingBookmarkIconRow[]>(
+      "SELECT id, url, icon_url FROM bookmarks ORDER BY id ASC"
+    );
+
+    for (const row of rows) {
+      const iconUrl = (row.icon_url || '').trim();
+      if (isWeChatHostedIconUrl(iconUrl)) {
+        result.skipped += 1;
+        continue;
+      }
+
+      result.processed += 1;
+
+      // Always try favicon.ico -> DuckDuckGo first for non-WeChat rows.
+      let uploadedUrl: string | null = await autoUploadBookmarkIcon(row.url);
+
+      if (!uploadedUrl) {
+        uploadedUrl = iconUrl ? await uploadIconBySourceUrl({
+          sourceIconUrl: iconUrl,
+          bookmarkUrl: row.url,
+        }) : null;
+      }
+
+      if (!uploadedUrl) {
+        result.failed += 1;
+        continue;
+      }
+
+      try {
+        await query("UPDATE bookmarks SET icon_url = ? WHERE id = ?", [uploadedUrl, row.id]);
+        result.updated += 1;
+      } catch (updateError: any) {
+        console.error(
+          `[BookmarkAction][syncNonWechatIconsToWechatAction] Update failed for bookmark ${row.id}:`,
+          updateError
+        );
+        result.failed += 1;
+      }
+    }
+
+    console.log('[BookmarkAction][syncNonWechatIconsToWechatAction] SUCCESS_EXIT', result);
+    return result;
+  } catch (error: any) {
+    console.error('[BookmarkAction][syncNonWechatIconsToWechatAction] ERROR_EXIT', error);
+    return result;
   }
 }
 

@@ -1,11 +1,11 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import type { Bookmark } from '@/types';
 import { Card } from '@/components/ui/card';
-import { Trash2, EyeOff, PenLine, GripVertical } from 'lucide-react';
+import { Trash2, EyeOff, PenLine, GripVertical, Globe } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +46,40 @@ const getBookmarkDomain = (url: string): string => {
   }
 };
 
+const FAVICON_CACHE_PREFIX = 'favicon-cache-v11-';
+const CACHE_DURATION_SUCCESS = 30 * 24 * 60 * 60 * 1000;
+const CACHE_DURATION_ERROR = 12 * 60 * 60 * 1000;
+const ICON_LOAD_TIMEOUT_MS = 1800;
+
+type RuntimeFaviconCacheItem = {
+  src: string | null;
+  expiresAt: number;
+};
+
+type LocalStorageFaviconCacheItem = {
+  src?: string;
+  timestamp?: number;
+  errorTimestamp?: number;
+};
+
+const runtimeFaviconCache = new Map<string, RuntimeFaviconCacheItem>();
+
+const getFaviconCacheKey = (domain: string): string => `${FAVICON_CACHE_PREFIX}${domain}`;
+
+const getIconCandidates = (domain: string, customIcon?: string): string[] => {
+  const normalizedDomain = domain.replace(/^www\./, '');
+  const candidates = [
+    `https://${normalizedDomain}/favicon.ico`,
+    `https://icons.duckduckgo.com/ip3/${encodeURIComponent(normalizedDomain)}.ico`,
+  ];
+
+  if (customIcon?.trim()) {
+    candidates.unshift(customIcon.trim());
+  }
+
+  return Array.from(new Set(candidates));
+};
+
 const BookmarkItem: React.FC<BookmarkItemProps> = ({
   id,
   bookmark,
@@ -56,6 +90,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
 }) => {
   const [currentIconSrc, setCurrentIconSrc] = useState<string | null>(null);
   const [showFallbackIcon, setShowFallbackIcon] = useState(false);
+  const [isCurrentIconLoaded, setIsCurrentIconLoaded] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number }>({
@@ -73,43 +108,79 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
 
     setShowFallbackIcon(false);
     setCurrentIconSrc(null);
+    setIsCurrentIconLoaded(false);
 
     const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
     let domain: string;
     try {
       domain = new URL(fullBookmarkUrl).hostname;
-    } catch (e) {
+    } catch {
       if (isActive) setShowFallbackIcon(true);
       return;
     }
-    
     const normalizedDomain = domain.replace(/^www\./, '');
-    const iconCandidates = [
-      `https://${normalizedDomain}/favicon.ico`,
-      `https://${normalizedDomain}/apple-touch-icon.png`,
-      `https://${normalizedDomain}/apple-touch-icon-precomposed.png`,
-      `https://icons.duckduckgo.com/ip3/${encodeURIComponent(normalizedDomain)}.ico`,
-      `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(normalizedDomain)}`,
-    ];
+    const customIconUrl = bookmark.iconUrl || bookmark.icon;
+    const iconCandidates = getIconCandidates(normalizedDomain, customIconUrl);
+    const cacheKey = getFaviconCacheKey(normalizedDomain);
 
-    const cacheKey = `favicon-cache-v7-${normalizedDomain}`;
-    const CACHE_DURATION_SUCCESS = 24 * 60 * 60 * 1000;
-    const CACHE_DURATION_ERROR = 60 * 60 * 1000;
+    // If we already have a DB-persisted icon URL, always prefer it over domain cache.
+    // This avoids sticking to stale favicon cache after a manual icon upload.
+    if (customIconUrl?.trim()) {
+      if (isActive) {
+        setCurrentIconSrc(customIconUrl.trim());
+      }
+      return () => {
+        isActive = false;
+      };
+    }
 
     try {
       const cachedItemString = localStorage.getItem(cacheKey);
-      if (cachedItemString) {
-        const cachedItem = JSON.parse(cachedItemString);
-        const now = Date.now();
+      const now = Date.now();
+      const runtimeCachedItem = runtimeFaviconCache.get(normalizedDomain);
 
-        if (cachedItem.src && cachedItem.timestamp && (now - cachedItem.timestamp < CACHE_DURATION_SUCCESS)) {
+      if (runtimeCachedItem && runtimeCachedItem.expiresAt > now) {
+        if (isActive) {
+          if (runtimeCachedItem.src) {
+            setCurrentIconSrc(runtimeCachedItem.src);
+          } else {
+            setShowFallbackIcon(true);
+            setCurrentIconSrc(null);
+          }
+        }
+        return;
+      }
+
+      if (runtimeCachedItem && runtimeCachedItem.expiresAt <= now) {
+        runtimeFaviconCache.delete(normalizedDomain);
+      }
+
+      if (cachedItemString) {
+        const cachedItem = JSON.parse(cachedItemString) as LocalStorageFaviconCacheItem;
+
+        if (
+          cachedItem.src &&
+          cachedItem.timestamp &&
+          now - cachedItem.timestamp < CACHE_DURATION_SUCCESS
+        ) {
+          runtimeFaviconCache.set(normalizedDomain, {
+            src: cachedItem.src,
+            expiresAt: cachedItem.timestamp + CACHE_DURATION_SUCCESS,
+          });
           if (isActive) {
             setCurrentIconSrc(cachedItem.src);
           }
-          return; 
+          return;
         }
 
-        if (cachedItem.errorTimestamp && (now - cachedItem.errorTimestamp < CACHE_DURATION_ERROR)) {
+        if (
+          cachedItem.errorTimestamp &&
+          now - cachedItem.errorTimestamp < CACHE_DURATION_ERROR
+        ) {
+          runtimeFaviconCache.set(normalizedDomain, {
+            src: null,
+            expiresAt: cachedItem.errorTimestamp + CACHE_DURATION_ERROR,
+          });
           if (isActive) {
             setShowFallbackIcon(true);
             setCurrentIconSrc(null);
@@ -133,19 +204,14 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     return () => {
       isActive = false;
     };
-  }, [bookmark.url]);
+  }, [bookmark.url, bookmark.icon, bookmark.iconUrl]);
 
-  const handleImageError = () => {
+  const moveToNextIconCandidate = useCallback(() => {
     try {
       const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
       const domain = new URL(fullBookmarkUrl).hostname.replace(/^www\./, '');
-      const iconCandidates = [
-        `https://${domain}/favicon.ico`,
-        `https://${domain}/apple-touch-icon.png`,
-        `https://${domain}/apple-touch-icon-precomposed.png`,
-        `https://icons.duckduckgo.com/ip3/${encodeURIComponent(domain)}.ico`,
-        `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(domain)}`,
-      ];
+      const customIconUrl = bookmark.iconUrl || bookmark.icon;
+      const iconCandidates = getIconCandidates(domain, customIconUrl);
 
       const activeSourceIndex = currentIconSrc
         ? iconCandidates.findIndex((iconSrc) => iconSrc === currentIconSrc)
@@ -158,24 +224,62 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
 
       setShowFallbackIcon(true);
       setCurrentIconSrc(null);
-      const cacheKey = `favicon-cache-v7-${domain}`;
-      localStorage.setItem(cacheKey, JSON.stringify({ errorTimestamp: Date.now() }));
+      const errorTimestamp = Date.now();
+      const cacheKey = getFaviconCacheKey(domain);
+      runtimeFaviconCache.set(domain, {
+        src: null,
+        expiresAt: errorTimestamp + CACHE_DURATION_ERROR,
+      });
+      localStorage.setItem(cacheKey, JSON.stringify({ errorTimestamp }));
     } catch (error) {
       setShowFallbackIcon(true);
       setCurrentIconSrc(null);
       console.warn(`[BookmarkItem] Error handling favicon fallback for ${bookmark.url}:`, error);
     }
+  }, [bookmark.url, bookmark.icon, bookmark.iconUrl, currentIconSrc]);
+
+  const handleImageError = () => {
+    moveToNextIconCandidate();
   };
+
+  useEffect(() => {
+    setIsCurrentIconLoaded(false);
+  }, [currentIconSrc]);
+
+  useEffect(() => {
+    if (!currentIconSrc || showFallbackIcon || isCurrentIconLoaded) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      moveToNextIconCandidate();
+    }, ICON_LOAD_TIMEOUT_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [currentIconSrc, showFallbackIcon, isCurrentIconLoaded, moveToNextIconCandidate]);
 
   const handleImageLoad = () => {
     if (currentIconSrc && !showFallbackIcon) { 
+      setIsCurrentIconLoaded(true);
       try {
         const fullBookmarkUrl = getFullUrlWithScheme(bookmark.url);
         const domain = new URL(fullBookmarkUrl).hostname.replace(/^www\./, '');
-        const cacheKey = `favicon-cache-v7-${domain}`;
+        const customIconUrl = bookmark.iconUrl || bookmark.icon;
+        if (customIconUrl?.trim()) {
+          // Do not cache DB custom icon URL into domain cache to avoid stale cache pollution.
+          return;
+        }
+        const cacheKey = getFaviconCacheKey(domain);
+        const timestamp = Date.now();
+        runtimeFaviconCache.set(domain, {
+          src: currentIconSrc,
+          expiresAt: timestamp + CACHE_DURATION_SUCCESS,
+        });
         localStorage.setItem(cacheKey, JSON.stringify({
           src: currentIconSrc,
-          timestamp: Date.now(),
+          timestamp,
         }));
       } catch (error) {
         console.warn(`[BookmarkItem] Error saving success state to cache for ${bookmark.url}:`, error);
@@ -283,10 +387,13 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
           >
             <div
               className={cn(
-                "flex-shrink-0 w-11 h-11 flex items-center justify-center mr-2.5 rounded-xl overflow-hidden",
-                showFallbackIcon || !currentIconSrc ? "bg-transparent" : "bg-muted/55"
+                "relative flex-shrink-0 w-11 h-11 flex items-center justify-center mr-2.5 rounded-xl overflow-hidden",
+                showFallbackIcon || !currentIconSrc ? "bg-muted/35" : "bg-muted/55"
               )}
             >
+              {(showFallbackIcon || !currentIconSrc) && (
+                <Globe className="h-4 w-4 text-muted-foreground/60" aria-hidden="true" />
+              )}
               {!showFallbackIcon && currentIconSrc && (
                 <img
                   key={currentIconSrc} 
@@ -294,8 +401,9 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
                   alt="" 
                   width={44}
                   height={44}
-                  className="w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-cover"
                   loading="lazy"
+                  decoding="async"
                   onError={handleImageError}
                   onLoad={handleImageLoad}
                 />

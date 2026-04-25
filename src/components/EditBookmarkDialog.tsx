@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, UploadCloud } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -28,10 +28,69 @@ import { useToast } from "@/hooks/use-toast";
 interface EditBookmarkDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onUpdateBookmark: (bookmark: Bookmark) => void;
+  onUpdateBookmark: (bookmark: Bookmark) => void | Promise<void>;
   bookmarkToEdit: Bookmark;
   categories: Category[];
 }
+
+const getFullUrlWithScheme = (value: string): string => {
+  if (!value.startsWith('http://') && !value.startsWith('https://')) {
+    return `https://${value}`;
+  }
+  return value;
+};
+
+const getDefaultSiteIconUrl = (bookmarkUrl: string): string => {
+  try {
+    const hostname = new URL(getFullUrlWithScheme(bookmarkUrl)).hostname.replace(/^www\./, '');
+    return `https://${hostname}/favicon.ico`;
+  } catch {
+    return '';
+  }
+};
+
+const getDuckDuckGoIconUrl = (bookmarkUrl: string): string => {
+  try {
+    const hostname = new URL(getFullUrlWithScheme(bookmarkUrl)).hostname.replace(/^www\./, '');
+    return `https://icons.duckduckgo.com/ip3/${encodeURIComponent(hostname)}.ico`;
+  } catch {
+    return '';
+  }
+};
+
+const canLoadImage = (src: string, timeoutMs = 2500): Promise<boolean> =>
+  new Promise((resolve) => {
+    if (!src) {
+      resolve(false);
+      return;
+    }
+    const img = new Image();
+    let settled = false;
+
+    const finalize = (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      img.onload = null;
+      img.onerror = null;
+      resolve(ok);
+    };
+
+    const timer = window.setTimeout(() => finalize(false), timeoutMs);
+    img.onload = () => finalize(true);
+    img.onerror = () => finalize(false);
+    img.src = src;
+  });
+
+const resolvePreferredDefaultIconUrl = async (bookmarkUrl: string): Promise<string> => {
+  const siteIcon = getDefaultSiteIconUrl(bookmarkUrl);
+  const duckIcon = getDuckDuckGoIconUrl(bookmarkUrl);
+  if (!siteIcon) {
+    return duckIcon;
+  }
+  const siteOk = await canLoadImage(siteIcon);
+  return siteOk ? siteIcon : (duckIcon || siteIcon);
+};
 
 const EditBookmarkDialog: React.FC<EditBookmarkDialogProps> = ({
   isOpen,
@@ -43,8 +102,11 @@ const EditBookmarkDialog: React.FC<EditBookmarkDialogProps> = ({
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
+  const [iconUrl, setIconUrl] = useState('');
+  const [autoSuggestedIconUrl, setAutoSuggestedIconUrl] = useState('');
   const [categoryId, setCategoryId] = useState<string>('');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [isAutoUploadingIcon, setIsAutoUploadingIcon] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -52,10 +114,88 @@ const EditBookmarkDialog: React.FC<EditBookmarkDialogProps> = ({
       setName(bookmarkToEdit.name);
       setUrl(bookmarkToEdit.url);
       setDescription(bookmarkToEdit.description || '');
+      const fallbackSiteIcon = getDefaultSiteIconUrl(bookmarkToEdit.url);
+      setAutoSuggestedIconUrl(fallbackSiteIcon);
+      setIconUrl(bookmarkToEdit.iconUrl || bookmarkToEdit.icon || fallbackSiteIcon);
       setCategoryId(bookmarkToEdit.categoryId);
       setIsPrivate(bookmarkToEdit.isPrivate || false);
+      setIsAutoUploadingIcon(false);
     }
   }, [isOpen, bookmarkToEdit]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    const shouldAutoFollow = !iconUrl || iconUrl === autoSuggestedIconUrl;
+
+    const updateDefaultIcon = async () => {
+      const nextSuggested = await resolvePreferredDefaultIconUrl(url);
+      if (!nextSuggested || cancelled) return;
+      setAutoSuggestedIconUrl(nextSuggested);
+      if (shouldAutoFollow) {
+        setIconUrl(nextSuggested);
+      }
+    };
+
+    void updateDefaultIcon();
+    return () => {
+      cancelled = true;
+    };
+  }, [url, isOpen]);
+
+  const handleUploadToWechatIcon = async () => {
+    if (!name.trim() || !url.trim() || !categoryId) {
+      toast({ title: "缺少必要信息", description: "请先填写名称、网址和分类。", variant: "destructive" });
+      return;
+    }
+    let normalizedUrl = '';
+    try {
+      normalizedUrl = getFullUrlWithScheme(url.trim());
+      new URL(normalizedUrl);
+    } catch {
+      toast({ title: "无效的URL", description: "请先填写有效的网址。", variant: "destructive" });
+      return;
+    }
+
+    setIsAutoUploadingIcon(true);
+    try {
+      const response = await fetch('/api/icon-auto-upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: normalizedUrl,
+          iconUrl: iconUrl.trim() || undefined,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || '上传失败');
+      }
+      if (!data?.url || typeof data.url !== 'string') {
+        throw new Error('上传成功但未返回可用 URL');
+      }
+
+      setIconUrl(data.url);
+      setAutoSuggestedIconUrl('');
+      await Promise.resolve(onUpdateBookmark({
+        ...bookmarkToEdit,
+        name: name.trim(),
+        url: normalizedUrl,
+        categoryId,
+        description: description.trim(),
+        iconUrl: data.url,
+        icon: data.url,
+        isPrivate,
+      }));
+    } catch (error: any) {
+      toast({ title: "上传失败", description: error?.message || '自动上传图标失败。', variant: "destructive" });
+    } finally {
+      setIsAutoUploadingIcon(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,13 +209,23 @@ const EditBookmarkDialog: React.FC<EditBookmarkDialogProps> = ({
       toast({ title: "无效的URL", description: "请输入有效的URL。", variant: "destructive" });
       return;
     }
+    if (iconUrl.trim()) {
+      try {
+        new URL(iconUrl.trim());
+      } catch (_) {
+        toast({ title: "无效的图标URL", description: "请输入有效的图标 URL。", variant: "destructive" });
+        return;
+      }
+    }
 
     onUpdateBookmark({ 
         ...bookmarkToEdit, 
-        name, 
-        url: url.startsWith('http') ? url : `https://${url}`, 
+        name: name.trim(), 
+        url: url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`, 
         categoryId, 
-        description, 
+        description: description.trim(),
+        iconUrl: iconUrl.trim() || undefined,
+        icon: iconUrl.trim() || undefined,
         isPrivate 
     });
     onClose();
@@ -132,6 +282,33 @@ const EditBookmarkDialog: React.FC<EditBookmarkDialogProps> = ({
                 rows={2}
               />
             </div>
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="edit-icon-url" className="text-right pt-2">
+                图标 URL
+              </Label>
+              <div className="col-span-3 space-y-2">
+                <Input
+                  id="edit-icon-url"
+                  value={iconUrl}
+                  onChange={(e) => setIconUrl(e.target.value)}
+                  className="w-full"
+                  placeholder="可选。留空则按书签网址自动抓取并上传图标"
+                  type="url"
+                  disabled={isAutoUploadingIcon}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleUploadToWechatIcon}
+                  disabled={isAutoUploadingIcon || !url.trim()}
+                  className="w-full justify-center text-xs"
+                >
+                  <UploadCloud className="mr-1.5 h-3.5 w-3.5" />
+                  {isAutoUploadingIcon ? '上传并保存中...' : '上传企业微信图床并保存'}
+                </Button>
+                <p className="text-xs text-muted-foreground">默认优先 `当前站点/favicon.ico`，若加载失败会自动切到 DuckDuckGo；上传后会改为数据库里的企业微信 URL。</p>
+              </div>
+            </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="edit-category" className="text-right">
                 分类*
@@ -169,8 +346,8 @@ const EditBookmarkDialog: React.FC<EditBookmarkDialogProps> = ({
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>取消</Button>
-            <Button type="submit">保存更改</Button>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isAutoUploadingIcon}>取消</Button>
+            <Button type="submit" disabled={isAutoUploadingIcon}>保存更改</Button>
           </DialogFooter>
         </form>
       </DialogContent>

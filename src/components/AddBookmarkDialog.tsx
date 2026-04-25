@@ -27,10 +27,10 @@ import {
 interface AddBookmarkDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddBookmark: (bookmark: Omit<Bookmark, 'id'>) => Promise<void>; // Changed to Promise<void>
+  onAddBookmark: (bookmark: Omit<Bookmark, 'id' | 'priority'>) => Promise<void>;
   categories: Category[];
   activeCategoryId?: string | null;
-  initialData?: { name?: string; url?: string; description?: string } | null;
+  initialData?: { name?: string; url?: string; description?: string; iconUrl?: string } | null;
 }
 
 const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
@@ -44,6 +44,7 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
+  const [iconUrl, setIconUrl] = useState('');
   const [categoryId, setCategoryId] = useState<string>('');
   const [isPrivate, setIsPrivate] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -54,6 +55,7 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
       setName(initialData?.name || '');
       setUrl(initialData?.url || '');
       setDescription(initialData?.description || '');
+      setIconUrl(initialData?.iconUrl || '');
       setIsPrivate(false);
       setValidationError(null); 
       setIsSubmitting(false);
@@ -74,7 +76,6 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
     }
   }, [isOpen, categories, activeCategoryId, initialData]);
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError(null); 
@@ -89,6 +90,14 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
       setValidationError("请输入有效的网址，例如：https://example.com");
       return;
     }
+    if (iconUrl.trim()) {
+      try {
+        new URL(iconUrl.trim());
+      } catch (_) {
+        setValidationError("图标 URL 无效，请输入完整的 http(s) 地址。");
+        return;
+      }
+    }
 
     setIsSubmitting(true);
     try {
@@ -97,6 +106,7 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
         url: url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`, 
         categoryId, 
         description: description.trim(), 
+        iconUrl: iconUrl.trim() || undefined,
         isPrivate 
       });
       onClose(); // Close dialog only on successful submission
@@ -175,6 +185,22 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
                 rows={2}
                 disabled={isSubmitting}
               />
+            </div>
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="iconUrl" className="text-right pt-2">
+                图标 URL
+              </Label>
+              <div className="col-span-3 space-y-2">
+                <Input
+                  id="iconUrl"
+                  value={iconUrl}
+                  onChange={(e) => setIconUrl(e.target.value)}
+                  placeholder="可选。留空则自动抓取站点图标并上传到企业微信图床"
+                  type="url"
+                  disabled={isSubmitting}
+                />
+                <p className="text-xs text-muted-foreground">自动抓取顺序：站点 favicon {'->'} DuckDuckGo 图标。</p>
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="category" className="text-right">

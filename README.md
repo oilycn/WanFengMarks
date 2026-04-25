@@ -62,6 +62,17 @@ MYSQL_CONNECTION_STRING="mysql://your_user:your_password@your_host:your_port/you
 例如，本地开发可能如下：
 `MYSQL_CONNECTION_STRING="mysql://root:password@localhost:3306/wanfeng_marks"`
 
+如需启用“书签图标自动抓取并上传到企业微信图床（例如 https://ju.mk ）”功能，可额外配置：
+
+```env
+# 图标上传统一使用该接口（按图标 URL 上传）
+ICON_UPLOAD_BY_URL_ENDPOINT="https://ju.mk/api/icon-from-url"
+# 如果你的 Worker API 开启了 X-Api-Key 鉴权，填这里
+ICON_AUTO_UPLOAD_API_KEY=""
+```
+
+如果 `ju.mk` 的 Worker 开启了 `ENABLE_AUTH=true`，建议在 Worker 端设置 `ICON_API_KEY`（或 `API_ACCESS_KEY`），并把同样的值填到 `ICON_AUTO_UPLOAD_API_KEY`。
+
 ### 4. 首次运行与应用配置 (非 Docker 方式)
 
 如果您不使用 Docker，请按以下步骤运行：

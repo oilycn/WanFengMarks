@@ -19,6 +19,10 @@ interface CategoryRow extends RowDataPacket { // For default category check
   id: number;
 }
 
+interface ColumnExistsRow extends RowDataPacket {
+  exists_flag: number;
+}
+
 interface ActionResult {
   success: boolean;
   message?: string;
@@ -151,6 +155,7 @@ export async function initializeMySQLDatabaseAction(): Promise<ActionResult> {
         url TEXT NOT NULL,
         category_id INT,
         description TEXT,
+        icon_url TEXT,
         is_private BOOLEAN DEFAULT FALSE,
         priority INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -159,6 +164,19 @@ export async function initializeMySQLDatabaseAction(): Promise<ActionResult> {
       )
     `);
     console.log('[AuthAction][initializeMySQLDatabaseAction] `bookmarks` table checked/created.');
+
+    const iconUrlColumnRows = await connection.query<ColumnExistsRow[]>(
+      `SELECT 1 AS exists_flag
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'bookmarks'
+         AND COLUMN_NAME = 'icon_url'
+       LIMIT 1`
+    );
+    if (iconUrlColumnRows[0].length === 0) {
+      await connection.query("ALTER TABLE bookmarks ADD COLUMN icon_url TEXT NULL AFTER description");
+      console.log('[AuthAction][initializeMySQLDatabaseAction] Added missing `icon_url` column in bookmarks table.');
+    }
 
     const defaultCategoryName = '通用书签';
     const [existingCategories] = await connection.query<CategoryRow[]>("SELECT id FROM categories WHERE name = ?", [defaultCategoryName]);

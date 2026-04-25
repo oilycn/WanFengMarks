@@ -12,7 +12,7 @@ import { addBookmarkAction } from '@/actions/bookmarkActions';
 const AddBookmarkPopupPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(true);
-  const [initialData, setInitialData] = useState<{ name?: string; url?: string; description?: string } | null>(null);
+  const [initialData, setInitialData] = useState<{ name?: string; url?: string; description?: string; iconUrl?: string } | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
@@ -62,7 +62,7 @@ const AddBookmarkPopupPage = () => {
     }
   }, [isClient, fetchCategoriesForPopup]);
 
-  const handleAddBookmark = async (newBookmarkData: Omit<Bookmark, 'id'>) => {
+  const handleAddBookmark = async (newBookmarkData: Omit<Bookmark, 'id' | 'priority'>) => {
     if (!isClient) return; // Should not happen if dialog is open
     try {
       await addBookmarkAction(newBookmarkData);

@@ -35,6 +35,12 @@ interface SettingsDialogProps {
     logoText?: string;
     logoIcon?: string;
   }) => Promise<void>;
+  onSyncBookmarkIcons: () => Promise<{
+    processed: number;
+    updated: number;
+    skipped: number;
+    failed: number;
+  }>;
   currentLogoText: string;
   currentLogoIconName: string;
   adminPasswordPresent: boolean; 
@@ -44,6 +50,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({
   isOpen,
   onClose,
   onSave,
+  onSyncBookmarkIcons,
   currentLogoText,
   currentLogoIconName,
   adminPasswordPresent,
@@ -61,6 +68,8 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({
   const [logoIcon, setLogoIcon] = useState(currentLogoIconName);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSyncingIcons, setIsSyncingIcons] = useState(false);
+  const [iconSyncSummary, setIconSyncSummary] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -73,6 +82,8 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({
       setLogoText(currentLogoText);
       setLogoIcon(currentLogoIconName);
       setIsSubmitting(false);
+      setIsSyncingIcons(false);
+      setIconSyncSummary(null);
     }
   }, [isOpen, currentLogoText, currentLogoIconName]);
 
@@ -139,6 +150,22 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
   const selectedIconObject = availableIcons.find(icon => icon.value === logoIcon);
   const selectedIconDisplayName = selectedIconObject?.name || "选择图标";
+
+  const handleSyncIconsClick = async () => {
+    setIsSyncingIcons(true);
+    setIconSyncSummary(null);
+    try {
+      const result = await onSyncBookmarkIcons();
+      const summary = `处理 ${result.processed} 项，成功 ${result.updated}，失败 ${result.failed}，跳过 ${result.skipped}`;
+      setIconSyncSummary(summary);
+      toast({ title: "图标同步完成", description: summary, duration: 3200 });
+    } catch (error: any) {
+      const msg = error?.message || '一键上传执行失败。';
+      toast({ title: "图标同步失败", description: msg, variant: "destructive" });
+    } finally {
+      setIsSyncingIcons(false);
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -229,6 +256,24 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({
                       </ScrollArea>
                     </SelectContent>
                   </Select>
+              </div>
+              <div className="space-y-2 rounded-md border border-border/70 p-3">
+                <Label>书签图标同步</Label>
+                <p className="text-xs text-muted-foreground">
+                  一键将非企业微信图标 URL 上传到企业微信图床，失败项会自动跳过。
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleSyncIconsClick}
+                  disabled={isSubmitting || isSyncingIcons}
+                  className="w-full"
+                >
+                  {isSyncingIcons ? '同步中...' : '一键上传非企业微信图标'}
+                </Button>
+                {iconSyncSummary && (
+                  <p className="text-xs text-muted-foreground">{iconSyncSummary}</p>
+                )}
               </div>
             </TabsContent>
           </Tabs>

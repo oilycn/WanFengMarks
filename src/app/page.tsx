@@ -21,6 +21,7 @@ import {
   deleteBookmarkAction,
   deleteBookmarksByCategoryIdAction,
   updateBookmarksOrderAction,
+  syncNonWechatIconsToWechatAction,
 } from '@/actions/bookmarkActions';
 import {
   getCategoriesAction,
@@ -82,7 +83,7 @@ export default function HomePage() {
   const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
 
-  const [initialDataForAddDialog, setInitialDataForAddDialog] = useState<{ name?: string; url?: string; description?: string } | null>(null);
+  const [initialDataForAddDialog, setInitialDataForAddDialog] = useState<{ name?: string; url?: string; description?: string; iconUrl?: string } | null>(null);
   const [hasPendingBookmarkOrderChanges, setHasPendingBookmarkOrderChanges] = useState(false);
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -526,6 +527,12 @@ export default function HomePage() {
   const handleOpenSettingsDialog = () => setIsSettingsDialogOpen(true);
   const handleCloseSettingsDialog = () => setIsSettingsDialogOpen(false);
 
+  const handleSyncBookmarkIcons = useCallback(async () => {
+    const result = await syncNonWechatIconsToWechatAction();
+    await fetchData(hasPendingBookmarkOrderChanges);
+    return result;
+  }, [fetchData, hasPendingBookmarkOrderChanges]);
+
   const handleSaveSettings = async (settingsData: {
     currentPassword?: string;
     newPassword?: string;
@@ -792,6 +799,7 @@ export default function HomePage() {
             isOpen={isSettingsDialogOpen}
             onClose={handleCloseSettingsDialog}
             onSave={handleSaveSettings}
+            onSyncBookmarkIcons={handleSyncBookmarkIcons}
             currentLogoText={logoText}
             currentLogoIconName={logoIconName}
             adminPasswordPresent={adminPasswordExists}
