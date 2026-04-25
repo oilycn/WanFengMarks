@@ -21,9 +21,12 @@ export const metadata: Metadata = {
   title: '晚风Marks 书签导航',
   description: '您的个性化书签仪表盘，集成时钟、天气和搜索功能。',
   icons: {
-    icon: '/mark.png',
-    shortcut: '/mark.png',
-    apple: '/mark.png',
+    icon: [
+      { url: '/mark.PNG?v=20260425', type: 'image/png', sizes: '48x48' },
+      { url: '/mark.png?v=20260425', type: 'image/png', sizes: '48x48' },
+    ],
+    shortcut: ['/mark.PNG?v=20260425', '/mark.png?v=20260425'],
+    apple: [{ url: '/mark.PNG?v=20260425', type: 'image/png', sizes: '180x180' }],
   },
 };
 

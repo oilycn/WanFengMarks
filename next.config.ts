@@ -28,6 +28,7 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
+      { source: '/favicon.ico', destination: '/mark.png' },
       { source: '/mark.PNG', destination: '/mark.png' },
     ];
   },
