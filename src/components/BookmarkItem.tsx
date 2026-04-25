@@ -364,13 +364,13 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
         "group relative rounded-2xl flex flex-col",
         isDragging
           ? 'shadow-2xl scale-[1.02] z-50'
-          : 'transition-shadow duration-200 hover:shadow-[0_24px_34px_-24px_hsl(var(--foreground)/0.45)]',
+          : 'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_30px_-24px_rgba(15,23,42,0.34)] dark:hover:shadow-[0_22px_34px_-24px_rgba(0,0,0,0.52)]',
       )}
     >
       <Card className={cn(
-        "flex-grow overflow-hidden rounded-2xl border border-black/[0.03] bg-card shadow-[0_14px_26px_-18px_hsl(var(--foreground)/0.42)]",
-        "group-hover:-translate-y-0.5 group-hover:shadow-[0_22px_34px_-20px_hsl(var(--foreground)/0.48)]",
-        isDragging ? 'shadow-[0_24px_38px_-18px_hsl(var(--foreground)/0.58)]' : ''
+        "flex-grow overflow-hidden rounded-2xl border-0 bg-[hsl(var(--surface-card))] shadow-[0_10px_18px_-14px_rgba(15,23,42,0.24)] dark:shadow-[0_12px_20px_-14px_rgba(0,0,0,0.46)]",
+        "group-hover:shadow-[0_14px_24px_-16px_rgba(15,23,42,0.3)] dark:group-hover:shadow-[0_16px_26px_-16px_rgba(0,0,0,0.54)]",
+        isDragging ? 'shadow-[0_18px_28px_-12px_rgba(0,0,0,0.58)]' : ''
       )} onContextMenu={handleContextMenu}>
         <div className="flex items-center p-2.5">
           {isAdminAuthenticated && isDraggable && (
@@ -393,7 +393,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
             <div
               className={cn(
                 "relative flex-shrink-0 w-11 h-11 flex items-center justify-center mr-2.5 rounded-xl overflow-hidden",
-                "bg-transparent"
+                "bg-transparent ring-0"
               )}
             >
               {(showFallbackIcon || !currentIconSrc) && (
@@ -442,7 +442,7 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
 
       {isMounted && isAdminAuthenticated && contextMenu.visible && createPortal(
         <div
-          className="fixed z-[90] min-w-40 rounded-xl border border-border/70 bg-popover/95 text-popover-foreground backdrop-blur p-1.5 shadow-[0_18px_36px_-22px_hsl(var(--foreground)/0.6)]"
+          className="fixed z-[90] min-w-40 rounded-xl bg-popover/95 text-popover-foreground backdrop-blur p-1.5 shadow-[0_14px_24px_-16px_rgba(0,0,0,0.78)]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(event) => event.stopPropagation()}
           onContextMenu={(event) => event.preventDefault()}

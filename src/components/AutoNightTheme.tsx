@@ -1,35 +1,52 @@
 "use client";
 
 import { useEffect } from 'react';
-
-const NIGHT_START_HOUR = 19;
-const NIGHT_END_HOUR = 7;
-
-const isNightTime = (date: Date) => {
-  const hour = date.getHours();
-  return hour >= NIGHT_START_HOUR || hour < NIGHT_END_HOUR;
-};
-
-const applyTheme = () => {
-  const root = document.documentElement;
-  const nightMode = isNightTime(new Date());
-  root.classList.toggle('dark', nightMode);
-};
+import {
+  THEME_EVENT_NAME,
+  THEME_STORAGE_KEY,
+  applyThemePreference,
+  getStoredThemePreference,
+} from '@/lib/theme';
 
 export default function AutoNightTheme() {
   useEffect(() => {
-    applyTheme();
+    const applyCurrentTheme = () => {
+      const preference = getStoredThemePreference();
+      applyThemePreference(preference);
+    };
 
-    const themeTimer = window.setInterval(applyTheme, 60 * 1000);
-    const visibilityHandler = () => {
-      if (document.visibilityState === 'visible') {
-        applyTheme();
+    applyCurrentTheme();
+
+    const themeTimer = window.setInterval(() => {
+      if (getStoredThemePreference() === 'auto') {
+        applyThemePreference('auto');
+      }
+    }, 60 * 1000);
+
+    const preferenceChangeHandler = () => {
+      applyCurrentTheme();
+    };
+
+    const storageHandler = (event: StorageEvent) => {
+      if (event.key === THEME_STORAGE_KEY) {
+        applyCurrentTheme();
       }
     };
+
+    const visibilityHandler = () => {
+      if (document.visibilityState === 'visible') {
+        applyCurrentTheme();
+      }
+    };
+
+    window.addEventListener(THEME_EVENT_NAME, preferenceChangeHandler as EventListener);
+    window.addEventListener('storage', storageHandler);
     document.addEventListener('visibilitychange', visibilityHandler);
 
     return () => {
       window.clearInterval(themeTimer);
+      window.removeEventListener(THEME_EVENT_NAME, preferenceChangeHandler as EventListener);
+      window.removeEventListener('storage', storageHandler);
       document.removeEventListener('visibilitychange', visibilityHandler);
     };
   }, []);

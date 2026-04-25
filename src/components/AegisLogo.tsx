@@ -17,7 +17,7 @@ const AegisLogo: React.FC<AegisLogoProps> = ({
 
   return (
     <div className={`flex items-center gap-3 ${className}`}>
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary/25 via-primary/10 to-accent/25 text-primary ring-1 ring-primary/25 shadow-sm">
+      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-[0_8px_14px_-10px_rgba(15,23,42,0.55)] dark:bg-primary/14 dark:shadow-[0_10px_18px_-12px_rgba(0,0,0,0.8)]">
         <IconComponent className="h-5 w-5" />
       </span>
       <h1 className="text-lg md:text-xl font-semibold text-foreground font-headline tracking-tight">{logoText}</h1>

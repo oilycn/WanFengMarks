@@ -137,12 +137,12 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
     "w-full justify-start text-sm rounded-xl transition-all duration-200",
     "h-10 pl-3 pr-16 text-foreground/90 hover:text-foreground",
     isActive
-      ? "bg-primary/12 text-foreground font-semibold shadow-sm"
-      : "bg-transparent hover:bg-card/70"
+      ? "bg-primary/14 text-foreground font-semibold shadow-sm dark:bg-primary/16"
+      : "bg-transparent hover:bg-[hsl(var(--surface-elevated))]"
   );
 
   return (
-    <aside className={cn("w-60 md:w-64 self-start bg-card/50 backdrop-blur-2xl flex flex-col overflow-y-auto shadow-[8px_0_28px_-22px_hsl(var(--foreground)/0.45)] md:sticky md:top-0", className)}>
+    <aside className={cn("w-60 md:w-64 self-start bg-[hsl(var(--surface-sidebar))] backdrop-blur-2xl flex flex-col overflow-y-auto shadow-[8px_0_28px_-24px_rgba(15,23,42,0.24)] dark:shadow-[10px_0_34px_-24px_rgba(0,0,0,0.46)] md:sticky md:top-0", className)}>
       <ScrollArea className="pt-4">
         <nav className="p-3 space-y-1.5">
           <Button
@@ -172,7 +172,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="h-6 w-6 rounded-lg bg-background/80 text-foreground/70 hover:text-foreground hover:bg-background p-0.5"
+                      className="h-6 w-6 rounded-lg bg-[hsl(var(--surface-input)/0.92)] text-foreground/70 hover:text-foreground hover:bg-[hsl(var(--surface-input))] p-0.5"
                       onClick={() => onEditCategory(category)}
                       aria-label={`编辑分类 ${category.name}`}
                     >
@@ -180,7 +180,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-lg bg-background/80 text-destructive/70 hover:text-destructive hover:bg-destructive/10 p-0.5">
+                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-lg bg-[hsl(var(--surface-input)/0.92)] text-destructive/70 hover:text-destructive hover:bg-destructive/12 p-0.5">
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </AlertDialogTrigger>
@@ -207,13 +207,13 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
         </nav>
       </ScrollArea>
       
-      <div className="p-3 space-y-3 bg-background/20">
-        <div className="wm-soft-divider" />
+      <div className="p-3 space-y-3 bg-[hsl(var(--surface-sidebar))]">
+        <div className="h-1" />
         {isAdminAuthenticated && (
-          <form onSubmit={handleAddCategorySubmit} className="space-y-2 p-2 rounded-2xl bg-background/40 ring-1 ring-foreground/[0.04]">
+          <form onSubmit={handleAddCategorySubmit} className="space-y-2 p-2 rounded-2xl bg-[hsl(var(--surface-elevated))]">
             <div className="flex items-center space-x-2">
               <Select value={newCategoryIcon} onValueChange={setNewCategoryIcon}>
-                <SelectTrigger className="flex-1 h-9 text-sm justify-start rounded-xl border-0 bg-background/80" aria-label="选择分类图标">
+                <SelectTrigger className="flex-1 h-9 text-sm justify-start rounded-xl border-0 bg-[hsl(var(--surface-input))]" aria-label="选择分类图标">
                    <div className="flex items-center gap-2 truncate">
                       {React.createElement(iconMap[newCategoryIcon] || iconMap['Default'], {className: "h-4 w-4 flex-shrink-0"})}
                       <span>{selectedIconName}</span>
@@ -237,7 +237,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
                   type="button"
                   variant="outline"
                   onClick={() => setNewCategoryIsPrivate(!newCategoryIsPrivate)}
-                  className="flex-1 flex items-center justify-start text-sm h-9 rounded-xl border-0 bg-background/80"
+                  className="flex-1 flex items-center justify-start text-sm h-9 rounded-xl border-0 bg-[hsl(var(--surface-input))]"
                   aria-label={newCategoryIsPrivate ? '设为公开分类' : '设为私密分类'}
               >
                   {newCategoryIsPrivate ? <EyeOff className="mr-2 h-4 w-4 flex-shrink-0" /> : <Eye className="mr-2 h-4 w-4 flex-shrink-0" />}
@@ -252,16 +252,16 @@ const AppSidebar: React.FC<AppSidebarProps> = ({
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
               placeholder="新分类名称"
-              className="h-9 text-sm rounded-xl border-0 bg-background/80"
+              className="h-9 text-sm rounded-xl border-0 bg-[hsl(var(--surface-input))]"
             />
             
-            <Button type="submit" className="w-full h-9 text-sm rounded-xl bg-gradient-to-r from-primary to-accent hover:brightness-110">
+            <Button type="submit" className="w-full h-9 text-sm rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
               <PlusCircle className="mr-2 h-4 w-4" /> 添加分类
             </Button>
           </form>
         )}
         {!isAdminAuthenticated && (
-          <Button onClick={onShowPasswordDialog} variant="outline" className="w-full h-9 text-sm rounded-xl border-0 bg-card/80 hover:bg-card">
+          <Button onClick={onShowPasswordDialog} variant="outline" className="w-full h-9 text-sm rounded-xl border-0 bg-[hsl(var(--surface-elevated))] hover:brightness-95">
             <LogIn className="mr-2 h-4 w-4" /> 进入管理模式
           </Button>
         )}

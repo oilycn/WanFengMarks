@@ -41,11 +41,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ currentQuery, onQueryChange }) =>
   return (
     <form
       onSubmit={handleSearchSubmit}
-      className="wm-panel group flex w-full items-center gap-1.5 overflow-hidden p-1.5 transition-all duration-300 focus-within:bg-card/95 focus-within:shadow-[0_18px_38px_-30px_hsl(var(--primary)/0.65)]"
+      className="wm-panel group flex w-full items-center gap-1.5 overflow-hidden p-1.5 transition-all duration-300 focus-within:bg-[hsl(var(--surface-card)/0.96)] focus-within:shadow-[0_16px_30px_-24px_rgba(15,23,42,0.3)] dark:focus-within:bg-[hsl(var(--surface-card)/0.9)] dark:focus-within:shadow-[0_16px_28px_-22px_rgba(0,0,0,0.58)]"
     >
       <Select value={selectedEngine} onValueChange={setSelectedEngine}>
         <SelectTrigger
-          className="h-10 w-auto min-w-[96px] rounded-xl border-0 bg-background/75 px-2.5 text-xs text-foreground/85 shadow-none outline-none focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+          className="h-10 w-auto min-w-[96px] rounded-xl border-0 bg-[hsl(var(--surface-input))] px-2.5 text-xs text-foreground/85 shadow-none outline-none focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 dark:text-foreground/90"
           aria-label="选择搜索引擎"
         >
           <div className="flex items-center gap-1.5 truncate">
@@ -74,7 +74,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ currentQuery, onQueryChange }) =>
         variant="default"
         size="icon"
         aria-label="搜索"
-        className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-accent hover:brightness-110 text-primary-foreground shadow-sm"
+        className="h-10 w-10 rounded-xl bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
       >
         <Search className="h-4 w-4" />
       </Button>

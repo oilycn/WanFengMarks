@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import AppSidebar from '@/components/AppSidebar';
 import AppHeader from '@/components/AppHeader';
 import AegisLogo from '@/components/AegisLogo';
+import ThemeToggle from '@/components/ThemeToggle';
 import BookmarkGrid from '@/components/BookmarkGrid';
 import type { Bookmark, Category } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -646,7 +647,7 @@ export default function HomePage() {
 
   const mainContent = (
     <div className="relative flex flex-col h-[100dvh] overflow-hidden">
-      <div className="pointer-events-none absolute -top-28 left-[8%] h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
+      <div className="pointer-events-none absolute -top-28 left-[8%] h-72 w-72 rounded-full bg-primary/8 blur-3xl dark:bg-primary/12" />
       <AppHeader
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -654,11 +655,11 @@ export default function HomePage() {
         logoText={logoText}
         logoIconName={logoIconName}
       />
-      <div className="mx-auto w-full max-w-[1880px] flex flex-1 min-h-0 overflow-hidden px-2 md:px-4">
+      <div className="mx-auto w-full max-w-[1880px] flex flex-1 min-h-0 overflow-hidden px-2 md:px-5 md:gap-4 lg:gap-5">
         {isMobile ? (
           <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
-            <SheetContent side="left" className="p-0 w-64 sm:w-72 flex flex-col h-full">
-              <SheetHeader className="p-4 border-b flex-shrink-0">
+            <SheetContent side="left" className="p-0 w-64 sm:w-72 flex flex-col h-full border-0 bg-[hsl(var(--surface-sidebar))]">
+              <SheetHeader className="p-4 flex-shrink-0">
                 <SheetTitle className="text-lg font-semibold">导航菜单</SheetTitle>
               </SheetHeader>
               <AppSidebar
@@ -673,7 +674,7 @@ export default function HomePage() {
                   setShowPasswordDialog(true);
                   setIsMobileSidebarOpen(false);
                 }}
-                className="flex-grow border-r-0 shadow-none bg-card/95"
+                className="flex-grow border-r-0 shadow-none bg-[hsl(var(--surface-sidebar))]"
               />
             </SheetContent>
           </Sheet>
@@ -690,7 +691,7 @@ export default function HomePage() {
             className="hidden md:flex relative z-20 rounded-2xl md:mt-3 overflow-hidden"
           />
         )}
-        <div className="relative z-10 flex-1 min-h-0 flex flex-col md:mt-3 rounded-2xl bg-background/35 overflow-hidden">
+        <div className="relative z-10 flex-1 min-h-0 flex flex-col md:mt-3 rounded-2xl bg-[hsl(var(--surface-content))] backdrop-blur-[1.5px] shadow-[0_16px_34px_-28px_rgba(15,23,42,0.3)] overflow-hidden dark:shadow-[0_16px_34px_-28px_rgba(0,0,0,0.38)]">
           <main className="flex-grow min-h-0 overflow-y-auto p-4 md:p-6 lg:p-7 relative">
             <div className="mx-auto max-w-[1620px] wm-fade-up">
               <BookmarkGrid
@@ -721,11 +722,12 @@ export default function HomePage() {
       {mainContent}
 
       <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 flex flex-col space-y-2 z-40">
+        <ThemeToggle className="h-11 w-11 rounded-2xl bg-[hsl(var(--surface-elevated)/0.78)] text-sky-700 backdrop-blur-xl shadow-[0_12px_20px_-14px_rgba(15,23,42,0.2)] hover:bg-[hsl(var(--surface-elevated)/0.92)] dark:bg-[hsl(var(--surface-elevated)/0.72)] dark:text-sky-300 dark:hover:bg-[hsl(var(--surface-elevated)/0.88)] dark:shadow-[0_12px_20px_-14px_rgba(0,0,0,0.36)]" />
         {isAdminAuthenticated && (
           <>
             <Button
               onClick={handleOpenAddBookmarkDialog}
-              className="h-11 w-11 rounded-2xl p-0 flex items-center justify-center bg-gradient-to-br from-primary to-accent text-white shadow-[0_18px_26px_-18px_hsl(var(--foreground)/0.85)] hover:brightness-110"
+              className="h-11 w-11 rounded-2xl p-0 flex items-center justify-center bg-[hsl(var(--surface-elevated)/0.78)] text-emerald-700 shadow-[0_12px_20px_-14px_rgba(15,23,42,0.2)] hover:bg-[hsl(var(--surface-elevated)/0.92)] dark:bg-[hsl(var(--surface-elevated)/0.72)] dark:text-emerald-300 dark:hover:bg-[hsl(var(--surface-elevated)/0.88)] dark:shadow-[0_12px_20px_-14px_rgba(0,0,0,0.36)]"
               aria-label="添加书签"
               title="添加书签"
             >
@@ -733,7 +735,7 @@ export default function HomePage() {
             </Button>
             <Button
               onClick={handleCopyBookmarkletScript}
-              className="h-11 w-11 rounded-2xl p-0 flex items-center justify-center bg-card/85 text-foreground backdrop-blur-xl shadow-[0_18px_26px_-18px_hsl(var(--foreground)/0.85)] hover:bg-card"
+              className="h-11 w-11 rounded-2xl p-0 flex items-center justify-center bg-[hsl(var(--surface-elevated)/0.78)] text-amber-700 shadow-[0_12px_20px_-14px_rgba(15,23,42,0.2)] hover:bg-[hsl(var(--surface-elevated)/0.92)] dark:bg-[hsl(var(--surface-elevated)/0.72)] dark:text-amber-300 dark:hover:bg-[hsl(var(--surface-elevated)/0.88)] dark:shadow-[0_12px_20px_-14px_rgba(0,0,0,0.36)]"
               aria-label="复制书签脚本"
               title="复制书签脚本"
             >
@@ -741,7 +743,7 @@ export default function HomePage() {
             </Button>
             <Button
               onClick={handleOpenSettingsDialog}
-              className="h-11 w-11 rounded-2xl p-0 flex items-center justify-center bg-card/85 text-foreground backdrop-blur-xl shadow-[0_18px_26px_-18px_hsl(var(--foreground)/0.85)] hover:bg-card"
+              className="h-11 w-11 rounded-2xl p-0 flex items-center justify-center bg-[hsl(var(--surface-elevated)/0.78)] text-indigo-700 shadow-[0_12px_20px_-14px_rgba(15,23,42,0.2)] hover:bg-[hsl(var(--surface-elevated)/0.92)] dark:bg-[hsl(var(--surface-elevated)/0.72)] dark:text-indigo-300 dark:hover:bg-[hsl(var(--surface-elevated)/0.88)] dark:shadow-[0_12px_20px_-14px_rgba(0,0,0,0.36)]"
               aria-label="应用设置"
               title="应用设置"
             >
@@ -749,7 +751,7 @@ export default function HomePage() {
             </Button>
             <Button
               onClick={handleLogoutAdmin}
-              className="h-11 w-11 rounded-2xl p-0 flex items-center justify-center bg-destructive/10 text-destructive shadow-[0_18px_26px_-18px_hsl(var(--foreground)/0.85)] hover:bg-destructive/15"
+              className="h-11 w-11 rounded-2xl p-0 flex items-center justify-center bg-[hsl(var(--surface-elevated)/0.78)] text-rose-700 shadow-[0_12px_20px_-14px_rgba(15,23,42,0.2)] hover:bg-[hsl(var(--surface-elevated)/0.92)] dark:bg-[hsl(var(--surface-elevated)/0.72)] dark:text-rose-300 dark:hover:bg-[hsl(var(--surface-elevated)/0.88)] dark:shadow-[0_12px_20px_-14px_rgba(0,0,0,0.36)]"
               aria-label="退出管理模式"
               title="退出管理模式"
             >

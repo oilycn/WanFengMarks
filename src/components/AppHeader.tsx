@@ -25,7 +25,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
   return (
     <header
-      className="sticky top-0 z-30 bg-background/65 backdrop-blur-2xl"
+      className="sticky top-0 z-30 bg-[hsl(var(--surface-header))] shadow-[0_10px_22px_-22px_rgba(15,23,42,0.14)] backdrop-blur-2xl dark:shadow-[0_10px_22px_-22px_rgba(0,0,0,0.46)]"
       data-ai-hint="light muted background"
     >
       <div className="mx-auto w-full max-w-[1880px] px-3 py-3 md:px-6 md:py-4">
@@ -34,7 +34,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             <Button 
               variant="ghost" 
               size="icon" 
-              className="md:hidden h-9 w-9 rounded-xl bg-card/70 hover:bg-muted/60"
+              className="md:hidden h-9 w-9 rounded-xl bg-[hsl(var(--surface-elevated)/0.86)] hover:bg-[hsl(var(--surface-elevated))] dark:bg-[hsl(var(--surface-elevated)/0.78)] dark:hover:bg-[hsl(var(--surface-elevated)/0.92)]"
               onClick={onToggleMobileSidebar}
               aria-label="打开侧边栏"
             >
@@ -47,7 +47,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             <SearchBar currentQuery={searchQuery} onQueryChange={setSearchQuery} />
           </div>
 
-          <div className="hidden md:flex md:justify-end"> 
+          <div className="hidden md:flex md:justify-end">
             <Clock />
           </div>
           <div className="flex justify-end md:hidden">

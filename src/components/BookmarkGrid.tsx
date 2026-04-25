@@ -124,7 +124,7 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
               </p>
             </div>
             {isAdminAuthenticated && hasPendingOrderChanges && (
-                <Button onClick={onSaveOrder} size="sm" className="rounded-xl bg-gradient-to-r from-primary to-accent text-white hover:brightness-110">
+                <Button onClick={onSaveOrder} size="sm" className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
                     <Save className="mr-2 h-4 w-4" />
                     保存书签顺序
                 </Button>
@@ -195,7 +195,7 @@ const BookmarkGrid: FC<BookmarkGridProps> = ({
                 </div>
                  {/* Save button is shown here if changes are pending, even if not actively dragging (canDrag might be false but changes exist) */}
                  {isAdminAuthenticated && hasPendingOrderChanges && activeCategoryId && activeCategoryId !== 'all' && (
-                    <Button onClick={onSaveOrder} size="sm" className="rounded-xl bg-gradient-to-r from-primary to-accent text-white hover:brightness-110">
+                    <Button onClick={onSaveOrder} size="sm" className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
                         <Save className="mr-2 h-4 w-4" />
                         保存书签顺序
                     </Button>
