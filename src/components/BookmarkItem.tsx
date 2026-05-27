@@ -49,7 +49,6 @@ const getBookmarkDomain = (url: string): string => {
 const FAVICON_CACHE_PREFIX = 'favicon-cache-v11-';
 const CACHE_DURATION_SUCCESS = 30 * 24 * 60 * 60 * 1000;
 const CACHE_DURATION_ERROR = 12 * 60 * 60 * 1000;
-const ICON_LOAD_TIMEOUT_MS = 1800;
 
 type RuntimeFaviconCacheItem = {
   src: string | null;
@@ -250,20 +249,6 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
     setIsCurrentIconLoaded(false);
   }, [currentIconSrc]);
 
-  useEffect(() => {
-    if (!currentIconSrc || showFallbackIcon || isCurrentIconLoaded) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      moveToNextIconCandidate();
-    }, ICON_LOAD_TIMEOUT_MS);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [currentIconSrc, showFallbackIcon, isCurrentIconLoaded, moveToNextIconCandidate]);
-
   const handleImageLoad = () => {
     if (currentIconSrc && !showFallbackIcon) { 
       setIsCurrentIconLoaded(true);
@@ -396,14 +381,14 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
                 "bg-transparent ring-0"
               )}
             >
-              {(showFallbackIcon || !currentIconSrc) && (
+              {(showFallbackIcon || !currentIconSrc || !isCurrentIconLoaded) && (
                 <img
                   src="/mark.png"
                   alt=""
                   width={44}
                   height={44}
                   className="absolute inset-0 w-full h-full object-contain"
-                  loading="lazy"
+                  loading="eager"
                   decoding="async"
                 />
               )}
@@ -414,8 +399,11 @@ const BookmarkItem: React.FC<BookmarkItemProps> = ({
                   alt="" 
                   width={44}
                   height={44}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  loading="lazy"
+                  className={cn(
+                    "absolute inset-0 w-full h-full object-cover",
+                    isCurrentIconLoaded ? "opacity-100" : "opacity-0"
+                  )}
+                  loading="eager"
                   decoding="async"
                   onError={handleImageError}
                   onLoad={handleImageLoad}
