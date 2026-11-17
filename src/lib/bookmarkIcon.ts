@@ -1,4 +1,4 @@
-const DEFAULT_ICON_BY_URL_ENDPOINT = 'https://ju.mk/api/icon-from-url';
+const DEFAULT_ICON_BY_URL_ENDPOINT = 'https://pic.gnoix.com/api/icon-from-url';
 const ICON_API_TIMEOUT_MS = 12000;
 const ICON_API_MAX_RETRIES = 2;
 const ICON_API_RETRY_DELAY_MS = 320;
